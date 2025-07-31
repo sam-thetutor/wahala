@@ -268,9 +268,14 @@ io.on('connection', (socket) => {
         });
 
         if (participant) {
-          await prisma.roomParticipant.delete({
-            where: { id: participant.id }
-          });
+          try {
+            await prisma.roomParticipant.delete({
+              where: { id: participant.id }
+            });
+          } catch (error) {
+            // Participant might have already been deleted, just log and continue
+            console.log(`Participant ${participant.id} already removed or not found`);
+          }
 
           // Update room participant count
           await prisma.room.update({
@@ -483,20 +488,20 @@ async function revealAnswers(roomId, question) {
     const correctAnswer = correctOption ? correctOption.text : 'Unknown';
 
     // Get user names for the answers
-    const userAnswers = await Promise.all(
-      questionData.answers.map(async (answer) => {
-        const user = await prisma.user.findUnique({
-          where: { id: answer.userId }
-        });
-        return {
-          userId: answer.userId,
-          answerId: answer.answerId,
-          isCorrect: answer.isCorrect,
-          points: answer.points,
-          userName: user ? (user.name || `User ${user.address.slice(0, 8)}...`) : 'Unknown'
-        };
-      })
-    );
+            const userAnswers = await Promise.all(
+          questionData.answers.map(async (answer) => {
+            const user = await prisma.user.findUnique({
+              where: { id: answer.userId }
+            });
+            return {
+              userId: answer.userId,
+              answerId: answer.answerId,
+              isCorrect: answer.isCorrect,
+              points: answer.points,
+              userName: user ? `${user.address.slice(0, 6)}...${user.address.slice(-4)}` : 'Unknown'
+            };
+          })
+        );
 
     // Emit answer reveal to all clients
     io.to(roomId).emit('answerReveal', {
@@ -528,7 +533,7 @@ async function updateLeaderboard(roomId) {
         });
         return {
           userId,
-          name: user ? (user.name || `User ${user.address.slice(0, 8)}...`) : 'Unknown',
+          name: user ? `${user.address.slice(0, 6)}...${user.address.slice(-4)}` : 'Unknown',
           score
         };
       })
@@ -569,7 +574,7 @@ async function endQuiz(roomId) {
           });
           return {
             userId,
-            name: user ? (user.name || `User ${user.address.slice(0, 8)}...`) : 'Unknown',
+            name: user ? `${user.address.slice(0, 6)}...${user.address.slice(-4)}` : 'Unknown',
             score
           };
         })

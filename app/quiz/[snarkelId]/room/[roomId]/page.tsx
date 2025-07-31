@@ -180,7 +180,7 @@ export default function QuizRoomPage() {
         // Initialize participant tabs with existing participants
         setParticipantTabs(data.participants.map((p: any) => ({
           id: p.id,
-          name: p.user.name || `User ${p.user.address.slice(0, 8)}...`,
+          name: `${p.user.address.slice(0, 6)}...${p.user.address.slice(-4)}`,
           address: p.user.address,
           isReady: p.isReady,
           isAdmin: p.isAdmin
@@ -269,7 +269,7 @@ export default function QuizRoomPage() {
       // Update participant tabs for TV display
       setParticipantTabs(data.participants.map((p: any) => ({
         id: p.id,
-        name: p.user.name || `User ${p.user.address.slice(0, 8)}...`,
+        name: `${p.user.address.slice(0, 6)}...${p.user.address.slice(-4)}`,
         address: p.user.address,
         isReady: p.isReady,
         isAdmin: p.isAdmin
@@ -293,7 +293,7 @@ export default function QuizRoomPage() {
     newSocket.on('participantLeft', (participantId: string) => {
       // Find the participant who left before removing them
       const leavingParticipant = participants.find(p => p.id === participantId);
-      const participantName = leavingParticipant?.user.name || `User ${leavingParticipant?.user.address.slice(0, 8)}...` || 'Unknown';
+      const participantName = leavingParticipant ? `${leavingParticipant.user.address.slice(0, 6)}...${leavingParticipant.user.address.slice(-4)}` : 'Unknown';
       
       // Remove participant from local state
       setParticipants(prev => prev.filter(p => p.id !== participantId));
@@ -644,7 +644,10 @@ export default function QuizRoomPage() {
                        {currentAnswer.userAnswers.map((userAnswer, index) => (
                          <div key={index} className="flex items-center justify-between bg-gray-800 rounded-lg p-3">
                            <span className="text-white font-medium">
-                             {participants.find(p => p.userId === userAnswer.userId)?.user.name || 'Unknown'}
+                             {(() => {
+                               const participant = participants.find(p => p.userId === userAnswer.userId);
+                               return participant ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 'Unknown';
+                             })()}
                            </span>
                            <div className="flex items-center gap-2">
                              <span className={`px-2 py-1 rounded text-sm font-bold ${
