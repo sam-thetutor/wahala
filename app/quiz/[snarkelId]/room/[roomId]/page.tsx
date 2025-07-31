@@ -114,6 +114,9 @@ export default function QuizRoomPage() {
   const [currentAnswer, setCurrentAnswer] = useState<{questionId: string, correctAnswer: string, userAnswers: Array<{userId: string, answerId: string, isCorrect: boolean, points: number}>} | null>(null);
   const [participantLeaveNotification, setParticipantLeaveNotification] = useState<string>('');
   const [participantJoinNotification, setParticipantJoinNotification] = useState<string>('');
+  const [adminMessage, setAdminMessage] = useState<string>('');
+  const [showAdminMessageModal, setShowAdminMessageModal] = useState(false);
+  const [messageSentNotification, setMessageSentNotification] = useState<string>('');
 
   useEffect(() => {
     // Enhanced wallet address validation
@@ -424,8 +427,16 @@ export default function QuizRoomPage() {
   };
 
   const sendMessage = () => {
-    if (socket && isAdmin) {
-      socket.emit('sendMessage', { message: 'Admin message sent' });
+    if (socket && isAdmin && adminMessage.trim()) {
+      socket.emit('sendMessage', { message: adminMessage.trim() });
+      setMessageSentNotification('Message sent successfully!');
+      setAdminMessage('');
+      setShowAdminMessageModal(false);
+      
+      // Clear notification after 3 seconds
+      setTimeout(() => {
+        setMessageSentNotification('');
+      }, 3000);
     }
   };
 
@@ -767,17 +778,29 @@ export default function QuizRoomPage() {
                   </div>
                 )}
 
-                {/* Leave Notification */}
-                {participantLeaveNotification && (
-                  <div className="mb-4">
-                    <div className="bg-gradient-to-r from-red-800 to-orange-800 rounded-lg p-3 text-white text-center animate-pulse">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                        <span className="font-handwriting font-bold">{participantLeaveNotification}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                                 {/* Message Sent Notification */}
+                 {messageSentNotification && (
+                   <div className="mb-4">
+                     <div className="bg-gradient-to-r from-green-800 to-blue-800 rounded-lg p-3 text-white text-center animate-pulse">
+                       <div className="flex items-center justify-center gap-2">
+                         <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                         <span className="font-handwriting font-bold">{messageSentNotification}</span>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Leave Notification */}
+                 {participantLeaveNotification && (
+                   <div className="mb-4">
+                     <div className="bg-gradient-to-r from-red-800 to-orange-800 rounded-lg p-3 text-white text-center animate-pulse">
+                       <div className="flex items-center justify-center gap-2">
+                         <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                         <span className="font-handwriting font-bold">{participantLeaveNotification}</span>
+                       </div>
+                     </div>
+                   </div>
+                 )}
                 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="bg-gray-800 rounded p-3">
@@ -949,7 +972,7 @@ export default function QuizRoomPage() {
                         Start Quiz
                       </button>
                       <button
-                        onClick={sendMessage}
+                        onClick={() => setShowAdminMessageModal(true)}
                         className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-400 hover:to-purple-500 transition-all duration-300 font-handwriting font-bold shadow-md"
                       >
                         <MessageSquare size={18} />
@@ -1396,7 +1419,52 @@ export default function QuizRoomPage() {
          </div>
        )}
 
-
+       {/* Admin Message Modal */}
+       {showAdminMessageModal && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+             <h3 className="text-xl font-handwriting font-bold text-gray-800 mb-4">
+               📢 Send Message to All Participants
+             </h3>
+             <div className="space-y-4">
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                   Message
+                 </label>
+                 <textarea
+                   value={adminMessage}
+                   onChange={(e) => setAdminMessage(e.target.value)}
+                   placeholder="Enter your message here..."
+                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                   rows={4}
+                   maxLength={200}
+                 />
+                 <div className="text-xs text-gray-500 mt-1 text-right">
+                   {adminMessage.length}/200
+                 </div>
+               </div>
+               <div className="flex gap-3">
+                 <button
+                   onClick={sendMessage}
+                   disabled={!adminMessage.trim()}
+                   className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-handwriting font-bold hover:from-blue-400 hover:to-purple-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300"
+                 >
+                   Send Message
+                 </button>
+                 <button
+                   onClick={() => {
+                     setShowAdminMessageModal(false);
+                     setAdminMessage('');
+                   }}
+                   className="flex-1 px-4 py-3 bg-gray-500 text-white rounded-lg font-handwriting font-bold hover:bg-gray-600 transition-all duration-300"
+                 >
+                   Cancel
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
 
        {/* Admin Controls Modal */}
        {showAdminControls && (
