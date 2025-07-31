@@ -1,0 +1,605 @@
+const { createServer } = require('http');
+const { Server } = require('socket.io');
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
+
+const httpServer = createServer();
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Store active rooms and their state
+const activeRooms = new Map();
+
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
+  const { roomId, walletAddress } = socket.handshake.query;
+  
+  if (!roomId || !walletAddress) {
+    console.log('Socket connection rejected: Missing roomId or walletAddress');
+    socket.disconnect();
+    return;
+  }
+
+  // Enhanced wallet address validation
+  if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
+    console.log('Socket connection rejected: Invalid wallet address format', walletAddress);
+    socket.disconnect();
+    return;
+  }
+
+  // Join the room
+  socket.join(roomId);
+  console.log(`User ${walletAddress} joined room ${roomId}`);
+
+  // Notify other participants about the new join
+  socket.to(roomId).emit('participantJoined', {
+    walletAddress,
+    timestamp: new Date().toISOString()
+  });
+
+  // Emit room stats update when user joins
+  emitRoomStatsUpdate(roomId);
+
+  // Handle ready toggle
+  socket.on('toggleReady', async () => {
+    try {
+      // Update participant ready status in database
+      const user = await prisma.user.findUnique({
+        where: { address: walletAddress.toLowerCase() }
+      });
+
+      if (user) {
+        const participant = await prisma.roomParticipant.findFirst({
+          where: {
+            roomId,
+            userId: user.id
+          }
+        });
+
+        if (participant) {
+          await prisma.roomParticipant.update({
+            where: { id: participant.id },
+            data: { isReady: !participant.isReady }
+          });
+
+          // Notify all clients in the room
+          socket.to(roomId).emit('participantReady', participant.id);
+          
+          // Emit room stats update
+          emitRoomStatsUpdate(roomId);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling ready status:', error);
+    }
+  });
+
+  // Handle game start (admin only)
+  socket.on('startGame', async (data) => {
+    try {
+      const { countdownTime = 5 } = data || {};
+      
+      // Verify user is admin
+      const user = await prisma.user.findUnique({
+        where: { address: walletAddress.toLowerCase() }
+      });
+
+      if (user) {
+        const participant = await prisma.roomParticipant.findFirst({
+          where: {
+            roomId,
+            userId: user.id,
+            isAdmin: true
+          }
+        });
+
+        if (participant) {
+          // Start countdown with custom time
+          let countdown = countdownTime * 60; // Convert to seconds
+          const countdownInterval = setInterval(() => {
+            io.to(roomId).emit('gameStarting', countdown);
+            countdown--;
+
+            if (countdown < 0) {
+              clearInterval(countdownInterval);
+              startQuiz(roomId);
+            }
+          }, 1000);
+        }
+      }
+    } catch (error) {
+      console.error('Error starting game:', error);
+    }
+  });
+
+  // Handle admin messages
+  socket.on('sendMessage', async (data) => {
+    try {
+      const { message } = data;
+      
+      // Verify user is admin
+      const user = await prisma.user.findUnique({
+        where: { address: walletAddress.toLowerCase() }
+      });
+
+      if (user) {
+        const participant = await prisma.roomParticipant.findFirst({
+          where: {
+            roomId,
+            userId: user.id,
+            isAdmin: true
+          }
+        });
+
+        if (participant && message) {
+          // Broadcast message to all clients in room
+          io.to(roomId).emit('tvMessage', message);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  });
+
+  // Handle auto-start game (from worker)
+  socket.on('autoStartGame', async (data) => {
+    try {
+      const { roomId, countdownTime = 5 } = data;
+      
+      console.log(`Auto-starting game for room: ${roomId}`);
+      
+      // Start countdown
+      let countdown = countdownTime * 60; // Convert to seconds
+      const countdownInterval = setInterval(() => {
+        io.to(roomId).emit('gameStarting', countdown);
+        countdown--;
+
+        if (countdown < 0) {
+          clearInterval(countdownInterval);
+          startQuiz(roomId);
+        }
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error auto-starting game:', error);
+    }
+  });
+
+  // Handle answer submission with immediate scoring
+  socket.on('submitAnswer', async (data) => {
+    try {
+      const { questionId, answerId, timeLeft } = data;
+      const user = await prisma.user.findUnique({
+        where: { address: walletAddress.toLowerCase() }
+      });
+
+      if (user) {
+        // Get the question to check if answer is correct
+        const question = await prisma.question.findUnique({
+          where: { id: questionId },
+          include: {
+            options: true,
+            snarkel: true
+          }
+        });
+
+        if (!question) {
+          console.error('Question not found:', questionId);
+          return;
+        }
+
+        // Find the selected option
+        const selectedOption = question.options.find(opt => opt.id === answerId);
+        const isCorrect = selectedOption ? selectedOption.isCorrect : false;
+
+        // Calculate score using quadratic formula
+        const basePoints = question.snarkel.basePointsPerQuestion || 100;
+        const maxTime = question.timeLimit;
+        const timeUsed = maxTime - timeLeft;
+        const timeRatio = timeUsed / maxTime;
+        
+        // Quadratic scoring: faster answers get exponentially more points
+        // Formula: basePoints * (1 - timeRatio^2)
+        const score = isCorrect ? Math.round(basePoints * (1 - Math.pow(timeRatio, 2))) : 0;
+
+        // Store the answer
+        if (!questionAnswers.has(roomId)) {
+          questionAnswers.set(roomId, new Map());
+        }
+        if (!questionAnswers.get(roomId).has(questionId)) {
+          questionAnswers.get(roomId).set(questionId, { answers: [], scores: {} });
+        }
+
+        const questionData = questionAnswers.get(roomId).get(questionId);
+        questionData.answers.push({
+          userId: user.id,
+          answerId,
+          isCorrect,
+          points: score,
+          timeLeft
+        });
+
+        // Update room scores
+        if (!roomScores.has(roomId)) {
+          roomScores.set(roomId, {});
+        }
+        if (!roomScores.get(roomId)[user.id]) {
+          roomScores.get(roomId)[user.id] = 0;
+        }
+        roomScores.get(roomId)[user.id] += score;
+
+        console.log(`User ${user.address} submitted answer for question ${questionId}: ${isCorrect ? 'Correct' : 'Incorrect'} (+${score} points)`);
+        
+        // Emit answer submitted event
+        socket.to(roomId).emit('answerSubmitted', {
+          userId: user.id,
+          questionId,
+          isCorrect,
+          points: score
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+    }
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', async () => {
+    console.log(`User ${walletAddress} disconnected from room ${roomId}`);
+    
+    try {
+      // Update participant count
+      const user = await prisma.user.findUnique({
+        where: { address: walletAddress.toLowerCase() }
+      });
+
+      if (user) {
+        const participant = await prisma.roomParticipant.findFirst({
+          where: {
+            roomId,
+            userId: user.id
+          }
+        });
+
+        if (participant) {
+          await prisma.roomParticipant.delete({
+            where: { id: participant.id }
+          });
+
+          // Update room participant count
+          await prisma.room.update({
+            where: { id: roomId },
+            data: {
+              currentParticipants: {
+                decrement: 1
+              }
+            }
+          });
+
+          // Remove from scoring system
+          if (roomScores.has(roomId) && roomScores.get(roomId)[user.id]) {
+            delete roomScores.get(roomId)[user.id];
+          }
+
+          // Remove from current question answers if quiz is active
+          if (questionAnswers.has(roomId)) {
+            questionAnswers.get(roomId).forEach((questionData, questionId) => {
+              questionData.answers = questionData.answers.filter(answer => answer.userId !== user.id);
+            });
+          }
+
+          // Notify other participants
+          socket.to(roomId).emit('participantLeft', participant.id);
+          
+          // Emit room stats update
+          emitRoomStatsUpdate(roomId);
+          
+          // Check if room is now empty and end quiz if needed
+          const remainingParticipants = await prisma.roomParticipant.count({
+            where: { roomId }
+          });
+          
+          if (remainingParticipants === 0) {
+            console.log(`Room ${roomId} is now empty, ending quiz`);
+            // Clean up any active quiz state
+            questionAnswers.delete(roomId);
+            roomScores.delete(roomId);
+            
+            // Update room status
+            await prisma.room.update({
+              where: { id: roomId },
+              data: {
+                isStarted: false,
+                isWaiting: true,
+                isFinished: false,
+                currentParticipants: 0
+              }
+            });
+            
+            // Notify remaining clients (if any)
+            io.to(roomId).emit('roomEmpty');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error handling disconnect:', error);
+    }
+  });
+});
+
+async function emitRoomStatsUpdate(roomId) {
+  try {
+    // Get updated room data
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      include: {
+        participants: {
+          include: {
+            user: true
+          }
+        }
+      }
+    });
+
+    if (room) {
+      // Emit room stats update to all clients in the room
+      io.to(roomId).emit('roomStatsUpdate', {
+        currentParticipants: room.currentParticipants,
+        maxParticipants: room.maxParticipants,
+        minParticipants: room.minParticipants,
+        isStarted: room.isStarted,
+        isWaiting: room.isWaiting,
+        participants: room.participants.map(p => ({
+          id: p.id,
+          userId: p.userId,
+          isAdmin: p.isAdmin,
+          isReady: p.isReady,
+          joinedAt: p.joinedAt,
+          user: {
+            id: p.user.id,
+            address: p.user.address,
+            name: p.user.name
+          }
+        }))
+      });
+    }
+  } catch (error) {
+    console.error('Error emitting room stats update:', error);
+  }
+}
+
+async function startQuiz(roomId) {
+  try {
+    // Get room and snarkel data
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      include: {
+        snarkel: {
+          include: {
+            questions: {
+              include: {
+                options: true
+              },
+              orderBy: {
+                order: 'asc'
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!room || !room.snarkel) {
+      return;
+    }
+
+    // Update room status
+    await prisma.room.update({
+      where: { id: roomId },
+      data: {
+        isStarted: true,
+        isWaiting: false,
+        actualStartTime: new Date()
+      }
+    });
+
+    // Start the quiz with questions
+    const questions = room.snarkel.questions;
+    let currentQuestionIndex = 0;
+
+    const askQuestion = () => {
+      if (currentQuestionIndex >= questions.length) {
+        // Quiz finished
+        endQuiz(roomId);
+        return;
+      }
+
+      const question = questions[currentQuestionIndex];
+      
+      // Send question to all clients
+      io.to(roomId).emit('questionStart', {
+        id: question.id,
+        text: question.text,
+        timeLimit: question.timeLimit,
+        options: question.options.map(opt => ({
+          id: opt.id,
+          text: opt.text,
+          isCorrect: opt.isCorrect
+        }))
+      });
+
+      // Set timer for question with countdown updates
+      let questionTimeLeft = question.timeLimit;
+      const questionTimer = setInterval(() => {
+        questionTimeLeft--;
+        
+        // Emit countdown update every second
+        io.to(roomId).emit('questionTimeUpdate', questionTimeLeft);
+        
+        if (questionTimeLeft <= 0) {
+          clearInterval(questionTimer);
+          
+          // Question time is up - reveal answers
+          revealAnswers(roomId, question);
+          
+          // Wait 10 seconds for answer reveal
+          setTimeout(() => {
+            // Update leaderboard
+            updateLeaderboard(roomId);
+            
+            // Move to next question
+            currentQuestionIndex++;
+            setTimeout(askQuestion, 2000);
+          }, 10000);
+        }
+      }, 1000);
+    };
+
+    askQuestion();
+
+  } catch (error) {
+    console.error('Error starting quiz:', error);
+  }
+}
+
+async function revealAnswers(roomId, question) {
+  try {
+    // Get all answers for this question
+    const questionData = questionAnswers.get(roomId)?.get(question.id);
+    
+    if (!questionData) {
+      console.log('No answers found for question:', question.id);
+      return;
+    }
+
+    // Find the correct answer
+    const correctOption = question.options.find(opt => opt.isCorrect);
+    const correctAnswer = correctOption ? correctOption.text : 'Unknown';
+
+    // Get user names for the answers
+    const userAnswers = await Promise.all(
+      questionData.answers.map(async (answer) => {
+        const user = await prisma.user.findUnique({
+          where: { id: answer.userId }
+        });
+        return {
+          userId: answer.userId,
+          answerId: answer.answerId,
+          isCorrect: answer.isCorrect,
+          points: answer.points,
+          userName: user ? (user.name || `User ${user.address.slice(0, 8)}...`) : 'Unknown'
+        };
+      })
+    );
+
+    // Emit answer reveal to all clients
+    io.to(roomId).emit('answerReveal', {
+      questionId: question.id,
+      correctAnswer,
+      userAnswers
+    });
+
+    console.log(`Revealed answers for question ${question.id}:`, userAnswers);
+
+  } catch (error) {
+    console.error('Error revealing answers:', error);
+  }
+}
+
+async function updateLeaderboard(roomId) {
+  try {
+    const scores = roomScores.get(roomId);
+    if (!scores) {
+      console.log('No scores found for room:', roomId);
+      return;
+    }
+
+    // Get user names for the scores
+    const leaderboard = await Promise.all(
+      Object.entries(scores).map(async ([userId, score]) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId }
+        });
+        return {
+          userId,
+          name: user ? (user.name || `User ${user.address.slice(0, 8)}...`) : 'Unknown',
+          score
+        };
+      })
+    );
+
+    // Sort by score (highest first)
+    leaderboard.sort((a, b) => b.score - a.score);
+
+    // Emit leaderboard update to all clients
+    io.to(roomId).emit('leaderboardUpdate', leaderboard);
+
+    console.log(`Updated leaderboard for room ${roomId}:`, leaderboard);
+
+  } catch (error) {
+    console.error('Error updating leaderboard:', error);
+  }
+}
+
+async function endQuiz(roomId) {
+  try {
+    // Update room status
+    await prisma.room.update({
+      where: { id: roomId },
+      data: {
+        isFinished: true,
+        isStarted: false,
+        endTime: new Date()
+      }
+    });
+
+    // Get final leaderboard
+    const scores = roomScores.get(roomId);
+    if (scores) {
+      const finalLeaderboard = await Promise.all(
+        Object.entries(scores).map(async ([userId, score]) => {
+          const user = await prisma.user.findUnique({
+            where: { id: userId }
+          });
+          return {
+            userId,
+            name: user ? (user.name || `User ${user.address.slice(0, 8)}...`) : 'Unknown',
+            score
+          };
+        })
+      );
+
+      finalLeaderboard.sort((a, b) => b.score - a.score);
+
+      // Send final results
+      io.to(roomId).emit('gameEnd', finalLeaderboard);
+    }
+
+    // Clean up room data
+    questionAnswers.delete(roomId);
+    roomScores.delete(roomId);
+
+  } catch (error) {
+    console.error('Error ending quiz:', error);
+  }
+}
+
+const PORT = process.env.SOCKET_PORT || 3001;
+
+httpServer.listen(PORT, () => {
+  console.log(`Socket server running on port ${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  httpServer.close(() => {
+    console.log('Process terminated');
+  });
+}); 

@@ -1,0 +1,247 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  address             String               @unique
+  name                String?
+  email               String?
+  totalPoints         Int                  @default(0)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  rewardDistributions RewardDistribution[]
+  roomParticipants    RoomParticipant[]
+  createdRooms        Room[]               @relation("RoomCreator")
+  allowedSnarkels     SnarkelAllowlist[]
+  createdSnarkels     Snarkel[]            @relation("SnarkelCreator")
+  socketSessions      SocketSession[]
+  submissions         Submission[]
+
+  @@index([address])
+  @@map("users")
+}
+
+model Room {
+  id                  String            @id @default(cuid())
+  name                String
+  description         String?
+  maxParticipants     Int               @default(50)
+  currentParticipants Int               @default(0)
+  isActive            Boolean           @default(true)
+  isWaiting           Boolean           @default(true)
+  isStarted           Boolean           @default(false)
+  isFinished          Boolean           @default(false)
+  minParticipants     Int               @default(1)
+  autoStartEnabled    Boolean           @default(false)
+  countdownDuration   Int               @default(10)
+  scheduledStartTime  DateTime?
+  actualStartTime     DateTime?
+  endTime             DateTime?
+  adminId             String
+  snarkelId           String            @unique
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  participants        RoomParticipant[]
+  admin               User              @relation("RoomCreator", fields: [adminId], references: [id])
+  snarkel             Snarkel           @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
+
+  @@map("rooms")
+}
+
+model RoomParticipant {
+  id       String   @id @default(cuid())
+  joinedAt DateTime @default(now())
+  isReady  Boolean  @default(false)
+  isAdmin  Boolean  @default(false)
+  roomId   String
+  userId   String
+  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@map("room_participants")
+}
+
+model Snarkel {
+  id                    String             @id @default(cuid())
+  title                 String
+  description           String?
+  costCelo              Float              @default(2.0)
+  maxQuestions          Int                @default(60)
+  startTime             DateTime?
+  autoStartEnabled      Boolean            @default(false)
+  isActive              Boolean            @default(false)
+  isPublic              Boolean            @default(true)
+  isFeatured            Boolean            @default(false)
+  snarkelCode           String             @unique
+  spamControlEnabled    Boolean            @default(false)
+  entryFeeAmount        String?
+  entryFeeTokenAddress  String?
+  entryFeeTokenSymbol   String?
+  entryFeeTokenName     String?
+  entryFeeNetwork       String?
+  entryFeeDecimals      Int?
+  basePointsPerQuestion Int                @default(1000)
+  speedBonusEnabled     Boolean            @default(true)
+  maxSpeedBonus         Int                @default(500)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  creatorId             String
+  featuredContent       FeaturedContent?
+  questions             Question[]
+  room                  Room?
+  allowlist             SnarkelAllowlist[]
+  rewards               SnarkelReward[]
+  creator               User               @relation("SnarkelCreator", fields: [creatorId], references: [id])
+  submissions           Submission[]
+
+  @@map("snarkels")
+}
+
+model SnarkelAllowlist {
+  id        String   @id @default(cuid())
+  address   String
+  createdAt DateTime @default(now())
+  snarkelId String
+  userId    String?
+  snarkel   Snarkel  @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@unique([snarkelId, address])
+  @@index([address])
+  @@map("snarkel_allowlists")
+}
+
+model SnarkelReward {
+  id              String               @id @default(cuid())
+  rewardType      RewardType
+  tokenAddress    String
+  tokenSymbol     String
+  tokenName       String
+  tokenDecimals   Int                  @default(18)
+  network         String
+  totalWinners    Int?
+  rewardAmounts   Json?
+  totalRewardPool String?
+  minParticipants Int?
+  pointsWeight    Float?
+  isDistributed   Boolean              @default(false)
+  distributedAt   DateTime?
+  createdAt       DateTime             @default(now())
+  snarkelId       String
+  distributions   RewardDistribution[]
+  snarkel         Snarkel              @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
+
+  @@map("snarkel_rewards")
+}
+
+model RewardDistribution {
+  id           String        @id @default(cuid())
+  position     Int
+  amount       String
+  txHash       String?
+  isProcessed  Boolean       @default(false)
+  processedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  rewardId     String
+  userId       String
+  submissionId String
+  reward       SnarkelReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  submission   Submission    @relation(fields: [submissionId], references: [id])
+  user         User          @relation(fields: [userId], references: [id])
+
+  @@map("reward_distributions")
+}
+
+model Question {
+  id        String   @id @default(cuid())
+  text      String
+  order     Int
+  points    Int      @default(1000)
+  timeLimit Int      @default(15)
+  snarkelId String
+  options   Option[]
+  snarkel   Snarkel  @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+model Option {
+  id         String   @id @default(cuid())
+  text       String
+  isCorrect  Boolean  @default(false)
+  order      Int
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("options")
+}
+
+model Submission {
+  id                     String               @id @default(cuid())
+  score                  Int                  @default(0)
+  totalPoints            Int                  @default(0)
+  totalQuestions         Int
+  timeSpent              Int?
+  averageTimePerQuestion Float?
+  completedAt            DateTime             @default(now())
+  userId                 String
+  snarkelId              String
+  answers                Answer[]
+  rewards                RewardDistribution[]
+  snarkel                Snarkel              @relation(fields: [snarkelId], references: [id])
+  user                   User                 @relation(fields: [userId], references: [id])
+
+  @@map("submissions")
+}
+
+model Answer {
+  id              String     @id @default(cuid())
+  questionId      String
+  selectedOptions String[]
+  isCorrect       Boolean
+  pointsEarned    Int        @default(0)
+  timeToAnswer    Int?
+  answeredAt      DateTime   @default(now())
+  submissionId    String
+  submission      Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("answers")
+}
+
+model SocketSession {
+  id            String   @id @default(cuid())
+  socketId      String   @unique
+  walletAddress String
+  snarkelId     String?
+  roomId        String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@map("socket_sessions")
+}
+
+model FeaturedContent {
+  id        String   @id @default(cuid())
+  priority  Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  snarkelId String   @unique
+  snarkel   Snarkel  @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
+
+  @@map("featured_content")
+}
+
+enum RewardType {
+  QUADRATIC
+  LINEAR
+}

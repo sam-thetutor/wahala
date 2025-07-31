@@ -1,0 +1,1449 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, Save, Settings, Users, Trophy, Shield, Home, Gamepad2, Star, Sparkles, ArrowLeft, ArrowRight, Clock, Edit3 } from 'lucide-react';
+import { useSnarkelCreation } from '@/hooks/useSnarkelCreation';
+import WalletConnectButton from '@/components/WalletConnectButton';
+import { useAccount } from 'wagmi';
+
+interface Question {
+  id: string;
+  text: string;
+  timeLimit: number;
+  options: Array<{
+    id: string;
+    text: string;
+    isCorrect: boolean;
+  }>;
+}
+
+interface SnarkelData {
+  title: string;
+  description: string;
+  basePointsPerQuestion: number;
+  maxSpeedBonus: number;
+  speedBonusEnabled: boolean;
+  maxQuestions: number;
+  isPublic: boolean;
+  allowlist: string[];
+  spamControlEnabled: boolean;
+  entryFee: number;
+  entryFeeToken: string;
+  autoStartEnabled: boolean;
+  scheduledStartTime: string | null;
+  rewards: {
+    enabled: boolean;
+    type: 'LINEAR' | 'QUADRATIC';
+    tokenAddress: string;
+    totalWinners?: number;
+    rewardAmounts?: number[];
+    totalRewardPool?: string;
+    minParticipants?: number;
+    pointsWeight?: number;
+  };
+  questions: Question[];
+}
+
+export default function SnarkelCreationPage() {
+  const [activeTab, setActiveTab] = useState('details');
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [floatingElements, setFloatingElements] = useState<Array<{
+    id: number;
+    x: number;
+    y: number;
+    size: number;
+    delay: number;
+    duration: number;
+  }>>([]);
+  
+  // Use the custom hook for snarkel creation
+  const { isSubmitting, error, validationErrors, setValidationErrors, createSnarkel, clearErrors } = useSnarkelCreation();
+  const { address, isConnected } = useAccount();
+  const [snarkel, setSnarkel] = useState<SnarkelData>({
+    title: '',
+    description: '',
+    basePointsPerQuestion: 1000,
+    maxSpeedBonus: 50,
+    speedBonusEnabled: true,
+    maxQuestions: 10,
+    isPublic: true,
+    allowlist: [],
+    spamControlEnabled: false,
+    entryFee: 0,
+    entryFeeToken: '',
+    autoStartEnabled: false,
+    scheduledStartTime: null,
+    rewards: {
+      enabled: false,
+      type: 'LINEAR',
+      tokenAddress: '',
+      totalWinners: 3,
+      rewardAmounts: [100, 50, 25],
+      totalRewardPool: '1000',
+      minParticipants: 5,
+      pointsWeight: 0.7
+    },
+    questions: []
+  });
+
+  const [newAllowlistAddress, setNewAllowlistAddress] = useState('');
+
+  useEffect(() => {
+    setIsLoaded(true);
+    
+    // Create floating elements
+    const elements = Array.from({ length: 10 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 80 + 10,
+      y: Math.random() * 80 + 10,
+      size: Math.random() * 15 + 10,
+      delay: Math.random() * 2000,
+      duration: Math.random() * 3000 + 4000,
+    }));
+    setFloatingElements(elements);
+  }, []);
+
+  // Tab validation functions
+  const validateDetailsTab = () => {
+    const errors: any = {};
+    if (!snarkel.title.trim()) {
+      errors.title = 'Snarkel title is required';
+    }
+    setValidationErrors(prev => ({ ...prev, ...errors }));
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateQuestionsTab = () => {
+    const errors: any = {};
+    if (snarkel.questions.length === 0) {
+      errors.questions = 'At least one question is required';
+    } else {
+      // Validate each question
+      snarkel.questions.forEach((question, index) => {
+        if (!question.text.trim()) {
+          errors[`question_${index}_text`] = `Question ${index + 1} text is required`;
+        }
+        
+        // Check if question has at least 2 options
+        if (question.options.length < 2) {
+          errors[`question_${index}_options`] = `Question ${index + 1} needs at least 2 options`;
+        }
+        
+        // Check if at least one option is marked as correct
+        const hasCorrectOption = question.options.some(opt => opt.isCorrect);
+        if (!hasCorrectOption) {
+          errors[`question_${index}_correct`] = `Question ${index + 1} needs at least one correct answer`;
+        }
+        
+        // Check if all options have text
+        question.options.forEach((option, optIndex) => {
+          if (!option.text.trim()) {
+            errors[`question_${index}_option_${optIndex}`] = `Question ${index + 1} option ${optIndex + 1} is required`;
+          }
+        });
+      });
+    }
+    setValidationErrors(prev => ({ ...prev, ...errors }));
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateRewardsTab = () => {
+    const errors: any = {};
+    if (snarkel.rewards.enabled) {
+      if (!snarkel.rewards.tokenAddress.trim()) {
+        errors.rewardsToken = 'Reward token address is required when rewards are enabled';
+      }
+      
+      if (snarkel.rewards.type === 'LINEAR') {
+        if (!snarkel.rewards.totalWinners || snarkel.rewards.totalWinners < 1) {
+          errors.rewardsWinners = 'Total winners must be at least 1';
+        }
+        if (!snarkel.rewards.rewardAmounts || snarkel.rewards.rewardAmounts.length === 0 || snarkel.rewards.rewardAmounts.every(amt => amt === 0)) {
+          errors.rewardsAmounts = 'Reward amounts are required';
+        }
+      }
+      
+      if (snarkel.rewards.type === 'QUADRATIC') {
+        if (!snarkel.rewards.totalRewardPool || snarkel.rewards.totalRewardPool === '0') {
+          errors.rewardsPool = 'Total reward pool is required';
+        }
+        if (!snarkel.rewards.minParticipants || snarkel.rewards.minParticipants < 1) {
+          errors.rewardsParticipants = 'Minimum participants must be at least 1';
+        }
+      }
+    }
+    setValidationErrors(prev => ({ ...prev, ...errors }));
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateAntiSpamTab = () => {
+    const errors: any = {};
+    if (snarkel.spamControlEnabled) {
+      if (snarkel.entryFee <= 0) {
+        errors.entryFee = 'Entry fee must be greater than 0';
+      }
+      if (!snarkel.entryFeeToken.trim()) {
+        errors.entryFeeToken = 'Entry fee token address is required';
+      }
+    }
+    setValidationErrors(prev => ({ ...prev, ...errors }));
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleNextTab = () => {
+    let isValid = true;
+    
+    // Clear previous validation errors for current tab
+    const currentErrors = { ...validationErrors };
+    
+    // Clear current tab errors
+    if (activeTab === 'details') {
+      delete currentErrors.title;
+      isValid = validateDetailsTab();
+    } else if (activeTab === 'questions') {
+      // Clear all question-related errors
+      Object.keys(currentErrors).forEach(key => {
+        if (key.startsWith('question_') || key === 'questions') {
+          delete currentErrors[key];
+        }
+      });
+      isValid = validateQuestionsTab();
+    } else if (activeTab === 'rewards') {
+      // Clear reward-related errors
+      ['rewardsToken', 'rewardsWinners', 'rewardsAmounts', 'rewardsPool', 'rewardsParticipants'].forEach(key => {
+        delete currentErrors[key];
+      });
+      isValid = validateRewardsTab();
+    } else if (activeTab === 'spam') {
+      // Clear spam-related errors
+      ['entryFee', 'entryFeeToken'].forEach(key => {
+        delete currentErrors[key];
+      });
+      isValid = validateAntiSpamTab();
+    }
+    
+    setValidationErrors(currentErrors);
+    
+    if (isValid) {
+      const tabIndex = tabs.findIndex(tab => tab.id === activeTab);
+      if (tabIndex < tabs.length - 1) {
+        setActiveTab(tabs[tabIndex + 1].id);
+      }
+    }
+  };
+
+  const isTabCompleted = (tabId: string) => {
+    if (tabId === 'details') {
+      return snarkel.title.trim() !== '';
+    } else if (tabId === 'questions') {
+      return snarkel.questions.length > 0 && 
+             snarkel.questions.every(q => 
+               q.text.trim() !== '' && 
+               q.options.length >= 2 && 
+               q.options.some(opt => opt.isCorrect) &&
+               q.options.every(opt => opt.text.trim() !== '')
+             );
+    } else if (tabId === 'access') {
+      return true; // Access tab is always valid (optional settings)
+    } else if (tabId === 'rewards') {
+      if (!snarkel.rewards.enabled) return true;
+      if (snarkel.rewards.type === 'LINEAR') {
+        return snarkel.rewards.tokenAddress.trim() !== '' &&
+               (snarkel.rewards.totalWinners ?? 0) > 0 &&
+               snarkel.rewards.rewardAmounts && snarkel.rewards.rewardAmounts.length > 0;
+      } else {
+        return snarkel.rewards.tokenAddress.trim() !== '' &&
+               snarkel.rewards.totalRewardPool !== '0' &&
+               (snarkel.rewards.minParticipants ?? 0) > 0;
+      }
+    } else if (tabId === 'spam') {
+      if (!snarkel.spamControlEnabled) return true;
+      return snarkel.entryFee > 0 && snarkel.entryFeeToken.trim() !== '';
+    }
+    return false;
+  };
+
+  const tabs = [
+    { id: 'details', label: 'Details', icon: Settings },
+    { id: 'questions', label: 'Questions', icon: Edit3 },
+    { id: 'access', label: 'Access', icon: Shield },
+    { id: 'rewards', label: 'Rewards', icon: Trophy },
+    { id: 'spam', label: 'Anti-Spam', icon: Users }
+  ];
+
+  const addQuestion = () => {
+    const newQuestion: Question = {
+      id: `q${Date.now()}`,
+      text: '',
+      timeLimit: 15,
+      options: [
+        { id: `opt${Date.now()}_1`, text: '', isCorrect: false },
+        { id: `opt${Date.now()}_2`, text: '', isCorrect: false },
+        { id: `opt${Date.now()}_3`, text: '', isCorrect: false },
+        { id: `opt${Date.now()}_4`, text: '', isCorrect: false }
+      ]
+    };
+    setSnarkel(prev => ({
+      ...prev,
+      questions: [...prev.questions, newQuestion]
+    }));
+    setActiveQuestionIndex(snarkel.questions.length);
+    setActiveTab('questions');
+  };
+
+  const removeQuestion = (questionId: string) => {
+    setSnarkel(prev => ({
+      ...prev,
+      questions: prev.questions.filter(q => q.id !== questionId)
+    }));
+    setActiveQuestionIndex(Math.max(0, activeQuestionIndex - 1));
+  };
+
+  const updateQuestion = (questionId: string, field: keyof Question, value: any) => {
+    setSnarkel(prev => ({
+      ...prev,
+      questions: prev.questions.map(q => 
+        q.id === questionId ? { ...q, [field]: value } : q
+      )
+    }));
+  };
+
+  const updateOption = (questionId: string, optionId: string, field: 'text' | 'isCorrect', value: any) => {
+    setSnarkel(prev => ({
+      ...prev,
+      questions: prev.questions.map(q => 
+        q.id === questionId ? {
+          ...q,
+          options: q.options.map(opt => 
+            opt.id === optionId ? { ...opt, [field]: value } : opt
+          )
+        } : q
+      )
+    }));
+  };
+
+  const addOption = (questionId: string) => {
+    setSnarkel(prev => ({
+      ...prev,
+      questions: prev.questions.map(q => 
+        q.id === questionId ? {
+          ...q,
+          options: [...q.options, { 
+            id: `opt${Date.now()}_${q.options.length + 1}`, 
+            text: '', 
+            isCorrect: false 
+          }]
+        } : q
+      )
+    }));
+  };
+
+  const removeOption = (questionId: string, optionId: string) => {
+    setSnarkel(prev => ({
+      ...prev,
+      questions: prev.questions.map(q => 
+        q.id === questionId ? {
+          ...q,
+          options: q.options.filter(opt => opt.id !== optionId)
+        } : q
+      )
+    }));
+  };
+
+  const addAllowlistAddress = () => {
+    if (newAllowlistAddress.trim() && !snarkel.allowlist.includes(newAllowlistAddress.trim())) {
+      setSnarkel(prev => ({
+        ...prev,
+        allowlist: [...prev.allowlist, newAllowlistAddress.trim()]
+      }));
+      setNewAllowlistAddress('');
+    }
+  };
+
+  const removeAllowlistAddress = (address: string) => {
+    setSnarkel(prev => ({
+      ...prev,
+      allowlist: prev.allowlist.filter(addr => addr !== address)
+    }));
+  };
+
+  const handleSubmit = async () => {
+    // Check if wallet is connected
+    if (!isConnected || !address) {
+      setValidationErrors(prev => ({
+        ...prev,
+        wallet: 'Please connect your wallet to create a snarkel'
+      }));
+      return;
+    }
+
+    // Clear wallet error if wallet is now connected
+    if (validationErrors.wallet) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.wallet;
+        return newErrors;
+      });
+    }
+
+    const result = await createSnarkel({
+      ...snarkel,
+      creatorAddress: address
+    });
+    
+    if (result.success && result.snarkelCode) {
+      alert(`Snarkel created successfully! Code: ${result.snarkelCode}`);
+    }
+  };
+
+  return (
+    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#FCF6F1' }}>
+      {/* Enhanced notebook background */}
+      <div className="fixed inset-0 opacity-40 pointer-events-none">
+        <div 
+          className="w-full h-full"
+          style={{
+            backgroundImage: `
+              repeating-linear-gradient(
+                transparent,
+                transparent 24px,
+                #E7E3D4 24px,
+                #E7E3D4 26px
+              ),
+              radial-gradient(circle at 30% 70%, rgba(252, 255, 82, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 70% 30%, rgba(86, 223, 124, 0.1) 0%, transparent 50%)
+            `,
+            backgroundSize: '100% 26px, 600px 600px, 800px 800px'
+          }}
+        />
+        {/* Paper texture */}
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `
+              radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0),
+              repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px)
+            `,
+            backgroundSize: '20px 20px, 30px 30px'
+          }}
+        />
+      </div>
+
+      {/* Floating elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {floatingElements.map((element) => (
+          <div
+            key={element.id}
+            className="absolute opacity-10 animate-float"
+            style={{
+              left: `${element.x}%`,
+              top: `${element.y}%`,
+              width: `${element.size}px`,
+              height: `${element.size}px`,
+              animationDelay: `${element.delay}ms`,
+              animationDuration: `${element.duration}ms`,
+            }}
+          >
+            <Star className="w-full h-full text-yellow-400" />
+          </div>
+        ))}
+      </div>
+
+      {/* Header - compact pinned board style */}
+      <div className={`relative z-10 transition-all duration-1000 ${
+        isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
+      }`}>
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="bg-white shadow-lg rounded-xl p-4 transform -rotate-1 hover:rotate-0 transition-all duration-500 relative border-l-3 border-purple-400 overflow-hidden">
+            {/* Pin effect */}
+            <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-purple-500 rounded-full shadow-md border border-white"></div>
+            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-purple-600 rounded-full"></div>
+            
+            {/* Texture overlay */}
+            <div className="absolute inset-0 opacity-20 pointer-events-none"
+                 style={{
+                   backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(0,0,0,0.02) 1px, rgba(0,0,0,0.02) 2px)`,
+                   backgroundSize: '12px 12px'
+                 }}></div>
+            
+            <div className="relative z-10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Gamepad2 className="w-8 h-8 animate-bounce-slow" style={{ color: '#476520' }} />
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-ping bg-yellow-400"></div>
+                </div>
+                <div>
+                  <h1 className="font-handwriting text-2xl font-bold" style={{ color: '#476520' }}>
+                    Create New Snarkel
+                  </h1>
+                  <p className="font-handwriting text-sm text-gray-600 mt-0.5">Design your Web3 quiz experience!</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <WalletConnectButton />
+                <button 
+                  onClick={() => window.history.back()}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors font-handwriting text-sm"
+                  style={{ color: '#476520' }}
+                >
+                  <Home className="w-4 h-4" />
+                  Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 max-w-6xl mx-auto px-4 py-6">
+        {/* Main content card */}
+        <div className={`transition-all duration-1000 delay-300 ${
+          isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        }`}>
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden relative border-l-3 border-blue-400">
+            {/* Pin effects */}
+            <div className="absolute -top-2 -left-2 w-5 h-5 bg-blue-500 rounded-full shadow-md border-2 border-white z-10"></div>
+            <div className="absolute -top-0.5 -left-0.5 w-2.5 h-2.5 bg-blue-600 rounded-full z-10"></div>
+            <div className="absolute -top-2 -right-2 w-5 h-5 bg-yellow-500 rounded-full shadow-md border-2 border-white z-10"></div>
+            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-yellow-600 rounded-full z-10"></div>
+
+            {/* Progress indicator */}
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 px-4 pt-4 pb-2">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-handwriting text-sm font-medium text-gray-600">
+                  Step {tabs.findIndex(tab => tab.id === activeTab) + 1} of {tabs.length}
+                </h3>
+                <span className="font-handwriting text-xs text-gray-500">
+                  {activeTab === 'details' && 'Basic Information'}
+                  {activeTab === 'questions' && 'Quiz Questions'}
+                  {activeTab === 'access' && 'Access Control'}
+                  {activeTab === 'rewards' && 'Rewards Setup'}
+                  {activeTab === 'spam' && 'Anti-Spam Settings'}
+                </span>
+              </div>
+              
+              {/* Progress bar */}
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                <div 
+                  className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${((tabs.findIndex(tab => tab.id === activeTab) + 1) / tabs.length) * 100}%` 
+                  }}
+                />
+              </div>
+              
+              {/* Enhanced Tabs - more compact */}
+              <div className="flex overflow-x-auto gap-2 pb-2">
+                {tabs.map((tab, index) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  const isCompleted = isTabCompleted(tab.id);
+                  const currentTabIndex = tabs.findIndex(t => t.id === activeTab);
+                  const canAccess = index <= currentTabIndex || isCompleted;
+                  
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => canAccess ? setActiveTab(tab.id) : null}
+                      disabled={!canAccess}
+                      className={`flex items-center gap-2 px-4 py-2 text-sm font-handwriting font-medium whitespace-nowrap rounded-lg transition-all transform hover:scale-105 ${
+                        isActive
+                          ? 'text-white bg-gradient-to-r from-purple-500 to-blue-500 shadow-md scale-105'
+                          : isCompleted
+                          ? 'text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 cursor-pointer'
+                          : canAccess
+                          ? 'text-gray-600 hover:text-purple-600 hover:bg-white hover:shadow-sm cursor-pointer'
+                          : 'text-gray-400 bg-gray-100 cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      <Icon size={16} />
+                      {tab.label}
+                      {isCompleted && (
+                        <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs">✓</span>
+                        </div>
+                      )}
+                      {!isCompleted && !canAccess && (
+                        <div className="w-4 h-4 bg-gray-400 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs">🔒</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Questions Tab - Horizontal Navigation */}
+            {activeTab === 'questions' && snarkel.questions.length > 0 && (
+              <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="font-handwriting font-bold text-sm text-gray-700">Questions:</span>
+                  
+                  {/* Question navigation pills */}
+                  <div className="flex overflow-x-auto gap-2 flex-1">
+                    {snarkel.questions.map((question, index) => (
+                      <button
+                        key={question.id}
+                        onClick={() => setActiveQuestionIndex(index)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-handwriting font-medium whitespace-nowrap transition-all transform hover:scale-105 ${
+                          activeQuestionIndex === index
+                            ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-md scale-105'
+                            : 'bg-white text-gray-600 hover:bg-green-50 hover:text-green-600 shadow-sm'
+                        }`}
+                      >
+                        <span className="w-4 h-4 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-xs">
+                          {index + 1}
+                        </span>
+                        <span className="max-w-20 truncate">
+                          {question.text || `Question ${index + 1}`}
+                        </span>
+                        {question.text && <Edit3 size={10} className="opacity-60" />}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Navigation arrows */}
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setActiveQuestionIndex(Math.max(0, activeQuestionIndex - 1))}
+                      disabled={activeQuestionIndex === 0}
+                      className="p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ArrowLeft size={14} />
+                    </button>
+                    <button
+                      onClick={() => setActiveQuestionIndex(Math.min(snarkel.questions.length - 1, activeQuestionIndex + 1))}
+                      disabled={activeQuestionIndex === snarkel.questions.length - 1}
+                      className="p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab Content - more compact */}
+            <div className="p-4">
+              {activeTab === 'details' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                        🎯 Snarkel Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={snarkel.title}
+                        onChange={(e) => setSnarkel(prev => ({ ...prev, title: e.target.value }))}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting ${
+                          validationErrors.title ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="Enter snarkel title..."
+                      />
+                      {validationErrors.title && (
+                        <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                          <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                          {validationErrors.title}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                        ⏱️ Max Questions
+                      </label>
+                      <input
+                        type="number"
+                        value={snarkel.maxQuestions}
+                        onChange={(e) => setSnarkel(prev => ({ ...prev, maxQuestions: parseInt(e.target.value) || 0 }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                        min="1"
+                        max="60"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                      📝 Description
+                    </label>
+                    <textarea
+                      value={snarkel.description}
+                      onChange={(e) => setSnarkel(prev => ({ ...prev, description: e.target.value }))}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                      placeholder="Describe your snarkel..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                        💯 Base Points per Question
+                      </label>
+                      <input
+                        type="number"
+                        value={snarkel.basePointsPerQuestion}
+                        onChange={(e) => setSnarkel(prev => ({ ...prev, basePointsPerQuestion: parseInt(e.target.value) || 0 }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                        min="100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                        ⚡ Max Speed Bonus
+                      </label>
+                      <input
+                        type="number"
+                        value={snarkel.maxSpeedBonus}
+                        onChange={(e) => setSnarkel(prev => ({ ...prev, maxSpeedBonus: parseInt(e.target.value) || 0 }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                       min="0"
+                     />
+                   </div>
+                 </div>
+
+                 <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                   <input
+                     type="checkbox"
+                     id="speedBonus"
+                     checked={snarkel.speedBonusEnabled}
+                     onChange={(e) => setSnarkel(prev => ({ ...prev, speedBonusEnabled: e.target.checked }))}
+                     className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                   />
+                   <label htmlFor="speedBonus" className="font-handwriting text-sm font-medium text-gray-700">
+                     ⚡ Enable speed bonus for faster answers
+                   </label>
+                 </div>
+
+                 {/* Auto-Start Settings */}
+                 <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                   <h4 className="font-handwriting text-lg font-bold text-gray-800 flex items-center gap-2">
+                     <Clock className="w-5 h-5" />
+                     Auto-Start Settings
+                   </h4>
+                   
+                   <div className="flex items-center gap-3">
+                     <input
+                       type="checkbox"
+                       id="autoStart"
+                       checked={snarkel.autoStartEnabled}
+                       onChange={(e) => setSnarkel(prev => ({ 
+                         ...prev, 
+                         autoStartEnabled: e.target.checked,
+                         scheduledStartTime: e.target.checked ? prev.scheduledStartTime : null
+                       }))}
+                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                     />
+                     <label htmlFor="autoStart" className="font-handwriting text-sm font-medium text-gray-700">
+                       🚀 Enable automatic quiz start
+                     </label>
+                   </div>
+
+                   {snarkel.autoStartEnabled && (
+                     <div className="mt-3">
+                       <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
+                         📅 Scheduled Start Time
+                       </label>
+                       <input
+                         type="datetime-local"
+                         value={snarkel.scheduledStartTime || ''}
+                         onChange={(e) => setSnarkel(prev => ({ 
+                           ...prev, 
+                           scheduledStartTime: e.target.value 
+                         }))}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-handwriting"
+                         min={new Date().toISOString().slice(0, 16)}
+                       />
+                       <p className="mt-1 text-xs text-gray-500 font-handwriting">
+                         If not set, admin must start quiz manually
+                       </p>
+                     </div>
+                   )}
+                 </div>
+               </div>
+             )}
+
+             {activeTab === 'questions' && (
+               <div className="space-y-4">
+                 <div className="flex justify-between items-center">
+                   <h3 className="font-handwriting text-lg font-bold text-gray-900 flex items-center gap-2">
+                     <Edit3 className="w-5 h-5" />
+                     Questions ({snarkel.questions.length})
+                   </h3>
+                   <button
+                     onClick={addQuestion}
+                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
+                   >
+                     <Plus size={16} />
+                     Add Question
+                   </button>
+                 </div>
+
+                 {snarkel.questions.length === 0 ? (
+                   <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                     <Edit3 size={48} className="mx-auto mb-4 text-gray-300" />
+                     <p className="font-handwriting text-gray-500 text-lg mb-4">No questions added yet</p>
+                     {validationErrors.questions && (
+                       <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                         <p className="text-red-600 font-handwriting text-sm flex items-center gap-2">
+                           <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                           {validationErrors.questions}
+                         </p>
+                       </div>
+                     )}
+                     <button
+                       onClick={addQuestion}
+                       className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold"
+                     >
+                       🚀 Create Your First Question
+                     </button>
+                   </div>
+                 ) : (
+                   <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-4 border border-gray-200">
+                     {(() => {
+                       const question = snarkel.questions[activeQuestionIndex];
+                       if (!question) return null;
+                       
+                       return (
+                         <div className="space-y-4">
+                           <div className="flex justify-between items-start">
+                             <h4 className="font-handwriting text-lg font-bold text-gray-900 flex items-center gap-2">
+                               <span className="w-6 h-6 rounded-full bg-purple-500 text-white text-sm flex items-center justify-center">
+                                 {activeQuestionIndex + 1}
+                               </span>
+                               Question {activeQuestionIndex + 1}
+                             </h4>
+                             <button
+                               onClick={() => removeQuestion(question.id)}
+                               className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg transition-colors"
+                             >
+                               <Trash2 size={16} />
+                             </button>
+                           </div>
+
+                           <div className="space-y-3">
+                             <div>
+                               <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                                 ❓ Question Text *
+                               </label>
+                               <textarea
+                                 value={question.text}
+                                 onChange={(e) => updateQuestion(question.id, 'text', e.target.value)}
+                                 rows={2}
+                                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting ${
+                                   validationErrors[`question_${activeQuestionIndex}_text`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                                 }`}
+                                 placeholder="Enter your question..."
+                               />
+                               {validationErrors[`question_${activeQuestionIndex}_text`] && (
+                                 <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                                   <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                                   {validationErrors[`question_${activeQuestionIndex}_text`]}
+                                 </p>
+                               )}
+                             </div>
+
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                               <div>
+                                 <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                                   <Clock size={14} />
+                                   Time Limit (seconds)
+                                 </label>
+                                 <input
+                                   type="number"
+                                   value={question.timeLimit}
+                                   onChange={(e) => updateQuestion(question.id, 'timeLimit', parseInt(e.target.value) || 15)}
+                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                                   min="5"
+                                   max="60"
+                                   placeholder="15"
+                                 />
+                               </div>
+                             </div>
+
+                             <div>
+                               <div className="flex justify-between items-center mb-2">
+                                 <label className="block font-handwriting text-sm font-medium text-gray-700">
+                                   📝 Answer Options
+                                 </label>
+                                 <button
+                                   onClick={() => addOption(question.id)}
+                                   className="text-sm font-handwriting text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2 py-1 rounded transition-colors"
+                                 >
+                                   + Add Option
+                                 </button>
+                               </div>
+
+                               <div className="space-y-2">
+                                 {question.options.map((option, oIndex) => (
+                                   <div key={option.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-gray-200 hover:border-purple-300 transition-colors">
+                                     <div className="flex items-center gap-2">
+                                       <input
+                                         type="checkbox"
+                                         checked={option.isCorrect}
+                                         onChange={(e) => updateOption(question.id, option.id, 'isCorrect', e.target.checked)}
+                                         className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                                       />
+                                       <span className="text-xs font-handwriting text-gray-500 w-8">
+                                         {option.isCorrect ? '✅' : `${String.fromCharCode(65 + oIndex)}.`}
+                                       </span>
+                                     </div>
+                                     <input
+                                       type="text"
+                                       value={option.text}
+                                       onChange={(e) => updateOption(question.id, option.id, 'text', e.target.value)}
+                                       className={`flex-1 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting text-sm ${
+                                         validationErrors[`question_${activeQuestionIndex}_option_${oIndex}`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                                       }`}
+                                       placeholder={`Option ${oIndex + 1}...`}
+                                     />
+                                     {question.options.length > 2 && (
+                                       <button
+                                         onClick={() => removeOption(question.id, option.id)}
+                                         className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                                       >
+                                         <Trash2 size={12} />
+                                       </button>
+                                     )}
+                                   </div>
+                                 ))}
+                               </div>
+                               
+                               {/* Question-level validation errors */}
+                               {(validationErrors[`question_${activeQuestionIndex}_options`] || validationErrors[`question_${activeQuestionIndex}_correct`]) && (
+                                 <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                   {validationErrors[`question_${activeQuestionIndex}_options`] && (
+                                     <p className="text-red-600 font-handwriting text-sm flex items-center gap-2 mb-1">
+                                       <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                                       {validationErrors[`question_${activeQuestionIndex}_options`]}
+                                     </p>
+                                   )}
+                                   {validationErrors[`question_${activeQuestionIndex}_correct`] && (
+                                     <p className="text-red-600 font-handwriting text-sm flex items-center gap-2">
+                                       <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                                       {validationErrors[`question_${activeQuestionIndex}_correct`]}
+                                     </p>
+                                   )}
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+                         </div>
+                       );
+                     })()}
+                   </div>
+                 )}
+               </div>
+             )}
+
+             {activeTab === 'access' && (
+               <div className="space-y-4">
+                 <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                   <input
+                     type="checkbox"
+                     id="isPublic"
+                     checked={snarkel.isPublic}
+                     onChange={(e) => setSnarkel(prev => ({ ...prev, isPublic: e.target.checked }))}
+                     className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                   />
+                   <label htmlFor="isPublic" className="font-handwriting text-sm font-medium text-gray-700">
+                     🌍 Public snarkel (anyone can join)
+                   </label>
+                 </div>
+
+                 {!snarkel.isPublic && (
+                   <div className="space-y-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                     <div>
+                       <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                         🔐 Allowlist Addresses
+                       </label>
+                       <div className="flex gap-2">
+                         <input
+                           type="text"
+                           value={newAllowlistAddress}
+                           onChange={(e) => setNewAllowlistAddress(e.target.value)}
+                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                           placeholder="Enter wallet address..."
+                         />
+                         <button
+                           onClick={addAllowlistAddress}
+                           className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-handwriting font-bold"
+                         >
+                           Add
+                         </button>
+                       </div>
+                     </div>
+
+                     {snarkel.allowlist.length > 0 && (
+                       <div className="space-y-2">
+                         <label className="block font-handwriting text-sm font-medium text-gray-700">
+                           Allowed Addresses ({snarkel.allowlist.length})
+                         </label>
+                         <div className="space-y-2 max-h-40 overflow-y-auto">
+                           {snarkel.allowlist.map((address, index) => (
+                             <div key={index} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200">
+                               <span className="font-handwriting text-sm font-mono text-gray-700 truncate">{address}</span>
+                               <button
+                                 onClick={() => removeAllowlistAddress(address)}
+                                 className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                               >
+                                 <Trash2 size={12} />
+                               </button>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 )}
+               </div>
+             )}
+
+             {activeTab === 'rewards' && (
+               <div className="space-y-4">
+                 <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                   <input
+                     type="checkbox"
+                     id="rewardsEnabled"
+                     checked={snarkel.rewards.enabled}
+                     onChange={(e) => setSnarkel(prev => ({
+                       ...prev,
+                       rewards: { ...prev.rewards, enabled: e.target.checked }
+                     }))}
+                     className="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
+                   />
+                   <label htmlFor="rewardsEnabled" className="font-handwriting text-sm font-medium text-gray-700">
+                     🏆 Enable rewards
+                   </label>
+                 </div>
+
+                 {snarkel.rewards.enabled && (
+                   <div className="space-y-4 p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                     <div>
+                       <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                         💰 Reward Token Address
+                       </label>
+                       <input
+                         type="text"
+                         value={snarkel.rewards.tokenAddress}
+                         onChange={(e) => setSnarkel(prev => ({
+                           ...prev,
+                           rewards: { ...prev.rewards, tokenAddress: e.target.value }
+                         }))}
+                         className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting ${
+                           validationErrors.rewardsToken ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                         }`}
+                         placeholder="0x..."
+                       />
+                       {validationErrors.rewardsToken && (
+                         <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                           <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                           {validationErrors.rewardsToken}
+                         </p>
+                       )}
+                     </div>
+
+                     <div>
+                       <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                         📊 Reward Distribution Type
+                       </label>
+                       <select
+                         value={snarkel.rewards.type}
+                         onChange={(e) => setSnarkel(prev => ({
+                           ...prev,
+                           rewards: { ...prev.rewards, type: e.target.value as 'LINEAR' | 'QUADRATIC' }
+                         }))}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting"
+                       >
+                         <option value="LINEAR">Linear (Fixed amounts for top winners)</option>
+                         <option value="QUADRATIC">Quadratic (Proportional distribution)</option>
+                       </select>
+                     </div>
+
+                     {snarkel.rewards.type === 'LINEAR' && (
+                       <div className="space-y-3 p-3 bg-white rounded-lg border border-gray-200">
+                         <div>
+                           <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                             🥇 Total Winners
+                           </label>
+                           <input
+                             type="number"
+                             value={snarkel.rewards.totalWinners ?? ''}
+                             onChange={(e) => setSnarkel(prev => ({
+                               ...prev,
+                               rewards: { ...prev.rewards, totalWinners: parseInt(e.target.value) || 0 }
+                             }))}
+                             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting ${
+                               validationErrors.rewardsWinners ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                             }`}
+                             min="1"
+                           />
+                           {validationErrors.rewardsWinners && (
+                             <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                               <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                               {validationErrors.rewardsWinners}
+                             </p>
+                           )}
+                         </div>
+
+                         <div>
+                           <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                             💎 Reward Amounts (comma-separated)
+                           </label>
+                           <input
+                             type="text"
+                             value={snarkel.rewards.rewardAmounts?.join(', ')}
+                             onChange={(e) => setSnarkel(prev => ({
+                               ...prev,
+                               rewards: {
+                                 ...prev.rewards,
+                                 rewardAmounts: e.target.value.split(',').map(v => parseInt(v.trim()) || 0)
+                               }
+                             }))}
+                             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting ${
+                               validationErrors.rewardsAmounts ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                             }`}
+                             placeholder="100, 50, 25"
+                           />
+                           {validationErrors.rewardsAmounts && (
+                             <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                               <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                               {validationErrors.rewardsAmounts}
+                             </p>
+                           )}
+                         </div>
+                       </div>
+                     )}
+
+                     {snarkel.rewards.type === 'QUADRATIC' && (
+                       <div className="space-y-3 p-3 bg-white rounded-lg border border-gray-200">
+                         <div>
+                           <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                             💰 Total Reward Pool
+                           </label>
+                           <input
+                             type="text"
+                             value={snarkel.rewards.totalRewardPool}
+                             onChange={(e) => setSnarkel(prev => ({
+                               ...prev,
+                               rewards: { ...prev.rewards, totalRewardPool: e.target.value }
+                             }))}
+                             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting ${
+                               validationErrors.rewardsPool ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                             }`}
+                             placeholder="1000"
+                           />
+                           {validationErrors.rewardsPool && (
+                             <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                               <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                               {validationErrors.rewardsPool}
+                             </p>
+                           )}
+                         </div>
+
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                           <div>
+                             <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                               👥 Min Participants
+                             </label>
+                             <input
+                               type="number"
+                               value={snarkel.rewards.minParticipants ?? ''}
+                               onChange={(e) => setSnarkel(prev => ({
+                                 ...prev,
+                                 rewards: { ...prev.rewards, minParticipants: parseInt(e.target.value) || 0 }
+                               }))}
+                               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting ${
+                                 validationErrors.rewardsParticipants ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                               }`}
+                               min="1"
+                             />
+                             {validationErrors.rewardsParticipants && (
+                               <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                                 <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                                 {validationErrors.rewardsParticipants}
+                               </p>
+                             )}
+                           </div>
+
+                           <div>
+                             <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                               ⚖️ Points Weight (0-1)
+                             </label>
+                             <input
+                               type="number"
+                               step="0.1"
+                               value={snarkel.rewards.pointsWeight}
+                               onChange={(e) => setSnarkel(prev => ({
+                                 ...prev,
+                                 rewards: { ...prev.rewards, pointsWeight: parseFloat(e.target.value) || 0 }
+                               }))}
+                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting"
+                               min="0"
+                               max="1"
+                             />
+                           </div>
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 )}
+               </div>
+             )}
+
+             {activeTab === 'spam' && (
+               <div className="space-y-4">
+                 <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                   <input
+                     type="checkbox"
+                     id="spamControl"
+                     checked={snarkel.spamControlEnabled}
+                     onChange={(e) => setSnarkel(prev => ({ ...prev, spamControlEnabled: e.target.checked }))}
+                     className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                   />
+                   <label htmlFor="spamControl" className="font-handwriting text-sm font-medium text-gray-700">
+                     🛡️ Enable entry fee to prevent spam
+                   </label>
+                 </div>
+
+                 {snarkel.spamControlEnabled && (
+                   <div className="space-y-3 p-4 bg-gradient-to-br from-red-50 to-pink-50 rounded-lg border border-red-200">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                       <div>
+                         <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                           💳 Entry Fee Amount
+                         </label>
+                         <input
+                           type="number"
+                           step="0.01"
+                           value={snarkel.entryFee}
+                           onChange={(e) => setSnarkel(prev => ({ ...prev, entryFee: parseFloat(e.target.value) || 0 }))}
+                           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent font-handwriting ${
+                             validationErrors.entryFee ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                           }`}
+                           min="0"
+                         />
+                         {validationErrors.entryFee && (
+                           <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                             <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                             {validationErrors.entryFee}
+                           </p>
+                         )}
+                       </div>
+
+                       <div>
+                         <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                           🪙 Entry Fee Token Address
+                         </label>
+                         <input
+                           type="text"
+                           value={snarkel.entryFeeToken}
+                           onChange={(e) => setSnarkel(prev => ({ ...prev, entryFeeToken: e.target.value }))}
+                           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent font-handwriting ${
+                             validationErrors.entryFeeToken ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                           }`}
+                           placeholder="0x..."
+                         />
+                         {validationErrors.entryFeeToken && (
+                           <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                             <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                             {validationErrors.entryFeeToken}
+                           </p>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+                 )}
+               </div>
+             )}
+           </div>
+
+           {/* Footer - compact */}
+           <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-4 py-3 border-t border-gray-200">
+             <div className="flex justify-between items-center">
+               <div className="font-handwriting text-sm text-gray-600 flex items-center gap-4">
+                 <span className="flex items-center gap-1">
+                   <Edit3 size={14} />
+                   {snarkel.questions.length} questions
+                 </span>
+                 <span className="flex items-center gap-1">
+                   <Users size={14} />
+                   {snarkel.allowlist.length} allowlist entries
+                 </span>
+                 <span className="flex items-center gap-1">
+                   <Trophy size={14} />
+                   {snarkel.rewards.enabled ? 'Rewards enabled' : 'No rewards'}
+                 </span>
+                 {/* Progress indicator */}
+                 <span className="flex items-center gap-1 text-xs">
+                   <div className="w-3 h-3 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs">
+                     {tabs.filter(tab => isTabCompleted(tab.id)).length}
+                   </div>
+                   of {tabs.length} completed
+                 </span>
+               </div>
+               
+               <div className="flex items-center gap-3">
+                 {/* Back button - show on all tabs except first */}
+                 {activeTab !== 'details' && (
+                   <button
+                     onClick={() => {
+                       const tabIndex = tabs.findIndex(tab => tab.id === activeTab);
+                       if (tabIndex > 0) {
+                         setActiveTab(tabs[tabIndex - 1].id);
+                       }
+                     }}
+                     className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium"
+                   >
+                     <ArrowLeft size={16} />
+                     Back
+                   </button>
+                 )}
+                 
+                 {/* Wallet Error Display */}
+                 {activeTab === 'spam' && validationErrors.wallet && (
+                   <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                     <div className="flex items-center gap-2">
+                       <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                         <span className="text-white text-xs font-bold">!</span>
+                       </div>
+                       <span className="font-handwriting text-red-700">{validationErrors.wallet}</span>
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Next/Create button */}
+                 {activeTab === 'spam' ? (
+                   // Last tab - show Create button
+                   <button
+                     onClick={handleSubmit}
+                     disabled={!isTabCompleted('details') || !isTabCompleted('questions') || isSubmitting}
+                     className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
+                   >
+                     {isSubmitting ? (
+                       <>
+                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                         Creating...
+                       </>
+                     ) : (
+                       <>
+                         <Save size={16} />
+                         Create Snarkel
+                       </>
+                     )}
+                   </button>
+                 ) : (
+                   // Other tabs - show Next button
+                   <button
+                     onClick={handleNextTab}
+                     disabled={isSubmitting}
+                     className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
+                   >
+                     Next
+                     <ArrowRight size={16} />
+                   </button>
+                 )}
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+     </div>
+
+     {/* Error Popup */}
+     {error && (
+       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+         <div className="bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all duration-300 scale-100">
+           {/* Header */}
+           <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-4 rounded-t-xl">
+             <div className="flex items-center gap-3">
+               <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                 <Shield size={20} />
+               </div>
+               <div>
+                 <h3 className="font-handwriting text-lg font-bold">Creation Failed</h3>
+                 <p className="text-red-100 text-sm">Unable to create your snarkel</p>
+               </div>
+             </div>
+           </div>
+
+           {/* Content */}
+           <div className="p-6">
+             <div className="flex items-start gap-3">
+               <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                 <span className="text-red-600 text-sm font-bold">!</span>
+               </div>
+               <div className="flex-1">
+                 <p className="font-handwriting text-gray-700 mb-4 leading-relaxed">
+                   {error}
+                 </p>
+                 <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                   <p className="font-handwriting">💡 Tips:</p>
+                   <ul className="mt-1 space-y-1">
+                     <li>• Check your internet connection</li>
+                     <li>• Ensure all required fields are filled</li>
+                     <li>• Verify your wallet connection</li>
+                     <li>• Try again in a few moments</li>
+                   </ul>
+                 </div>
+               </div>
+             </div>
+           </div>
+
+           {/* Footer */}
+           <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex gap-3">
+             <button
+               onClick={() => clearErrors()}
+               className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium"
+             >
+               Dismiss
+             </button>
+             <button
+               onClick={() => {
+                 clearErrors();
+                 handleSubmit();
+               }}
+               className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors font-handwriting font-bold"
+             >
+               Try Again
+             </button>
+           </div>
+         </div>
+       </div>
+     )}
+
+     <style jsx>{`
+       @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap');
+       
+       .font-handwriting {
+         font-family: 'Kalam', cursive;
+       }
+       
+       @keyframes float {
+         0%, 100% { transform: translateY(0px) rotate(0deg); }
+         50% { transform: translateY(-20px) rotate(180deg); }
+       }
+       
+       @keyframes bounce-slow {
+         0%, 100% { transform: translateY(0px); }
+         50% { transform: translateY(-8px); }
+       }
+       
+       .animate-float {
+         animation: float 6s ease-in-out infinite;
+       }
+       
+       .animate-bounce-slow {
+         animation: bounce-slow 3s ease-in-out infinite;
+       }
+     `}</style>
+   </div>
+ );
+}
+
