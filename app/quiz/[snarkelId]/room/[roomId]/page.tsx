@@ -225,15 +225,18 @@ export default function QuizRoomPage() {
     });
 
     newSocket.on('participantJoined', (participant: Participant) => {
-      setParticipants(prev => [...prev, participant]);
-      // Add to animated tabs
-      setParticipantTabs(prev => [...prev, {
-        id: participant.id,
-        name: participant.user.name || `User ${participant.user.address.slice(0, 8)}...`,
-        address: participant.user.address,
-        isReady: participant.isReady,
-        isAdmin: participant.isAdmin
-      }]);
+      // Safety check for participant data
+      if (participant && participant.user && participant.user.address) {
+        setParticipants(prev => [...prev, participant]);
+        // Add to animated tabs
+        setParticipantTabs(prev => [...prev, {
+          id: participant.id,
+          name: `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}`,
+          address: participant.user.address,
+          isReady: participant.isReady,
+          isAdmin: participant.isAdmin
+        }]);
+      }
     });
 
     newSocket.on('participantLeft', (participantId: string) => {
@@ -269,8 +272,8 @@ export default function QuizRoomPage() {
       // Update participant tabs for TV display
       setParticipantTabs(data.participants.map((p: any) => ({
         id: p.id,
-        name: `${p.user.address.slice(0, 6)}...${p.user.address.slice(-4)}`,
-        address: p.user.address,
+        name: p.user && p.user.address ? `${p.user.address.slice(0, 6)}...${p.user.address.slice(-4)}` : 'Unknown',
+        address: p.user?.address || '',
         isReady: p.isReady,
         isAdmin: p.isAdmin
       })));
@@ -293,7 +296,9 @@ export default function QuizRoomPage() {
     newSocket.on('participantLeft', (participantId: string) => {
       // Find the participant who left before removing them
       const leavingParticipant = participants.find(p => p.id === participantId);
-      const participantName = leavingParticipant ? `${leavingParticipant.user.address.slice(0, 6)}...${leavingParticipant.user.address.slice(-4)}` : 'Unknown';
+      const participantName = leavingParticipant && leavingParticipant.user && leavingParticipant.user.address 
+        ? `${leavingParticipant.user.address.slice(0, 6)}...${leavingParticipant.user.address.slice(-4)}` 
+        : 'Unknown';
       
       // Remove participant from local state
       setParticipants(prev => prev.filter(p => p.id !== participantId));
@@ -646,7 +651,9 @@ export default function QuizRoomPage() {
                            <span className="text-white font-medium">
                              {(() => {
                                const participant = participants.find(p => p.userId === userAnswer.userId);
-                               return participant ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 'Unknown';
+                               return participant && participant.user && participant.user.address 
+                                 ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` 
+                                 : 'Unknown';
                              })()}
                            </span>
                            <div className="flex items-center gap-2">
@@ -1273,14 +1280,14 @@ export default function QuizRoomPage() {
                         participant.isReady ? 'bg-green-500' : 'bg-gray-400'
                       }`}>
                         {participant.isAdmin ? <Trophy className="w-4 h-4" /> : 
-                         participant.user.name?.charAt(0) || participant.user.address.charAt(0).toUpperCase()}
+                         participant.user?.address?.charAt(0)?.toUpperCase() || '?'}
                       </div>
                       <div>
                         <div className="font-handwriting text-sm font-medium">
-                          {participant.user.name || `User ${participant.user.address.slice(0, 8)}...`}
+                          {participant.user?.address ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 'Unknown'}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {participant.user.address.slice(0, 6)}...{participant.user.address.slice(-4)}
+                          {participant.user?.address ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 'Unknown'}
                         </div>
                       </div>
                     </div>
