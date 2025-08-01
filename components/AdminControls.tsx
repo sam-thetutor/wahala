@@ -18,7 +18,8 @@ import {
   Eye,
   UserX,
   Timer,
-  Zap
+  Zap,
+  Share2
 } from 'lucide-react';
 
 interface AdminControlsProps {
@@ -158,14 +159,29 @@ export default function AdminControls({
     }
   };
 
-  const broadcastNotification = (type: 'info' | 'warning' | 'success', message: string) => {
+    const broadcastNotification = (type: 'info' | 'warning' | 'success', message: string) => {
     if (socket && isAdmin) {
-      socket.emit('broadcastNotification', {
+      socket.emit('broadcastNotification', { 
         type,
         message,
         roomId: room.id,
         timestamp: new Date().toISOString()
       });
+    }
+  };
+
+  const shareSnarkel = () => {
+    const shareUrl = `${window.location.origin}/share?code=${snarkel?.snarkelCode}`;
+    if (navigator.share) {
+      navigator.share({
+        title: `Join my Snarkel: ${snarkel?.title}`,
+        text: `Join my quiz session! Code: ${snarkel?.snarkelCode}`,
+        url: shareUrl
+      });
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(shareUrl);
+      alert('Share link copied to clipboard!');
     }
   };
 
@@ -406,7 +422,7 @@ export default function AdminControls({
             Communication
           </h3>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-3">
             <button
               onClick={() => setShowMessageModal(true)}
               className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-400 hover:to-purple-500 transition-all duration-300 font-handwriting font-bold"
@@ -429,6 +445,14 @@ export default function AdminControls({
             >
               <CheckCircle className="w-5 h-5" />
               Encourage
+            </button>
+
+            <button
+              onClick={shareSnarkel}
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-400 hover:to-pink-400 transition-all duration-300 font-handwriting font-bold"
+            >
+              <Share2 className="w-5 h-5" />
+              Share Quiz
             </button>
 
             <button
