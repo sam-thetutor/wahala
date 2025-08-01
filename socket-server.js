@@ -311,19 +311,21 @@ io.on('connection', (socket) => {
           });
           
           if (remainingParticipants === 0) {
-            console.log(`Room ${roomId} is now empty, ending quiz`);
+            console.log(`Room ${roomId} is now empty, closing room`);
             // Clean up any active quiz state
             questionAnswers.delete(roomId);
             roomScores.delete(roomId);
             
-            // Update room status
+            // Close the room (mark as inactive and finished)
             await prisma.room.update({
               where: { id: roomId },
               data: {
                 isStarted: false,
-                isWaiting: true,
-                isFinished: false,
-                currentParticipants: 0
+                isWaiting: false,
+                isFinished: true,
+                isActive: false,
+                currentParticipants: 0,
+                endTime: new Date()
               }
             });
             
@@ -554,12 +556,13 @@ async function updateLeaderboard(roomId) {
 
 async function endQuiz(roomId) {
   try {
-    // Update room status
+    // Update room status to finished and inactive
     await prisma.room.update({
       where: { id: roomId },
       data: {
         isFinished: true,
         isStarted: false,
+        isActive: false,
         endTime: new Date()
       }
     });
@@ -589,6 +592,8 @@ async function endQuiz(roomId) {
     // Clean up room data
     questionAnswers.delete(roomId);
     roomScores.delete(roomId);
+
+    console.log(`Room ${roomId} finished and closed. New sessions will create new rooms.`);
 
   } catch (error) {
     console.error('Error ending quiz:', error);

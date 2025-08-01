@@ -53,6 +53,7 @@ interface Room {
   isStarted: boolean;
   isFinished: boolean;
   countdownDuration: number;
+  sessionNumber?: number;
 }
 
 interface Snarkel {
@@ -612,6 +613,13 @@ export default function QuizRoomPage() {
                 <h2 className="text-4xl font-handwriting font-bold mb-4 text-blue-400">
                   📺 SNARKEL TV
                 </h2>
+                {room?.sessionNumber && (
+                  <div className="text-center mb-2">
+                    <span className="inline-block px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-bold">
+                      Session #{room.sessionNumber}
+                    </span>
+                  </div>
+                )}
                 
                 {/* Countdown Display */}
                 {gameState === 'countdown' && countdown && (
@@ -1247,11 +1255,15 @@ export default function QuizRoomPage() {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Participants:</span>
-                  <span className="font-medium">{room?.currentParticipants}/{room?.maxParticipants}</span>
+                  <span className="font-medium">{participants.length}/{room?.maxParticipants}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Min to Start:</span>
                   <span className="font-medium">{room?.minParticipants}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Session:</span>
+                  <span className="font-medium">#{room?.sessionNumber || 1}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>

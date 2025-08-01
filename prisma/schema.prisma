@@ -44,12 +44,15 @@ model Room {
   actualStartTime     DateTime?
   endTime             DateTime?
   adminId             String
-  snarkelId           String            @unique
+  snarkelId           String
+  sessionNumber       Int               @default(1)
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   participants        RoomParticipant[]
   admin               User              @relation("RoomCreator", fields: [adminId], references: [id])
   snarkel             Snarkel           @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
+
+  @@unique([snarkelId, sessionNumber])
 
   @@map("rooms")
 }
@@ -95,7 +98,7 @@ model Snarkel {
   creatorId             String
   featuredContent       FeaturedContent?
   questions             Question[]
-  room                  Room?
+  rooms                 Room[]
   allowlist             SnarkelAllowlist[]
   rewards               SnarkelReward[]
   creator               User               @relation("SnarkelCreator", fields: [creatorId], references: [id])

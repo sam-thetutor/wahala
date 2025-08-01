@@ -91,14 +91,39 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check if room exists, create if not
-    let room = snarkel.room;
+    // Find active room or create new one
+    let room = await prisma.room.findFirst({
+      where: {
+        snarkelId: snarkel.id,
+        isActive: true,
+        isFinished: false
+      },
+      include: {
+        participants: {
+          include: {
+            user: true
+          }
+        },
+        admin: true
+      },
+      orderBy: {
+        sessionNumber: 'desc'
+      }
+    });
     
     if (!room) {
+      // Get the next session number
+      const lastRoom = await prisma.room.findFirst({
+        where: { snarkelId: snarkel.id },
+        orderBy: { sessionNumber: 'desc' }
+      });
+      
+      const nextSessionNumber = (lastRoom?.sessionNumber || 0) + 1;
+      
       room = await prisma.room.create({
         data: {
-          name: `${snarkel.title} Room`,
-          description: `Room for ${snarkel.title}`,
+          name: `${snarkel.title} Session ${nextSessionNumber}`,
+          description: `Room for ${snarkel.title} - Session ${nextSessionNumber}`,
           maxParticipants: 50,
           currentParticipants: 0,
           isActive: true,
@@ -109,21 +134,9 @@ export async function POST(request: NextRequest) {
           autoStartEnabled: false,
           countdownDuration: 10,
           adminId: snarkel.creatorId,
-          snarkelId: snarkel.id
+          snarkelId: snarkel.id,
+          sessionNumber: nextSessionNumber
         },
-        include: {
-          participants: {
-            include: {
-              user: true
-            }
-          },
-          admin: true
-        }
-      });
-    } else {
-      // If room exists, fetch it with admin relation
-      room = await prisma.room.findUnique({
-        where: { id: room.id },
         include: {
           participants: {
             include: {
