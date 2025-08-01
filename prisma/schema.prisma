@@ -45,15 +45,14 @@ model Room {
   endTime             DateTime?
   adminId             String
   snarkelId           String
-  sessionNumber       Int               @default(1)
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
+  sessionNumber       Int               @default(1)
   participants        RoomParticipant[]
   admin               User              @relation("RoomCreator", fields: [adminId], references: [id])
   snarkel             Snarkel           @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
 
   @@unique([snarkelId, sessionNumber])
-
   @@map("rooms")
 }
 

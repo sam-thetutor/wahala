@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client/edge';
+import { PrismaClient } from '@prisma/client';
 import { isValidWalletAddress } from '@/lib/wallet-utils';
 
 const prisma = new PrismaClient();
@@ -64,9 +64,9 @@ export async function POST(request: NextRequest) {
 
     // Check if user is allowed to join (for private snarkels)
     if (!snarkel.isPublic) {
-      const isAllowed = snarkel.allowlist.some(
-        allowlistItem => allowlistItem.address.toLowerCase() === walletAddress.toLowerCase()
-      );
+      const isAllowed = snarkel.allowlist?.some(
+        (allowlistItem: any) => allowlistItem.address.toLowerCase() === walletAddress.toLowerCase()
+      ) || false;
       
       if (!isAllowed) {
         return NextResponse.json(

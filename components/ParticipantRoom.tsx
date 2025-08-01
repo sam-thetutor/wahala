@@ -148,10 +148,10 @@ export default function ParticipantRoom({
     const handleAdminMessage = (data: { message: string, timestamp: string }) => {
       setAdminMessageDisplay(data.message);
       setShowAdminMessage(true);
-      // Auto-hide after 5 seconds
+      // Auto-hide after 3 seconds
       setTimeout(() => {
         setShowAdminMessage(false);
-      }, 5000);
+      }, 3000);
     };
 
     socket.on('gameStarting', handleGameStarting);

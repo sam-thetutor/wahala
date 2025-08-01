@@ -103,7 +103,7 @@ io.on('connection', (socket) => {
           // Start countdown with custom time
           let countdown = countdownTime * 60; // Convert to seconds
           const countdownInterval = setInterval(() => {
-            io.to(roomId).emit('gameStarting', countdown);
+            io.to(roomId).emit('countdownUpdate', countdown);
             countdown--;
 
             if (countdown < 0) {
@@ -119,6 +119,35 @@ io.on('connection', (socket) => {
   });
 
   // Handle admin messages
+  socket.on('sendAdminMessage', async (data) => {
+    try {
+      const { message, timestamp } = data;
+      
+      // Verify user is admin
+      const user = await prisma.user.findUnique({
+        where: { address: walletAddress.toLowerCase() }
+      });
+
+      if (user) {
+        const participant = await prisma.roomParticipant.findFirst({
+          where: {
+            roomId,
+            userId: user.id,
+            isAdmin: true
+          }
+        });
+
+        if (participant && message) {
+          // Broadcast message to all clients in room
+          io.to(roomId).emit('adminMessageReceived', { message, timestamp });
+        }
+      }
+    } catch (error) {
+      console.error('Error sending admin message:', error);
+    }
+  });
+
+  // Handle regular messages (for backward compatibility)
   socket.on('sendMessage', async (data) => {
     try {
       const { message } = data;
@@ -139,7 +168,10 @@ io.on('connection', (socket) => {
 
         if (participant && message) {
           // Broadcast message to all clients in room
-          io.to(roomId).emit('tvMessage', message);
+          io.to(roomId).emit('adminMessageReceived', { 
+            message, 
+            timestamp: new Date().toISOString() 
+          });
         }
       }
     } catch (error) {
@@ -157,7 +189,7 @@ io.on('connection', (socket) => {
       // Start countdown
       let countdown = countdownTime * 60; // Convert to seconds
       const countdownInterval = setInterval(() => {
-        io.to(roomId).emit('gameStarting', countdown);
+        io.to(roomId).emit('countdownUpdate', countdown);
         countdown--;
 
         if (countdown < 0) {

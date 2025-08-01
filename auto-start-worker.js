@@ -20,13 +20,19 @@ setInterval(async () => {
           gte: new Date(now.getTime() - 60000) // Within last minute
         },
         isActive: true,
-        room: {
-          isStarted: false,
-          isFinished: false
+        rooms: {
+          some: {
+            isStarted: false,
+            isFinished: false
+          }
         }
       },
       include: {
-        room: {
+        rooms: {
+          where: {
+            isStarted: false,
+            isFinished: false
+          },
           include: {
             participants: {
               include: {
@@ -41,25 +47,28 @@ setInterval(async () => {
     for (const snarkel of scheduledSnarkels) {
       console.log(`Auto-starting snarkel: ${snarkel.title} (${snarkel.snarkelCode})`);
       
-      if (snarkel.room && snarkel.room.participants.length >= snarkel.room.minParticipants) {
-        // Emit start game event to socket server
-        socket.emit('autoStartGame', {
-          roomId: snarkel.room.id,
-          countdownTime: 5 // 5 minute countdown
-        });
-        
-        // Update room status
-        await prisma.room.update({
-          where: { id: snarkel.room.id },
-          data: {
-            isWaiting: false,
-            scheduledStartTime: now
-          }
-        });
-        
-        console.log(`Successfully auto-started snarkel: ${snarkel.snarkelCode}`);
-      } else {
-        console.log(`Not enough participants for auto-start: ${snarkel.snarkelCode}`);
+      // Process each active room for this snarkel
+      for (const room of snarkel.rooms) {
+        if (room.participants.length >= room.minParticipants) {
+          // Emit start game event to socket server
+          socket.emit('autoStartGame', {
+            roomId: room.id,
+            countdownTime: 5 // 5 minute countdown
+          });
+          
+          // Update room status
+          await prisma.room.update({
+            where: { id: room.id },
+            data: {
+              isWaiting: false,
+              scheduledStartTime: now
+            }
+          });
+          
+          console.log(`Successfully auto-started room: ${room.id} for snarkel: ${snarkel.snarkelCode}`);
+        } else {
+          console.log(`Not enough participants for auto-start in room ${room.id}: ${snarkel.snarkelCode}`);
+        }
       }
     }
   } catch (error) {

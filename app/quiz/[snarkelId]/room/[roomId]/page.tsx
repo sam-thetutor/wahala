@@ -54,6 +54,7 @@ interface Room {
   isFinished: boolean;
   countdownDuration: number;
   sessionNumber?: number;
+  scheduledStartTime?: string;
 }
 
 interface Snarkel {
@@ -336,10 +337,10 @@ export default function QuizRoomPage() {
     newSocket.on('adminMessageReceived', (data: { message: string, timestamp: string }) => {
       setAdminMessageDisplay(data.message);
       setShowAdminMessage(true);
-      // Auto-hide after 5 seconds
+      // Auto-hide after 3 seconds
       setTimeout(() => {
         setShowAdminMessage(false);
-      }, 5000);
+      }, 3000);
     });
 
     newSocket.on('countdownUpdate', (timeLeft: number) => {
@@ -622,7 +623,7 @@ export default function QuizRoomPage() {
                 )}
                 
                 {/* Countdown Display */}
-                {gameState === 'countdown' && countdown && (
+                {countdown && (gameState === 'countdown' || room?.scheduledStartTime) && (
                   <div className="bg-gradient-to-r from-red-900 to-pink-900 rounded-lg p-6 mb-4 animate-pulse">
                     <div className="text-6xl font-bold text-white mb-2">{formatTime(countdown)}</div>
                     <p className="text-xl font-handwriting">Quiz Starting Soon!</p>
