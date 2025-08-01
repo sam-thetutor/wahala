@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
           }
         },
         allowlist: true,
-        room: {
+        rooms: {
           include: {
             participants: {
               include: {
@@ -207,14 +207,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is the creator (admin) of the snarkel
-   
-    //console log isAdmin and all teh details and ids
-    console.log('isAdmin');
-    console.log('room.adminId', room?.adminId);
-    console.log('user.id', user.id);
-    //maybe for is admin user the admin id vs connecedt wallet address
-    const isAdmin = room?.adminId === user.id;
-    console.log('isAdmin', isAdmin);
+    const isAdmin = snarkel.creator?.address?.toLowerCase() === walletAddress.toLowerCase();
+    console.log('isAdmin check:', {
+      creatorAddress: snarkel.creator?.address,
+      walletAddress: walletAddress,
+      isAdmin: isAdmin
+    });
 
 
     
