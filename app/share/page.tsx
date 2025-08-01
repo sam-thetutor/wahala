@@ -15,7 +15,7 @@ import {
   QrCode,
   Download
 } from 'lucide-react';
-import QRCode from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 
 interface SnarkelData {
   id: string;
@@ -272,7 +272,7 @@ export default function ShareSnarkelPage() {
               
               <div className="flex justify-center mb-6">
                 <div className="p-4 bg-white rounded-xl shadow-lg border border-gray-200">
-                  <QRCode
+                  <QRCodeCanvas
                     value={qrCodeUrl}
                     size={200}
                     level="H"
