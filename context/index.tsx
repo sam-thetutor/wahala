@@ -3,7 +3,7 @@
 import { wagmiAdapter } from '@/config'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createAppKit } from '@reown/appkit/react'
-import { celo, celoAlfajores } from '@reown/appkit/networks'
+import { celoAlfajores } from '@reown/appkit/networks'
 import React, { type ReactNode } from 'react'
 import { cookieToInitialState, WagmiProvider, type Config } from 'wagmi'
 
@@ -28,8 +28,8 @@ const metadata = {
 const modal = createAppKit({
   adapters: [wagmiAdapter],
   projectId,
-  networks: [celo, celoAlfajores],
-  defaultNetwork: celo,
+  networks: [ celoAlfajores],
+  defaultNetwork: celoAlfajores,
   metadata: metadata,
   features: {
     analytics: true // Optional - defaults to your Cloud configuration

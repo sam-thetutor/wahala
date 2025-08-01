@@ -19,8 +19,10 @@ import {
   UserX,
   Timer,
   Zap,
-  Share2
+  Share2,
+  Trophy
 } from 'lucide-react';
+import QuizRewards from './QuizRewards';
 
 interface AdminControlsProps {
   socket: Socket | null;
@@ -56,6 +58,7 @@ export default function AdminControls({
     averageResponseTime: 0,
     totalMessages: 0
   });
+  const [showRewardsModal, setShowRewardsModal] = useState(false);
 
   // Socket event listeners
   useEffect(() => {
@@ -462,6 +465,14 @@ export default function AdminControls({
               <Settings className="w-5 h-5" />
               Settings
             </button>
+
+            <button
+              onClick={() => setShowRewardsModal(true)}
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-400 hover:to-orange-400 transition-all duration-300 font-handwriting font-bold"
+            >
+              <Trophy className="w-5 h-5" />
+              Rewards
+            </button>
           </div>
         </div>
 
@@ -793,6 +804,15 @@ export default function AdminControls({
               </div>
             </div>
           </div>
+        )}
+
+        {/* Quiz Rewards Modal */}
+        {showRewardsModal && (
+          <QuizRewards
+            sessionId={room?.sessionNumber || 1}
+            isAdmin={isAdmin}
+            onClose={() => setShowRewardsModal(false)}
+          />
         )}
       </div>
     </div>

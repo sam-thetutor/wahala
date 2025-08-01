@@ -92,6 +92,8 @@ model Snarkel {
   basePointsPerQuestion Int                @default(1000)
   speedBonusEnabled     Boolean            @default(true)
   maxSpeedBonus         Int                @default(500)
+  rewardsEnabled        Boolean            @default(false)
+  onchainSessionId      String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   creatorId             String
@@ -128,6 +130,7 @@ model SnarkelReward {
   tokenName       String
   tokenDecimals   Int                  @default(18)
   network         String
+  chainId         Int                  @default(44787)
   totalWinners    Int?
   rewardAmounts   Json?
   totalRewardPool String?
@@ -135,6 +138,7 @@ model SnarkelReward {
   pointsWeight    Float?
   isDistributed   Boolean              @default(false)
   distributedAt   DateTime?
+  onchainSessionId String?
   createdAt       DateTime             @default(now())
   snarkelId       String
   distributions   RewardDistribution[]

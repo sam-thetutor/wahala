@@ -1,11 +1,111 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Save, Settings, Users, Trophy, Shield, Home, Gamepad2, Star, Sparkles, ArrowLeft, ArrowRight, Clock, Edit3 } from 'lucide-react';
+import { Plus, Trash2, Save, Settings, Users, Trophy, Shield, Home, Gamepad2, Star, Sparkles, ArrowLeft, ArrowRight, Clock, Edit3, CheckCircle, XCircle, Loader } from 'lucide-react';
 import { useSnarkelCreation } from '@/hooks/useSnarkelCreation';
 import WalletConnectButton from '@/components/WalletConnectButton';
+import { RewardConfigurationSection } from '@/components/RewardConfigurationSection';
 import { useAccount } from 'wagmi';
+
+// Progress Modal Component
+interface ProgressStep {
+  id: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'loading' | 'completed' | 'error';
+  error?: string;
+}
+
+interface ProgressModalProps {
+  isOpen: boolean;
+  steps: ProgressStep[];
+  currentStep: number;
+  onClose: () => void;
+}
+
+const ProgressModal: React.FC<ProgressModalProps> = ({ isOpen, steps, currentStep, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all duration-300 scale-100">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-4 rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+              <Loader className="w-5 h-5 animate-spin" />
+            </div>
+            <div>
+              <h3 className="font-handwriting text-lg font-bold">Creating Your Snarkel</h3>
+              <p className="text-purple-100 text-sm">Please wait while we set everything up...</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          <div className="space-y-4">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-1">
+                  {step.status === 'pending' && (
+                    <div className="w-6 h-6 rounded-full border-2 border-gray-300 bg-gray-50"></div>
+                  )}
+                  {step.status === 'loading' && (
+                    <div className="w-6 h-6 rounded-full border-2 border-purple-500 border-t-transparent animate-spin"></div>
+                  )}
+                  {step.status === 'completed' && (
+                    <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                      <CheckCircle className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                  {step.status === 'error' && (
+                    <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
+                      <XCircle className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex-1">
+                  <h4 className={`font-handwriting text-sm font-medium ${
+                    step.status === 'completed' ? 'text-green-600' :
+                    step.status === 'error' ? 'text-red-600' :
+                    step.status === 'loading' ? 'text-purple-600' :
+                    'text-gray-500'
+                  }`}>
+                    {step.title}
+                  </h4>
+                  <p className="text-xs text-gray-500 mt-1">{step.description}</p>
+                  {step.error && (
+                    <p className="text-xs text-red-500 mt-1">{step.error}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-gray-50 rounded-b-2xl">
+          <div className="flex justify-between items-center">
+            <div className="text-xs text-gray-500 font-handwriting">
+              Step {currentStep + 1} of {steps.length}
+            </div>
+            {steps.every(step => step.status === 'completed' || step.status === 'error') && (
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-handwriting font-medium"
+              >
+                {steps.some(step => step.status === 'error') ? 'Close' : 'Continue'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface Question {
   id: string;
@@ -36,6 +136,7 @@ interface SnarkelData {
     enabled: boolean;
     type: 'LINEAR' | 'QUADRATIC';
     tokenAddress: string;
+    chainId: number;
     totalWinners?: number;
     rewardAmounts?: number[];
     totalRewardPool?: string;
@@ -59,6 +160,11 @@ export default function SnarkelCreationPage() {
     duration: number;
   }>>([]);
   
+  // Progress modal state
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
+  const [currentProgressStep, setCurrentProgressStep] = useState(0);
+  
   // Use the custom hook for snarkel creation
   const { isSubmitting, error, validationErrors, setValidationErrors, createSnarkel, clearErrors } = useSnarkelCreation();
   const { address, isConnected } = useAccount();
@@ -80,6 +186,7 @@ export default function SnarkelCreationPage() {
       enabled: false,
       type: 'LINEAR',
       tokenAddress: '',
+      chainId: 44787, // Changed from 42220 (Celo Mainnet) to 44787 (Alfajores)
       totalWinners: 3,
       rewardAmounts: [100, 50, 25],
       totalRewardPool: '1000',
@@ -106,17 +213,16 @@ export default function SnarkelCreationPage() {
     setFloatingElements(elements);
   }, []);
 
-  // Tab validation functions
-  const validateDetailsTab = () => {
+  // Tab validation functions - return errors instead of setting state directly
+  const validateDetailsTab = useCallback(() => {
     const errors: any = {};
     if (!snarkel.title.trim()) {
       errors.title = 'Snarkel title is required';
     }
-    setValidationErrors(prev => ({ ...prev, ...errors }));
-    return Object.keys(errors).length === 0;
-  };
+    return errors;
+  }, [snarkel.title]);
 
-  const validateQuestionsTab = () => {
+  const validateQuestionsTab = useCallback(() => {
     const errors: any = {};
     if (snarkel.questions.length === 0) {
       errors.questions = 'At least one question is required';
@@ -146,11 +252,10 @@ export default function SnarkelCreationPage() {
         });
       });
     }
-    setValidationErrors(prev => ({ ...prev, ...errors }));
-    return Object.keys(errors).length === 0;
-  };
+    return errors;
+  }, [snarkel.questions]);
 
-  const validateRewardsTab = () => {
+  const validateRewardsTab = useCallback(() => {
     const errors: any = {};
     if (snarkel.rewards.enabled) {
       if (!snarkel.rewards.tokenAddress.trim()) {
@@ -175,57 +280,61 @@ export default function SnarkelCreationPage() {
         }
       }
     }
-    setValidationErrors(prev => ({ ...prev, ...errors }));
-    return Object.keys(errors).length === 0;
-  };
+    return errors;
+  }, [snarkel.rewards]);
 
-  const validateAntiSpamTab = () => {
+  const validateAntiSpamTab = useCallback(() => {
     const errors: any = {};
     if (snarkel.spamControlEnabled) {
-      if (snarkel.entryFee <= 0) {
+      if (!snarkel.entryFee || snarkel.entryFee <= 0) {
         errors.entryFee = 'Entry fee must be greater than 0';
       }
       if (!snarkel.entryFeeToken.trim()) {
         errors.entryFeeToken = 'Entry fee token address is required';
       }
     }
-    setValidationErrors(prev => ({ ...prev, ...errors }));
-    return Object.keys(errors).length === 0;
-  };
+    return errors;
+  }, [snarkel.spamControlEnabled, snarkel.entryFee, snarkel.entryFeeToken]);
 
-  const handleNextTab = () => {
+  const handleNextTab = useCallback(() => {
     let isValid = true;
+    let newErrors = { ...validationErrors };
     
-    // Clear previous validation errors for current tab
-    const currentErrors = { ...validationErrors };
-    
-    // Clear current tab errors
+    // Clear current tab errors and validate
     if (activeTab === 'details') {
-      delete currentErrors.title;
-      isValid = validateDetailsTab();
+      delete newErrors.title;
+      const errors = validateDetailsTab();
+      newErrors = { ...newErrors, ...errors };
+      isValid = Object.keys(errors).length === 0;
     } else if (activeTab === 'questions') {
       // Clear all question-related errors
-      Object.keys(currentErrors).forEach(key => {
+      Object.keys(newErrors).forEach(key => {
         if (key.startsWith('question_') || key === 'questions') {
-          delete currentErrors[key];
+          delete newErrors[key];
         }
       });
-      isValid = validateQuestionsTab();
+      const errors = validateQuestionsTab();
+      newErrors = { ...newErrors, ...errors };
+      isValid = Object.keys(errors).length === 0;
     } else if (activeTab === 'rewards') {
       // Clear reward-related errors
       ['rewardsToken', 'rewardsWinners', 'rewardsAmounts', 'rewardsPool', 'rewardsParticipants'].forEach(key => {
-        delete currentErrors[key];
+        delete newErrors[key];
       });
-      isValid = validateRewardsTab();
+      const errors = validateRewardsTab();
+      newErrors = { ...newErrors, ...errors };
+      isValid = Object.keys(errors).length === 0;
     } else if (activeTab === 'spam') {
       // Clear spam-related errors
       ['entryFee', 'entryFeeToken'].forEach(key => {
-        delete currentErrors[key];
+        delete newErrors[key];
       });
-      isValid = validateAntiSpamTab();
+      const errors = validateAntiSpamTab();
+      newErrors = { ...newErrors, ...errors };
+      isValid = Object.keys(errors).length === 0;
     }
     
-    setValidationErrors(currentErrors);
+    setValidationErrors(newErrors);
     
     if (isValid) {
       const tabIndex = tabs.findIndex(tab => tab.id === activeTab);
@@ -233,9 +342,9 @@ export default function SnarkelCreationPage() {
         setActiveTab(tabs[tabIndex + 1].id);
       }
     }
-  };
+  }, [activeTab, validationErrors, validateDetailsTab, validateQuestionsTab, validateRewardsTab, validateAntiSpamTab]);
 
-  const isTabCompleted = (tabId: string) => {
+  const isTabCompleted = useCallback((tabId: string) => {
     if (tabId === 'details') {
       return snarkel.title.trim() !== '';
     } else if (tabId === 'questions') {
@@ -264,7 +373,7 @@ export default function SnarkelCreationPage() {
       return snarkel.entryFee > 0 && snarkel.entryFeeToken.trim() !== '';
     }
     return false;
-  };
+  }, [snarkel]);
 
   const tabs = [
     { id: 'details', label: 'Details', icon: Settings },
@@ -274,7 +383,7 @@ export default function SnarkelCreationPage() {
     { id: 'spam', label: 'Anti-Spam', icon: Users }
   ];
 
-  const addQuestion = () => {
+  const addQuestion = useCallback(() => {
     const newQuestion: Question = {
       id: `q${Date.now()}`,
       text: '',
@@ -292,26 +401,26 @@ export default function SnarkelCreationPage() {
     }));
     setActiveQuestionIndex(snarkel.questions.length);
     setActiveTab('questions');
-  };
+  }, [snarkel.questions.length]);
 
-  const removeQuestion = (questionId: string) => {
+  const removeQuestion = useCallback((questionId: string) => {
     setSnarkel(prev => ({
       ...prev,
       questions: prev.questions.filter(q => q.id !== questionId)
     }));
     setActiveQuestionIndex(Math.max(0, activeQuestionIndex - 1));
-  };
+  }, [activeQuestionIndex]);
 
-  const updateQuestion = (questionId: string, field: keyof Question, value: any) => {
+  const updateQuestion = useCallback((questionId: string, field: keyof Question, value: any) => {
     setSnarkel(prev => ({
       ...prev,
       questions: prev.questions.map(q => 
         q.id === questionId ? { ...q, [field]: value } : q
       )
     }));
-  };
+  }, []);
 
-  const updateOption = (questionId: string, optionId: string, field: 'text' | 'isCorrect', value: any) => {
+  const updateOption = useCallback((questionId: string, optionId: string, field: 'text' | 'isCorrect', value: any) => {
     setSnarkel(prev => ({
       ...prev,
       questions: prev.questions.map(q => 
@@ -323,9 +432,9 @@ export default function SnarkelCreationPage() {
         } : q
       )
     }));
-  };
+  }, []);
 
-  const addOption = (questionId: string) => {
+  const addOption = useCallback((questionId: string) => {
     setSnarkel(prev => ({
       ...prev,
       questions: prev.questions.map(q => 
@@ -339,9 +448,9 @@ export default function SnarkelCreationPage() {
         } : q
       )
     }));
-  };
+  }, []);
 
-  const removeOption = (questionId: string, optionId: string) => {
+  const removeOption = useCallback((questionId: string, optionId: string) => {
     setSnarkel(prev => ({
       ...prev,
       questions: prev.questions.map(q => 
@@ -351,9 +460,9 @@ export default function SnarkelCreationPage() {
         } : q
       )
     }));
-  };
+  }, []);
 
-  const addAllowlistAddress = () => {
+  const addAllowlistAddress = useCallback(() => {
     if (newAllowlistAddress.trim() && !snarkel.allowlist.includes(newAllowlistAddress.trim())) {
       setSnarkel(prev => ({
         ...prev,
@@ -361,17 +470,17 @@ export default function SnarkelCreationPage() {
       }));
       setNewAllowlistAddress('');
     }
-  };
+  }, [newAllowlistAddress, snarkel.allowlist]);
 
-  const removeAllowlistAddress = (address: string) => {
+  const removeAllowlistAddress = useCallback((address: string) => {
     setSnarkel(prev => ({
       ...prev,
       allowlist: prev.allowlist.filter(addr => addr !== address)
     }));
-  };
+  }, []);
 
-  const handleSubmit = async () => {
-    // Check if wallet is connected
+  const handleSubmit = useCallback(async () => {
+    // Check if wallet is connected first
     if (!isConnected || !address) {
       setValidationErrors(prev => ({
         ...prev,
@@ -389,16 +498,162 @@ export default function SnarkelCreationPage() {
       });
     }
 
-    const result = await createSnarkel({
-      ...snarkel,
-      creatorAddress: address
-    });
+    // Validate all tabs before proceeding
+    const detailsErrors = validateDetailsTab();
+    const questionsErrors = validateQuestionsTab();
+    const rewardsErrors = snarkel.rewards.enabled ? validateRewardsTab() : {};
+    const spamErrors = snarkel.spamControlEnabled ? validateAntiSpamTab() : {};
     
-    if (result.success && result.snarkelCode) {
-      // Redirect to share page
-      router.push(`/share?code=${result.snarkelCode}`);
+    const allErrors = { ...detailsErrors, ...questionsErrors, ...rewardsErrors, ...spamErrors };
+    
+    if (Object.keys(allErrors).length > 0) {
+      setValidationErrors(allErrors);
+      return;
     }
-  };
+
+    // Set entry fee to zero if not set
+    const snarkelData = {
+      ...snarkel,
+      entryFee: snarkel.entryFee || 0,
+      creatorAddress: address
+    };
+
+    // Initialize progress steps
+    const steps: ProgressStep[] = [
+      {
+        id: 'prepare',
+        title: 'Preparing Data',
+        description: 'Validating form data and preparing for creation',
+        status: 'pending'
+      },
+      {
+        id: 'create-quiz',
+        title: 'Creating Quiz',
+        description: 'Creating quiz in database and setting up blockchain',
+        status: 'pending'
+      },
+      {
+        id: 'blockchain',
+        title: 'Blockchain Transaction',
+        description: 'Creating smart contract session on blockchain',
+        status: 'pending'
+      },
+      {
+        id: 'token-ops',
+        title: 'Token Operations',
+        description: 'Approving and transferring ERC20 tokens',
+        status: 'pending'
+      }
+    ];
+
+    setProgressSteps(steps);
+    setCurrentProgressStep(0);
+    setShowProgressModal(true);
+
+    try {
+      // Step 1: Prepare data
+      updateProgressStep(0, 'loading');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate preparation
+      updateProgressStep(0, 'completed');
+
+      // Step 2: Create quiz (database + blockchain if rewards enabled)
+      updateProgressStep(1, 'loading');
+      console.log('Starting createSnarkel...');
+      const result = await createSnarkel(snarkelData);
+      console.log('createSnarkel result:', result);
+      
+      if (result.success && result.snarkelCode) {
+        updateProgressStep(1, 'completed');
+        console.log('Quiz creation completed, snarkelCode:', result.snarkelCode);
+        
+        // If rewards are enabled, the blockchain and token operations are handled within createSnarkel
+        // We just need to mark them as completed since the real waiting happens inside
+        if (snarkelData.rewards.enabled) {
+          updateProgressStep(2, 'loading');
+          console.log('Blockchain transaction step completed');
+          updateProgressStep(2, 'completed');
+          
+          updateProgressStep(3, 'loading');
+          console.log('Token operations step completed');
+          updateProgressStep(3, 'completed');
+        } else {
+          // Skip blockchain and token steps if no rewards
+          updateProgressStep(2, 'completed');
+          updateProgressStep(3, 'completed');
+        }
+        
+        // Show success message
+        setTimeout(() => {
+          setShowProgressModal(false);
+          if (snarkelData.rewards.enabled && result.error) {
+            alert(`Quiz created successfully! However, reward setup failed: ${result.error}. You can still use the quiz without rewards.`);
+          } else if (snarkelData.rewards.enabled) {
+            alert('Quiz created successfully with rewards! Smart contract session has been deployed.');
+          } else {
+            alert('Quiz created successfully!');
+          }
+          // Redirect to share page
+          // router.push(`/share?code=${result.snarkelCode}`);
+        }, 1000);
+      } else {
+        updateProgressStep(1, 'error', result.error || 'Failed to create quiz');
+      }
+    } catch (error: any) {
+      updateProgressStep(currentProgressStep, 'error', error.message || 'An unexpected error occurred');
+    }
+  }, [isConnected, address, validationErrors, validateDetailsTab, validateQuestionsTab, validateRewardsTab, validateAntiSpamTab, snarkel, createSnarkel, currentProgressStep]);
+
+  const updateProgressStep = useCallback((stepIndex: number, status: 'pending' | 'loading' | 'completed' | 'error', error?: string) => {
+    setProgressSteps(prev => prev.map((step, index) => 
+      index === stepIndex ? { ...step, status, error } : step
+    ));
+    setCurrentProgressStep(stepIndex);
+  }, []);
+
+  // Show wallet connection requirement if not connected
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#FCF6F1' }}>
+        {/* Enhanced notebook background */}
+        <div className="fixed inset-0 opacity-40 pointer-events-none">
+          <div 
+            className="w-full h-full"
+            style={{
+              backgroundImage: `
+                repeating-linear-gradient(
+                  transparent,
+                  transparent 24px,
+                  #E7E3D4 24px,
+                  #E7E3D4 26px
+                ),
+                radial-gradient(circle at 30% 70%, rgba(252, 255, 82, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 70% 30%, rgba(86, 223, 124, 0.1) 0%, transparent 50%)
+              `,
+              backgroundSize: '100% 26px, 600px 600px, 800px 800px'
+            }}
+          />
+        </div>
+
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 text-center">
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trophy className="w-8 h-8 text-yellow-600" />
+            </div>
+            <h2 className="font-handwriting text-2xl font-bold text-gray-900 mb-2">
+              Connect Your Wallet
+            </h2>
+            <p className="font-handwriting text-gray-600 mb-6">
+              You need to connect your wallet to create a Snarkel quiz
+            </p>
+            <WalletConnectButton />
+            <p className="font-handwriting text-xs text-gray-500 mt-4">
+              This ensures you can create and manage your quizzes securely
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#FCF6F1' }}>
@@ -1009,195 +1264,11 @@ export default function SnarkelCreationPage() {
              )}
 
              {activeTab === 'rewards' && (
-               <div className="space-y-4">
-                 <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                   <input
-                     type="checkbox"
-                     id="rewardsEnabled"
-                     checked={snarkel.rewards.enabled}
-                     onChange={(e) => setSnarkel(prev => ({
-                       ...prev,
-                       rewards: { ...prev.rewards, enabled: e.target.checked }
-                     }))}
-                     className="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
-                   />
-                   <label htmlFor="rewardsEnabled" className="font-handwriting text-sm font-medium text-gray-700">
-                     🏆 Enable rewards
-                   </label>
-                 </div>
-
-                 {snarkel.rewards.enabled && (
-                   <div className="space-y-4 p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                     <div>
-                       <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                         💰 Reward Token Address
-                       </label>
-                       <input
-                         type="text"
-                         value={snarkel.rewards.tokenAddress}
-                         onChange={(e) => setSnarkel(prev => ({
-                           ...prev,
-                           rewards: { ...prev.rewards, tokenAddress: e.target.value }
-                         }))}
-                         className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting ${
-                           validationErrors.rewardsToken ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                         }`}
-                         placeholder="0x..."
-                       />
-                       {validationErrors.rewardsToken && (
-                         <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
-                           <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                           {validationErrors.rewardsToken}
-                         </p>
-                       )}
-                     </div>
-
-                     <div>
-                       <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                         📊 Reward Distribution Type
-                       </label>
-                       <select
-                         value={snarkel.rewards.type}
-                         onChange={(e) => setSnarkel(prev => ({
-                           ...prev,
-                           rewards: { ...prev.rewards, type: e.target.value as 'LINEAR' | 'QUADRATIC' }
-                         }))}
-                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting"
-                       >
-                         <option value="LINEAR">Linear (Fixed amounts for top winners)</option>
-                         <option value="QUADRATIC">Quadratic (Proportional distribution)</option>
-                       </select>
-                     </div>
-
-                     {snarkel.rewards.type === 'LINEAR' && (
-                       <div className="space-y-3 p-3 bg-white rounded-lg border border-gray-200">
-                         <div>
-                           <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                             🥇 Total Winners
-                           </label>
-                           <input
-                             type="number"
-                             value={snarkel.rewards.totalWinners ?? ''}
-                             onChange={(e) => setSnarkel(prev => ({
-                               ...prev,
-                               rewards: { ...prev.rewards, totalWinners: parseInt(e.target.value) || 0 }
-                             }))}
-                             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting ${
-                               validationErrors.rewardsWinners ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                             }`}
-                             min="1"
-                           />
-                           {validationErrors.rewardsWinners && (
-                             <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
-                               <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                               {validationErrors.rewardsWinners}
-                             </p>
-                           )}
-                         </div>
-
-                         <div>
-                           <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                             💎 Reward Amounts (comma-separated)
-                           </label>
-                           <input
-                             type="text"
-                             value={snarkel.rewards.rewardAmounts?.join(', ')}
-                             onChange={(e) => setSnarkel(prev => ({
-                               ...prev,
-                               rewards: {
-                                 ...prev.rewards,
-                                 rewardAmounts: e.target.value.split(',').map(v => parseInt(v.trim()) || 0)
-                               }
-                             }))}
-                             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting ${
-                               validationErrors.rewardsAmounts ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                             }`}
-                             placeholder="100, 50, 25"
-                           />
-                           {validationErrors.rewardsAmounts && (
-                             <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
-                               <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                               {validationErrors.rewardsAmounts}
-                             </p>
-                           )}
-                         </div>
-                       </div>
-                     )}
-
-                     {snarkel.rewards.type === 'QUADRATIC' && (
-                       <div className="space-y-3 p-3 bg-white rounded-lg border border-gray-200">
-                         <div>
-                           <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                             💰 Total Reward Pool
-                           </label>
-                           <input
-                             type="text"
-                             value={snarkel.rewards.totalRewardPool}
-                             onChange={(e) => setSnarkel(prev => ({
-                               ...prev,
-                               rewards: { ...prev.rewards, totalRewardPool: e.target.value }
-                             }))}
-                             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting ${
-                               validationErrors.rewardsPool ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                             }`}
-                             placeholder="1000"
-                           />
-                           {validationErrors.rewardsPool && (
-                             <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
-                               <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                               {validationErrors.rewardsPool}
-                             </p>
-                           )}
-                         </div>
-
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                           <div>
-                             <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                               👥 Min Participants
-                             </label>
-                             <input
-                               type="number"
-                               value={snarkel.rewards.minParticipants ?? ''}
-                               onChange={(e) => setSnarkel(prev => ({
-                                 ...prev,
-                                 rewards: { ...prev.rewards, minParticipants: parseInt(e.target.value) || 0 }
-                               }))}
-                               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting ${
-                                 validationErrors.rewardsParticipants ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                               }`}
-                               min="1"
-                             />
-                             {validationErrors.rewardsParticipants && (
-                               <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
-                                 <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                                 {validationErrors.rewardsParticipants}
-                               </p>
-                             )}
-                           </div>
-
-                           <div>
-                             <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                               ⚖️ Points Weight (0-1)
-                             </label>
-                             <input
-                               type="number"
-                               step="0.1"
-                               value={snarkel.rewards.pointsWeight}
-                               onChange={(e) => setSnarkel(prev => ({
-                                 ...prev,
-                                 rewards: { ...prev.rewards, pointsWeight: parseFloat(e.target.value) || 0 }
-                               }))}
-                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting"
-                               min="0"
-                               max="1"
-                             />
-                           </div>
-                         </div>
-                       </div>
-                     )}
-                   </div>
-                 )}
-               </div>
+               <RewardConfigurationSection
+                 rewardConfig={snarkel.rewards}
+                 onRewardConfigChange={(rewards) => setSnarkel(prev => ({ ...prev, rewards }))}
+                 validationErrors={validationErrors}
+               />
              )}
 
              {activeTab === 'spam' && (
@@ -1332,12 +1403,12 @@ export default function SnarkelCreationPage() {
                      {isSubmitting ? (
                        <>
                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                         Creating...
+                         {snarkel.rewards.enabled ? 'Creating with Rewards...' : 'Creating...'}
                        </>
                      ) : (
                        <>
                          <Save size={16} />
-                         Create Snarkel
+                         {snarkel.rewards.enabled ? 'Create with Rewards' : 'Create Snarkel'}
                        </>
                      )}
                    </button>
@@ -1358,6 +1429,14 @@ export default function SnarkelCreationPage() {
          </div>
        </div>
      </div>
+
+     {/* Progress Modal */}
+     <ProgressModal
+       isOpen={showProgressModal}
+       steps={progressSteps}
+       currentStep={currentProgressStep}
+       onClose={() => setShowProgressModal(false)}
+     />
 
      {/* Error Popup */}
      {error && (
