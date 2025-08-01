@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Settings, Users, Trophy, Shield, Home, Gamepad2, Star, Sparkles, ArrowLeft, ArrowRight, Clock, Edit3 } from 'lucide-react';
 import { useSnarkelCreation } from '@/hooks/useSnarkelCreation';
 import WalletConnectButton from '@/components/WalletConnectButton';
@@ -45,6 +46,7 @@ interface SnarkelData {
 }
 
 export default function SnarkelCreationPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('details');
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -393,7 +395,8 @@ export default function SnarkelCreationPage() {
     });
     
     if (result.success && result.snarkelCode) {
-      alert(`Snarkel created successfully! Code: ${result.snarkelCode}`);
+      // Redirect to share page
+      router.push(`/share?code=${result.snarkelCode}`);
     }
   };
 
