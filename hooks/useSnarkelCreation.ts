@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useWagmiContract } from './useViemContract';
-import { parseEther, formatEther } from 'viem';
+import { parseEther, formatEther, type Address } from 'viem';
 
 // Contract address
 const SNARKEL_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS || '0x...';
@@ -251,12 +251,27 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
             maxParticipants: 100
           });
 
+          // Calculate required amount for rewards if enabled
+          let requiredAmount = '0';
+          if (data.rewards.enabled) {
+            if (data.rewards.type === 'LINEAR') {
+              const totalReward = data.rewards.rewardAmounts?.reduce((sum, amount) => sum + amount, 0) || 0;
+              requiredAmount = parseEther(totalReward.toString()).toString();
+            } else if (data.rewards.type === 'QUADRATIC') {
+              requiredAmount = data.rewards.totalRewardPool 
+                ? parseEther(data.rewards.totalRewardPool).toString()
+                : '0';
+            }
+          }
+
           // Create smart contract session with the actual quiz code - Using Wagmi
           const sessionResult = await createSession({
             snarkelCode, // Use the actual quiz code from database
             entryFeeWei, // entryFee in wei
             platformFeePercentage: 5, // 5%
-            maxParticipants: 100
+            maxParticipants: 100,
+            expectedRewardToken: data.rewards.enabled ? (data.rewards.tokenAddress as Address) : '0x0000000000000000000000000000000000000000' as Address, // NEW: Required reward token
+            expectedRewardAmount: requiredAmount // NEW: Required reward amount
           });
 
           if (!sessionResult.success) {
@@ -276,17 +291,6 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
               data.creatorAddress as any
             );
             console.log('Token balance:', tokenBalance);
-
-            // Calculate required amount
-            let requiredAmount = '0';
-            if (data.rewards.type === 'LINEAR') {
-              const totalReward = data.rewards.rewardAmounts?.reduce((sum, amount) => sum + amount, 0) || 0;
-              requiredAmount = parseEther(totalReward.toString()).toString();
-            } else if (data.rewards.type === 'QUADRATIC') {
-              requiredAmount = data.rewards.totalRewardPool 
-                ? parseEther(data.rewards.totalRewardPool).toString()
-                : '0';
-            }
 
             console.log('Required amount:', requiredAmount);
 

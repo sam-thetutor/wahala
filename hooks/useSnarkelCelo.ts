@@ -193,7 +193,9 @@ export function useSnarkelContract(contractAddress?: Address) {
     snarkelCode: string,
     entryFeeEth: string,
     platformFeePercentage: number,
-    maxParticipants: number
+    maxParticipants: number,
+    expectedRewardToken: Address = '0x0000000000000000000000000000000000000000' as Address,
+    expectedRewardAmount: string = '0'
   ) => {
     if (!createSessionWrite) return;
     
@@ -206,7 +208,14 @@ export function useSnarkelContract(contractAddress?: Address) {
         address: contractAddr,
         abi: SNARKEL_ABI,
         functionName: 'createSnarkelSession',
-        args: [snarkelCode, entryFeeWei, BigInt(platformFeePercentage), BigInt(maxParticipants)]
+        args: [
+          snarkelCode, 
+          entryFeeWei, 
+          BigInt(platformFeePercentage), 
+          BigInt(maxParticipants),
+          expectedRewardToken,
+          BigInt(expectedRewardAmount)
+        ]
       });
     } catch (error: any) {
       updateState({ error: { message: error.message }, isLoading: false });
@@ -302,36 +311,36 @@ export function useSnarkelContract(contractAddress?: Address) {
     }
   }, [batchAddParticipantsWrite, resetState, updateState, contractAddr]);
 
-  // Claim reward
+  // Add reward (admin only)
   const {
-    writeContract: claimRewardWrite,
-    data: claimRewardData,
-    isPending: claimRewardLoading
+    writeContract: addRewardWrite,
+    data: addRewardData,
+    isPending: addRewardLoading
   } = useContractWrite();
 
-  const { isLoading: claimRewardTxLoading } = useTransaction({
-    hash: claimRewardData
+  const { isLoading: addRewardTxLoading } = useTransaction({
+    hash: addRewardData
   });
 
-  const claimReward = useCallback(async (sessionId: number, tokenAddress: Address) => {
-    if (!claimRewardWrite) return;
+  const addReward = useCallback(async (sessionId: number, tokenAddress: Address, amount: string) => {
+    if (!addRewardWrite) return;
     
     resetState();
     updateState({ isLoading: true });
     
     try {
-      claimRewardWrite({
+      addRewardWrite({
         address: contractAddr,
         abi: SNARKEL_ABI,
-        functionName: 'claimReward',
-        args: [BigInt(sessionId), tokenAddress]
+        functionName: 'addReward',
+        args: [BigInt(sessionId), tokenAddress, BigInt(amount)]
       });
     } catch (error: any) {
       updateState({ error: { message: error.message }, isLoading: false });
     }
-  }, [claimRewardWrite, resetState, updateState, contractAddr]);
+  }, [addRewardWrite, resetState, updateState, contractAddr]);
 
-  // Distribute rewards (admin only)
+  // Distribute rewards to all participants (admin only)
   const {
     writeContract: distributeRewardsWrite,
     data: distributeRewardsData,
@@ -399,7 +408,7 @@ export function useSnarkelContract(contractAddress?: Address) {
     joinSnarkelLoading || joinSnarkelTxLoading ||
     addParticipantLoading || addParticipantTxLoading ||
     batchAddParticipantsLoading || batchAddParticipantsTxLoading ||
-    claimRewardLoading || claimRewardTxLoading ||
+    addRewardLoading || addRewardTxLoading ||
     distributeRewardsLoading || distributeRewardsTxLoading ||
     deactivateSessionLoading || deactivateSessionTxLoading;
 
@@ -434,7 +443,7 @@ export function useSnarkelContract(contractAddress?: Address) {
     joinSnarkel,
     addParticipant,
     batchAddParticipants,
-    claimReward,
+    addReward,
     distributeRewards,
     deactivateSession,
 
@@ -447,7 +456,7 @@ export function useSnarkelContract(contractAddress?: Address) {
       joinSnarkel: joinSnarkelData,
       addParticipant: addParticipantData,
       batchAddParticipants: batchAddParticipantsData,
-      claimReward: claimRewardData,
+      addReward: addRewardData,
       distributeRewards: distributeRewardsData,
       deactivateSession: deactivateSessionData
     }

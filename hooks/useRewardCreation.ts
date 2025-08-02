@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useSnarkelContract } from './useSnarkelCelo';
+import { useWagmiContract } from './useViemContract';
 import { Address } from 'viem';
 
 interface RewardConfig {
@@ -63,7 +63,7 @@ export const useRewardCreation = (): UseRewardCreationReturn => {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { createSession, contractState } = useSnarkelContract();
+  const { createSession, contractState } = useWagmiContract();
 
   const updateStep = useCallback((stepIndex: number, updates: Partial<CreationStep>) => {
     setSteps(prev => prev.map((step, index) => 
@@ -132,12 +132,14 @@ export const useRewardCreation = (): UseRewardCreationReturn => {
         }
 
         // Create session with proper parameters
-        const sessionResult = await createSession(
-          snarkelId, // snarkelCode
-          entryFeeWei, // entryFee in wei
-          5, // platformFeePercentage (5%)
-          100 // maxParticipants
-        );
+        const sessionResult = await createSession({
+          snarkelCode: snarkelId,
+          entryFeeWei: entryFeeWei,
+          platformFeePercentage: 5,
+          maxParticipants: 100,
+          expectedRewardToken: rewardConfig.tokenAddress as `0x${string}`,
+          expectedRewardAmount: entryFeeWei // Use the calculated amount as expected reward
+        });
 
         if (contractState.error) {
           throw new Error(contractState.error.message);

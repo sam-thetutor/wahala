@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { io, Socket } from 'socket.io-client';
 import { isValidWalletAddress } from '@/lib/wallet-utils';
-import { useQuizRewards } from '@/hooks/useQuizRewards';
+import { useWagmiContract } from '@/hooks/useViemContract';
 import { 
   Users, 
   Clock, 
@@ -57,6 +57,7 @@ interface Room {
   countdownDuration: number;
   sessionNumber?: number;
   scheduledStartTime?: string;
+  snarkel?: Snarkel;
 }
 
 interface Snarkel {
@@ -67,6 +68,7 @@ interface Snarkel {
   basePointsPerQuestion: number;
   speedBonusEnabled: boolean;
   maxSpeedBonus: number;
+  rewardsEnabled?: boolean;
 }
 
 interface Question {
@@ -89,18 +91,14 @@ export default function QuizRoomPage() {
   const snarkelId = params.snarkelId as string;
   const roomId = params.roomId as string;
   
-  // Initialize rewards functionality
+  // Initialize rewards functionality with new secure contract
   const {
-    useSessionRewards,
-    useHasClaimedReward,
-    claimReward,
-    formatRewardAmount
-  } = useQuizRewards();
+    areRewardsDistributed,
+    getExpectedRewardToken,
+    getExpectedRewardAmount
+  } = useWagmiContract();
   
   const [room, setRoom] = useState<Room | null>(null);
-  
-  // Get session rewards
-  const { data: sessionRewards, isLoading: rewardsLoading } = useSessionRewards(room?.sessionNumber);
   const [snarkel, setSnarkel] = useState<Snarkel | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -133,6 +131,8 @@ export default function QuizRoomPage() {
   const [showAdminMessageModal, setShowAdminMessageModal] = useState(false);
   const [messageSentNotification, setMessageSentNotification] = useState<string>('');
   const [showRewardsSection, setShowRewardsSection] = useState(false);
+  const [rewardsDistributed, setRewardsDistributed] = useState(false);
+  const [distributingRewards, setDistributingRewards] = useState(false);
 
   useEffect(() => {
     // Enhanced wallet address validation
@@ -398,6 +398,30 @@ export default function QuizRoomPage() {
     newSocket.on('gameEnd', (finalLeaderboard: any[]) => {
       setGameState('finished');
       setLeaderboard(finalLeaderboard);
+      // Start distributing rewards if enabled
+      if (room?.snarkel?.rewardsEnabled) {
+        setDistributingRewards(true);
+      }
+    });
+
+    newSocket.on('rewardsDistributed', (data: {success: boolean, message: string, results?: any[], error?: string}) => {
+      setDistributingRewards(false);
+      
+      if (data.success) {
+        // Show success notification
+        setTvMessage(`🎉 ${data.message}`);
+        setRewardsDistributed(true);
+        // Refresh rewards data
+        // The useSessionRewards hook will automatically refetch
+      } else {
+        // Show error notification
+        setTvMessage(`❌ ${data.message}: ${data.error}`);
+      }
+      
+      // Clear notification after 5 seconds
+      setTimeout(() => {
+        setTvMessage('');
+      }, 5000);
     });
 
     newSocket.on('roomEmpty', () => {
@@ -840,82 +864,7 @@ export default function QuizRoomPage() {
           </div>
         )}
 
-        {/* Rewards Section */}
-        {room && sessionRewards && sessionRewards.length > 0 && (
-          <div className="mb-6">
-            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl shadow-2xl p-6 border-2 border-yellow-200">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <Trophy className="w-8 h-8 text-yellow-500" />
-                  <h3 className="text-2xl font-handwriting font-bold text-gray-800">
-                    Quiz Rewards
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setShowRewardsSection(!showRewardsSection)}
-                  className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
-                >
-                  {showRewardsSection ? 'Hide' : 'View'} Rewards
-                </button>
-              </div>
-              
-              {showRewardsSection && (
-                <div className="space-y-4">
-                  {rewardsLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500"></div>
-                      <span className="ml-2 text-gray-600">Loading rewards...</span>
-                    </div>
-                  ) : (
-                    <div className="grid gap-4">
-                      {sessionRewards.map((reward, index) => (
-                        <div key={index} className="bg-white rounded-lg p-4 border border-yellow-200">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Coins className="w-6 h-6 text-yellow-500" />
-                              <div>
-                                <div className="font-semibold text-gray-800">
-                                  {reward.tokenSymbol} ({reward.tokenName})
-                                </div>
-                                <div className="text-sm text-gray-600">
-                                  {formatRewardAmount(reward.amount)} tokens
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  Network: {reward.network}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              {reward.isDistributed ? (
-                                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                                  Available to Claim
-                                </span>
-                              ) : (
-                                <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
-                                  Pending Distribution
-                                </span>
-                              )}
-                              
-                              {!reward.isDistributed && (
-                                <button
-                                  onClick={() => room?.sessionNumber && claimReward(room.sessionNumber, reward.tokenAddress)}
-                                  className="px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 disabled:opacity-50"
-                                >
-                                  Claim
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+
 
                  {/* Answer Grid for All Participants */}
          {gameState === 'playing' && currentQuestion && (

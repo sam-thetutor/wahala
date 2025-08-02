@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract SnarkelCelo is Ownable, ReentrancyGuard {
-    using Counters for Counters.Counter;
 
     // Structs
     struct SnarkelSession {
@@ -37,8 +35,8 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
     }
 
     // State variables
-    Counters.Counter private _sessionIds;
-    Counters.Counter private _snarkelIds;
+    uint256 private _sessionIds;
+    uint256 private _snarkelIds;
 
     mapping(uint256 => SnarkelSession) public snarkelSessions;
     mapping(uint256 => Reward[]) public sessionRewards;
@@ -46,6 +44,7 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
     mapping(address => bool) public adminWallets;
     mapping(address => bool) public verifiedUsers;
     mapping(string => uint256) public snarkelCodeToSessionId;
+    mapping(string => bool) public snarkelCodeRewardsDistributed;
 
     // Events
     event SnarkelSessionCreated(uint256 indexed sessionId, string snarkelCode, uint256 entryFee);
@@ -54,10 +53,12 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
     event RewardAdded(uint256 indexed sessionId, address indexed token, uint256 amount);
     event RewardClaimed(uint256 indexed sessionId, address indexed participant, address indexed token, uint256 amount);
     event RewardDistributed(uint256 indexed sessionId, address indexed token, uint256 totalAmount);
+    event AdminRewardDistributed(uint256 indexed sessionId, address indexed recipient, address indexed token, uint256 amount, address indexed admin);
     event SnarkelFeeUpdated(uint256 indexed snarkelId, uint256 feeAmount, address tokenAddress);
     event UserVerified(address indexed user, address indexed admin);
     event AdminWalletAdded(address indexed admin);
     event AdminWalletRemoved(address indexed admin);
+    event SnarkelRewardsAlreadyDistributed(string snarkelCode, address indexed admin);
 
     // Modifiers
     modifier onlyAdmin() {
@@ -75,16 +76,11 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         _;
     }
 
-    // Constructor - FIXED: Pass initial owner to Ownable constructor
+    // Constructor - FIXED: Single constructor with optional parameter
+    // If no address is provided or address(0) is passed, msg.sender becomes the owner
     constructor() Ownable(msg.sender) {
         adminWallets[msg.sender] = true;
         emit AdminWalletAdded(msg.sender);
-    }
-
-    // Alternative constructor if you want to set a different initial owner
-    constructor(address initialOwner) Ownable(initialOwner) {
-        adminWallets[initialOwner] = true;
-        emit AdminWalletAdded(initialOwner);
     }
 
     // Core functions
@@ -106,8 +102,8 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         require(snarkelCodeToSessionId[snarkelCode] == 0, "Snarkel code already exists");
         require(platformFeePercentage <= 1000, "Platform fee cannot exceed 10%");
 
-        _sessionIds.increment();
-        uint256 sessionId = _sessionIds.current();
+        _sessionIds++;
+        uint256 sessionId = _sessionIds;
 
         SnarkelSession storage session = snarkelSessions[sessionId];
         session.sessionId = sessionId;
@@ -281,6 +277,68 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         emit RewardDistributed(sessionId, tokenAddress, totalAmount);
     }
 
+    /**
+     * @dev Admin distribute snarkel session rewards to specific wallet
+     * @param sessionId ID of the session
+     * @param recipient Wallet address to receive rewards
+     * @param amount Amount to distribute
+     */
+    function adminDistributeReward(
+        uint256 sessionId, 
+        address recipient, 
+        uint256 amount
+    ) external onlyAdmin sessionExists(sessionId) nonReentrant {
+        // Get session details
+        SnarkelSession storage session = snarkelSessions[sessionId];
+        
+        // Check if rewards for this snarkel code have already been distributed
+        if (snarkelCodeRewardsDistributed[session.snarkelCode]) {
+            emit SnarkelRewardsAlreadyDistributed(session.snarkelCode, msg.sender);
+            revert("Rewards for this snarkel code already distributed");
+        }
+        
+        // Validate inputs
+        if (recipient == address(0)) {
+            revert("Invalid recipient address");
+        }
+        
+        if (amount == 0) {
+            revert("Amount must be greater than 0");
+        }
+        
+        // Find the reward token for this session
+        Reward[] storage rewards = sessionRewards[sessionId];
+        if (rewards.length == 0) {
+            revert("No rewards available for this session");
+        }
+        
+        // Get the first reward token (assuming one reward token per session)
+        address rewardTokenAddress = rewards[0].tokenAddress;
+        uint256 availableReward = rewards[0].amount;
+        
+        if (amount > availableReward) {
+            revert("Insufficient reward balance");
+        }
+        
+        // Transfer the reward token
+        IERC20 token = IERC20(rewardTokenAddress);
+        bool transferSuccess = token.transfer(recipient, amount);
+        if (!transferSuccess) {
+            revert("Token transfer failed");
+        }
+        
+        // Mark rewards as distributed for this snarkel code
+        snarkelCodeRewardsDistributed[session.snarkelCode] = true;
+        
+        // Update the reward amount
+        rewards[0].amount = availableReward - amount;
+        if (rewards[0].amount == 0) {
+            rewards[0].isDistributed = true;
+        }
+        
+        emit AdminRewardDistributed(sessionId, recipient, rewardTokenAddress, amount, msg.sender);
+    }
+
     // Admin functions
 
     /**
@@ -451,7 +509,7 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
      * @dev Get current session count
      */
     function getCurrentSessionId() external view returns (uint256) {
-        return _sessionIds.current();
+        return _sessionIds;
     }
 
     /**
@@ -460,6 +518,48 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
      */
     function isAdmin(address admin) external view returns (bool) {
         return adminWallets[admin] || admin == owner();
+    }
+
+    /**
+     * @dev Check if rewards have been distributed for a snarkel code
+     * @param snarkelCode Snarkel code to check
+     */
+    function areRewardsDistributed(string memory snarkelCode) external view returns (bool) {
+        return snarkelCodeRewardsDistributed[snarkelCode];
+    }
+
+    /**
+     * @dev Get reward token address for a session
+     * @param sessionId ID of the session
+     */
+    function getRewardTokenAddress(uint256 sessionId) 
+        external 
+        view 
+        sessionExists(sessionId) 
+        returns (address) 
+    {
+        Reward[] storage rewards = sessionRewards[sessionId];
+        if (rewards.length == 0) {
+            return address(0);
+        }
+        return rewards[0].tokenAddress;
+    }
+
+    /**
+     * @dev Get available reward amount for a session
+     * @param sessionId ID of the session
+     */
+    function getAvailableRewardAmount(uint256 sessionId) 
+        external 
+        view 
+        sessionExists(sessionId) 
+        returns (uint256) 
+    {
+        Reward[] storage rewards = sessionRewards[sessionId];
+        if (rewards.length == 0) {
+            return 0;
+        }
+        return rewards[0].amount;
     }
 
     /**

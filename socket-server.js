@@ -15,6 +15,10 @@ const io = new Server(httpServer, {
 // Store active rooms and their state
 const activeRooms = new Map();
 
+// Store question answers and scores for each room
+const questionAnswers = new Map(); // roomId -> Map(questionId -> answers)
+const roomScores = new Map(); // roomId -> Map(userId -> score)
+
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
@@ -100,8 +104,8 @@ io.on('connection', (socket) => {
         });
 
         if (participant) {
-          // Start countdown with custom time
-          let countdown = countdownTime * 60; // Convert to seconds
+          // Start countdown with custom time (default 10 seconds)
+          let countdown = countdownTime || 10; // Use countdownTime or default to 10 seconds
           const countdownInterval = setInterval(() => {
             io.to(roomId).emit('countdownUpdate', countdown);
             countdown--;
@@ -244,11 +248,12 @@ io.on('connection', (socket) => {
         if (!questionAnswers.has(roomId)) {
           questionAnswers.set(roomId, new Map());
         }
-        if (!questionAnswers.get(roomId).has(questionId)) {
-          questionAnswers.get(roomId).set(questionId, { answers: [], scores: {} });
+        const roomQuestionAnswers = questionAnswers.get(roomId);
+        if (!roomQuestionAnswers.has(questionId)) {
+          roomQuestionAnswers.set(questionId, { answers: [] });
         }
 
-        const questionData = questionAnswers.get(roomId).get(questionId);
+        const questionData = roomQuestionAnswers.get(questionId);
         questionData.answers.push({
           userId: user.id,
           answerId,
@@ -259,12 +264,11 @@ io.on('connection', (socket) => {
 
         // Update room scores
         if (!roomScores.has(roomId)) {
-          roomScores.set(roomId, {});
+          roomScores.set(roomId, new Map());
         }
-        if (!roomScores.get(roomId)[user.id]) {
-          roomScores.get(roomId)[user.id] = 0;
-        }
-        roomScores.get(roomId)[user.id] += score;
+        const userScores = roomScores.get(roomId);
+        const currentScore = userScores.get(user.id) || 0;
+        userScores.set(user.id, currentScore + score);
 
         console.log(`User ${user.address} submitted answer for question ${questionId}: ${isCorrect ? 'Correct' : 'Incorrect'} (+${score} points)`);
         
@@ -320,13 +324,15 @@ io.on('connection', (socket) => {
           });
 
           // Remove from scoring system
-          if (roomScores.has(roomId) && roomScores.get(roomId)[user.id]) {
-            delete roomScores.get(roomId)[user.id];
+          if (roomScores.has(roomId)) {
+            const userScores = roomScores.get(roomId);
+            userScores.delete(user.id);
           }
 
           // Remove from current question answers if quiz is active
           if (questionAnswers.has(roomId)) {
-            questionAnswers.get(roomId).forEach((questionData, questionId) => {
+            const roomQuestionAnswers = questionAnswers.get(roomId);
+            roomQuestionAnswers.forEach((questionData, questionId) => {
               questionData.answers = questionData.answers.filter(answer => answer.userId !== user.id);
             });
           }
@@ -448,6 +454,10 @@ async function startQuiz(roomId) {
       }
     });
 
+    // Initialize question answers and scores for this room
+    questionAnswers.set(roomId, new Map());
+    roomScores.set(roomId, new Map());
+
     // Start the quiz with questions
     const questions = room.snarkel.questions;
     let currentQuestionIndex = 0;
@@ -510,7 +520,8 @@ async function startQuiz(roomId) {
 async function revealAnswers(roomId, question) {
   try {
     // Get all answers for this question
-    const questionData = questionAnswers.get(roomId)?.get(question.id);
+    const roomQuestionAnswers = questionAnswers.get(roomId);
+    const questionData = roomQuestionAnswers?.get(question.id);
     
     if (!questionData) {
       console.log('No answers found for question:', question.id);
@@ -561,7 +572,7 @@ async function updateLeaderboard(roomId) {
 
     // Get user names for the scores
     const leaderboard = await Promise.all(
-      Object.entries(scores).map(async ([userId, score]) => {
+      Array.from(scores.entries()).map(async ([userId, score]) => {
         const user = await prisma.user.findUnique({
           where: { id: userId }
         });
@@ -588,6 +599,19 @@ async function updateLeaderboard(roomId) {
 
 async function endQuiz(roomId) {
   try {
+    // Get room information first
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      include: {
+        snarkel: true
+      }
+    });
+
+    if (!room) {
+      console.error(`Room ${roomId} not found`);
+      return;
+    }
+
     // Update room status to finished and inactive
     await prisma.room.update({
       where: { id: roomId },
@@ -603,7 +627,7 @@ async function endQuiz(roomId) {
     const scores = roomScores.get(roomId);
     if (scores) {
       const finalLeaderboard = await Promise.all(
-        Object.entries(scores).map(async ([userId, score]) => {
+        Array.from(scores.entries()).map(async ([userId, score]) => {
           const user = await prisma.user.findUnique({
             where: { id: userId }
           });
@@ -619,6 +643,53 @@ async function endQuiz(roomId) {
 
       // Send final results
       io.to(roomId).emit('gameEnd', finalLeaderboard);
+
+      // Automatically distribute rewards if enabled
+      if (room.snarkel.rewardsEnabled) {
+        console.log(`Attempting automatic reward distribution for room ${roomId}, session ${room.sessionNumber}`);
+        
+        try {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/quiz/distribute-rewards`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              roomId,
+              sessionNumber: room.sessionNumber,
+              finalLeaderboard
+            }),
+          });
+
+          const result = await response.json();
+          
+          if (result.success) {
+            console.log('Automatic reward distribution completed:', result);
+            // Emit reward distribution event to clients
+            io.to(roomId).emit('rewardsDistributed', {
+              success: true,
+              message: 'Rewards have been automatically distributed!',
+              results: result.results
+            });
+          } else {
+            console.error('Automatic reward distribution failed:', result.error);
+            io.to(roomId).emit('rewardsDistributed', {
+              success: false,
+              message: 'Failed to distribute rewards automatically',
+              error: result.error
+            });
+          }
+        } catch (error) {
+          console.error('Error calling reward distribution API:', error);
+          io.to(roomId).emit('rewardsDistributed', {
+            success: false,
+            message: 'Error during automatic reward distribution',
+            error: error.message
+          });
+        }
+      } else {
+        console.log(`Rewards not enabled for snarkel ${room.snarkelId}`);
+      }
     }
 
     // Clean up room data

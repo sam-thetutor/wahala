@@ -740,6 +740,14 @@ export default function SnarkelCreationPage() {
               </div>
               
               <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => router.push('/admin')}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 transition-colors font-handwriting text-sm"
+                  style={{ color: '#1e40af' }}
+                >
+                  <Trophy className="w-4 h-4" />
+                  My Quizzes
+                </button>
                 <WalletConnectButton />
                 <button 
                   onClick={() => window.history.back()}
