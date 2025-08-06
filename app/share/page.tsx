@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Share2, 
@@ -36,7 +36,7 @@ interface SnarkelData {
   };
 }
 
-export default function ShareSnarkelPage() {
+function ShareSnarkelContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [snarkel, setSnarkel] = useState<SnarkelData | null>(null);
@@ -363,5 +363,13 @@ export default function ShareSnarkelPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function ShareSnarkelPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ShareSnarkelContent />
+    </Suspense>
   );
 } 

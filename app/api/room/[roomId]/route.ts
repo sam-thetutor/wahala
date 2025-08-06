@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client/edge';
+import { PrismaClient } from '@prisma/client/index';
 import { getRoomStatus, joinRoom, setParticipantReady } from '@/lib/snarkel-utils';
 
 const prisma = new PrismaClient();
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { roomId: string } }
+  _: NextRequest,
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
-    const roomId = params.roomId;
+    const roomId = (await params).roomId;
     const roomStatus = await getRoomStatus(roomId);
     
     return NextResponse.json(roomStatus);
@@ -24,10 +24,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
-    const roomId = params.roomId;
+    const roomId = (await params).roomId;
     const { userId, action, isReady } = await request.json();
 
     if (action === 'join') {

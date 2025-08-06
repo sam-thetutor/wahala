@@ -1177,4 +1177,4 @@ export const SNARKEL_ABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   }
-] as const; 
+] as const;

@@ -55,12 +55,15 @@ export default function QuizRewards({ sessionId, isAdmin, onClose }: QuizRewards
     }
   };
 
-  const handleDistributeRewards = async (recipient: string, amount: string) => {
-    await adminDistributeReward({
+  const handleDistributeRewards = async (tokenAddress: string, amount: string) => {
+    const result = await adminDistributeReward({
       sessionId,
-      recipient: recipient as `0x${string}`,
+      tokenAddress: tokenAddress as `0x${string}`,
       amount
     });
+    if (result.success) {
+      resetState();
+    }
   };
 
   return (

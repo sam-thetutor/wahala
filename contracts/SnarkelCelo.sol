@@ -18,6 +18,8 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         bool isActive;
         uint256 createdAt;
         address[] participants;
+        address expectedRewardToken;
+        uint256 expectedRewardAmount;
         mapping(address => bool) isParticipant;
         mapping(address => bool) hasClaimedReward;
     }
@@ -53,7 +55,7 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
     event RewardAdded(uint256 indexed sessionId, address indexed token, uint256 amount);
     event RewardClaimed(uint256 indexed sessionId, address indexed participant, address indexed token, uint256 amount);
     event RewardDistributed(uint256 indexed sessionId, address indexed token, uint256 totalAmount);
-    event AdminRewardDistributed(uint256 indexed sessionId, address indexed recipient, address indexed token, uint256 amount, address indexed admin);
+    event AdminRewardDistributed(uint256 indexed sessionId, address indexed recipient, address indexed token, uint256 amount, address admin);
     event SnarkelFeeUpdated(uint256 indexed snarkelId, uint256 feeAmount, address tokenAddress);
     event UserVerified(address indexed user, address indexed admin);
     event AdminWalletAdded(address indexed admin);
@@ -91,16 +93,22 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
      * @param entryFee Fee required to join (in native token)
      * @param platformFeePercentage Platform fee percentage (basis points)
      * @param maxParticipants Maximum number of participants
+     * @param expectedRewardToken The ERC20 token address that will be distributed as rewards
+     * @param expectedRewardAmount The total amount of reward tokens for this session
      */
     function createSnarkelSession(
         string memory snarkelCode,
         uint256 entryFee,
         uint256 platformFeePercentage,
-        uint256 maxParticipants
+        uint256 maxParticipants,
+        address expectedRewardToken,
+        uint256 expectedRewardAmount
     ) external onlyAdmin returns (uint256) {
         require(bytes(snarkelCode).length > 0, "Snarkel code cannot be empty");
         require(snarkelCodeToSessionId[snarkelCode] == 0, "Snarkel code already exists");
         require(platformFeePercentage <= 1000, "Platform fee cannot exceed 10%");
+        require(expectedRewardToken != address(0), "Invalid reward token address");
+        require(expectedRewardAmount > 0, "Reward amount must be greater than 0");
 
         _sessionIds++;
         uint256 sessionId = _sessionIds;
@@ -113,6 +121,8 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         session.maxParticipants = maxParticipants;
         session.isActive = true;
         session.createdAt = block.timestamp;
+        session.expectedRewardToken = expectedRewardToken;
+        session.expectedRewardAmount = expectedRewardAmount;
 
         snarkelCodeToSessionId[snarkelCode] = sessionId;
 
@@ -179,8 +189,16 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         onlyAdmin 
         sessionExists(sessionId) 
     {
+        SnarkelSession storage session = snarkelSessions[sessionId];
+        
+        // SECURITY: Enforce that only the expected reward token can be added
+        require(tokenAddress == session.expectedRewardToken, "Token address does not match expected reward token");
+        require(amount == session.expectedRewardAmount, "Amount does not match expected reward amount");
         require(tokenAddress != address(0), "Invalid token address");
         require(amount > 0, "Amount must be greater than 0");
+        
+        // Check that rewards haven't already been added for this session
+        require(sessionRewards[sessionId].length == 0, "Rewards already added for this session");
 
         IERC20 token = IERC20(tokenAddress);
         require(token.transferFrom(msg.sender, address(this), amount), "Token transfer failed");
@@ -312,8 +330,10 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
             revert("No rewards available for this session");
         }
         
-        // Get the first reward token (assuming one reward token per session)
-        address rewardTokenAddress = rewards[0].tokenAddress;
+        // SECURITY: Verify the reward token matches expected token and use only expected token
+        address rewardTokenAddress = session.expectedRewardToken;
+        require(rewards[0].tokenAddress == rewardTokenAddress, "Reward token mismatch with expected token");
+        
         uint256 availableReward = rewards[0].amount;
         
         if (amount > availableReward) {
@@ -439,7 +459,9 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
             uint256 currentParticipants,
             bool isActive,
             uint256 createdAt,
-            address[] memory participants
+            address[] memory participants,
+            address expectedRewardToken,
+            uint256 expectedRewardAmount
         ) 
     {
         SnarkelSession storage session = snarkelSessions[sessionId];
@@ -452,7 +474,9 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
             session.currentParticipants,
             session.isActive,
             session.createdAt,
-            session.participants
+            session.participants,
+            session.expectedRewardToken,
+            session.expectedRewardAmount
         );
     }
 
@@ -538,11 +562,20 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         sessionExists(sessionId) 
         returns (address) 
     {
-        Reward[] storage rewards = sessionRewards[sessionId];
-        if (rewards.length == 0) {
-            return address(0);
-        }
-        return rewards[0].tokenAddress;
+        return snarkelSessions[sessionId].expectedRewardToken;
+    }
+
+    /**
+     * @dev Get expected reward amount for a session
+     * @param sessionId ID of the session
+     */
+    function getExpectedRewardAmount(uint256 sessionId) 
+        external 
+        view 
+        sessionExists(sessionId) 
+        returns (uint256) 
+    {
+        return snarkelSessions[sessionId].expectedRewardAmount;
     }
 
     /**

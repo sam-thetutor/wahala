@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client/index';
 import { getFeaturedSnarkels } from '@/lib/snarkel-utils';
 
 const prisma = new PrismaClient();
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     
     const featuredSnarkels = await getFeaturedSnarkels(limit);
 
-    const response = featuredSnarkels.map(snarkel => ({
+    const response = featuredSnarkels.map((snarkel: any) => ({
       id: snarkel.id,
       title: snarkel.title,
       description: snarkel.description,

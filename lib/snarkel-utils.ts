@@ -46,7 +46,7 @@ export async function isWalletAllowed(snarkelId: string, walletAddress: string):
 
 // Create or get room for a snarkel
 export async function getOrCreateRoom(snarkelId: string, adminId: string): Promise<any> {
-  let room = await prisma.room.findUnique({
+  let room = await prisma.room.findFirst({
     where: { snarkelId },
     include: {
       participants: {
@@ -392,7 +392,7 @@ export async function getFeaturedSnarkels(limit: number = 10) {
     include: {
       creator: true,
       featuredContent: true,
-      room: true,
+      rooms: true,
       _count: {
         select: {
           questions: true,

@@ -10,6 +10,7 @@ interface TokenSelectorProps {
   placeholder?: string;
   className?: string;
   error?: string;
+  disabled?: boolean;
 }
 
 interface TokenOption {
@@ -72,6 +73,7 @@ export const TokenSelector: React.FC<TokenSelectorProps> = ({
   placeholder = 'Select a token...',
   className = '',
   error,
+  disabled,
 }) => {
   const { tokenDetails, validateToken, clearTokenDetails } = useTokenDetails();
   const [isOpen, setIsOpen] = useState(false);
@@ -161,8 +163,9 @@ export const TokenSelector: React.FC<TokenSelectorProps> = ({
         {/* Main input/button */}
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting transition-all duration-200 ${getInputBorderColor()} ${getInputBgColor()} flex items-center justify-between`}
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          disabled={disabled}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting transition-all duration-200 ${getInputBorderColor()} ${getInputBgColor()} flex items-center justify-between ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <div className="flex items-center gap-2">
             {selectedToken ? (
@@ -185,7 +188,7 @@ export const TokenSelector: React.FC<TokenSelectorProps> = ({
         </button>
 
         {/* Dropdown */}
-        {isOpen && (
+        {isOpen && !disabled && (
           <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-hidden">
             {/* Search input */}
             <div className="p-3 border-b border-gray-200">

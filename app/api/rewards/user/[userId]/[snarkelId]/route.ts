@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client/edge';
+import { PrismaClient } from '@prisma/client/index';
 
 const prisma = new PrismaClient();
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { userId: string; snarkelId: string } }
+  _: NextRequest,
+  { params }: { params: Promise<{ userId: string; snarkelId: string }> }
 ) {
   try {
-    const { userId, snarkelId } = params;
+    const { userId, snarkelId } = await params;
 
     // Get user's reward distribution for this snarkel
     const distribution = await prisma.rewardDistribution.findFirst({

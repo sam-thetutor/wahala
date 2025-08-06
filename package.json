@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently \"next dev --turbopack\" \"node socket-server.js\" \"node auto-start-worker.js\"",
     "dev:next": "next dev --turbopack",
-    "build": "next build",
+    "build": "prisma generate --no-engine && next build",
     "start": "next start",
     "lint": "next lint",
     "socket": "node socket-server.js",
@@ -23,6 +23,7 @@
     "db:studio": "npx prisma studio"
   },
   "dependencies": {
+    "@farcaster/miniapp-sdk": "^0.1.8",
     "@prisma/client": "^5.22.0",
     "@prisma/extension-accelerate": "^2.0.2",
     "@reown/appkit": "^1.7.17",

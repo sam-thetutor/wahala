@@ -142,7 +142,7 @@ export const useRewardCreation = (): UseRewardCreationReturn => {
         });
 
         if (contractState.error) {
-          throw new Error(contractState.error.message);
+          throw new Error(contractState.error);
         }
 
         updateStep(2, { status: 'completed' });

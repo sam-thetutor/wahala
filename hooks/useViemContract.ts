@@ -51,6 +51,11 @@ interface UseWagmiContractReturn {
     sessionId: number;
     tokenAddress: Address;
   }) => Promise<{ success: boolean; transactionHash?: string; error?: string }>;
+  adminDistributeReward: (params: {
+    sessionId: number;
+    tokenAddress: Address;
+    amount: string;
+  }) => Promise<{ success: boolean; transactionHash?: string; error?: string }>;
   approveToken: (params: {
     tokenAddress: Address;
     spenderAddress: Address;
@@ -332,6 +337,56 @@ export function useWagmiContract(): UseWagmiContractReturn {
     }
   }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
 
+  // NEW: Admin distribute reward function
+  const adminDistributeReward = useCallback(async (params: {
+    sessionId: number;
+    tokenAddress: Address;
+    amount: string;
+  }): Promise<{ success: boolean; transactionHash?: string; error?: string }> => {
+    try {
+      resetState();
+      updateState({ isLoading: true, error: null });
+
+      if (!isConnected || !userAddress) {
+        throw new Error('Wallet not connected - please connect your wallet first');
+      }
+
+      await ensureCorrectChain();
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      console.log('Admin distributing reward:', params);
+
+      const hash = await writeContractAsync({
+        address: SNARKEL_CONTRACT_ADDRESS,
+        abi: SNARKEL_ABI,
+        functionName: 'adminDistributeReward',
+        args: [
+          BigInt(params.sessionId),
+          params.tokenAddress,
+          BigInt(params.amount)
+        ]
+      });
+
+      console.log('Admin distribute reward transaction hash:', hash);
+      updateState({ transactionHash: hash });
+
+      updateState({ 
+        isLoading: false, 
+        success: true
+      });
+
+      return { success: true, transactionHash: hash };
+    } catch (error: any) {
+      console.error('Admin distribute reward error:', error);
+      let errorMessage = error.message || 'Failed to distribute reward as admin';
+      updateState({ 
+        isLoading: false, 
+        error: errorMessage 
+      });
+      return { success: false, error: errorMessage };
+    }
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+
   // Approve token spending
   const approveToken = useCallback(async (params: {
     tokenAddress: Address;
@@ -558,6 +613,7 @@ export function useWagmiContract(): UseWagmiContractReturn {
     createSession,
     addReward,               // NEW
     distributeRewards,       // NEW
+    adminDistributeReward,   // NEW
     approveToken,
     transferToken,
     getTokenBalance,

@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client/index';
 import { startRoomCountdown, startSnarkelImmediately } from '@/lib/snarkel-utils';
 
 const prisma = new PrismaClient();
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
-    const roomId = params.roomId;
+    const roomId = (await params).roomId;
     const { adminId, startType } = await request.json();
 
     if (startType === 'countdown') {

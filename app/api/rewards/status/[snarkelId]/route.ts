@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client/edge';
+import { PrismaClient } from '@prisma/client/index';
 
 const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { snarkelId: string } }
+  { params }: { params: Promise<{ snarkelId: string }> }
 ) {
   try {
-    const { snarkelId } = params;
+    // Await the params since they're now a Promise in newer Next.js versions
+    const { snarkelId } = await params;
 
     // Get reward distribution status
     const reward = await prisma.snarkelReward.findFirst({
@@ -90,4 +91,4 @@ export async function GET(
       error: error.message || 'Failed to fetch reward status'
     }, { status: 500 });
   }
-} 
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { io, Socket } from 'socket.io-client';
@@ -61,7 +61,7 @@ interface Snarkel {
   maxSpeedBonus: number;
 }
 
-export default function JoinSnarkelPage() {
+function JoinSnarkelContent() {
   const { address, isConnected } = useAccount();
   const searchParams = useSearchParams();
   const [snarkelCode, setSnarkelCode] = useState('');
@@ -885,5 +885,13 @@ export default function JoinSnarkelPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function JoinSnarkelPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <JoinSnarkelContent />
+    </Suspense>
   );
 }
