@@ -1,0 +1,32 @@
+{
+  "miniapp": {
+    "version": "1",
+    "name": "Snarkels",
+    "iconUrl": "https://snarkels.vercel.app/logo.png",
+    "homeUrl": "https://snarkels.vercel.app",
+    "splashImageUrl": "https://snarkels.vercel.app/logo.png",
+    "splashBackgroundColor": "#1f2937",
+    "subtitle": "Quiz rewards platform",
+    "description": "Create and participate in quiz sessions with crypto rewards on Celo network.",
+    "primaryCategory": "social",
+    "tags": [
+      "quiz",
+      "rewards",
+      "crypto",
+      "celo",
+      "social"
+    ],
+    "heroImageUrl": "https://snarkels.vercel.app/api/og",
+    "tagline": "Quiz rewards platform",
+    "ogTitle": "Snarkels",
+    "ogDescription": "Create and participate in quiz sessions with crypto rewards",
+    "ogImageUrl": "https://snarkels.vercel.app/api/og",
+    "requiredChains": [
+      "eip155:44787"
+    ],
+    "requiredCapabilities": [
+      "wallet.getEthereumProvider",
+      "actions.signIn"
+    ]
+  }
+} 
