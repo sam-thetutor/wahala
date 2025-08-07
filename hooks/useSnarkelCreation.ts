@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useWagmiContract } from './useViemContract';
+import { useQuizContract } from './useViemContract';
 import { parseEther, formatEther, type Address } from 'viem';
 
 // Contract address
@@ -63,13 +63,13 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
 
   // Get smart contract functions - Updated to use Wagmi
   const { 
-    createSession, 
+    createSnarkelSession, 
     approveToken, 
     transferToken, 
     getTokenBalance, 
     getTokenAllowance,
     contractState 
-  } = useWagmiContract();
+  } = useQuizContract();
 
   const validateForm = (data: SnarkelData): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -230,18 +230,12 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
             throw new Error(tokenData.error || 'Invalid token address');
           }
 
-          // Calculate entry fee based on reward type
+          // Calculate entry fee from spam control settings
           let entryFeeWei = '0';
           
-          if (data.rewards.type === 'LINEAR') {
-            // For linear rewards, sum up all reward amounts
-            const totalReward = data.rewards.rewardAmounts?.reduce((sum, amount) => sum + amount, 0) || 0;
-            entryFeeWei = (totalReward * 1e18).toString();
-          } else if (data.rewards.type === 'QUADRATIC') {
-            // For quadratic rewards, use the total reward pool
-            entryFeeWei = data.rewards.totalRewardPool 
-              ? (parseFloat(data.rewards.totalRewardPool) * 1e18).toString()
-              : '0';
+          if (data.spamControlEnabled && data.entryFee > 0) {
+            // Convert entry fee to wei (assuming entry fee is in the token's smallest unit)
+            entryFeeWei = (data.entryFee * 1e18).toString();
           }
 
           console.log('Creating session with params:', {
@@ -265,7 +259,7 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
           }
 
           // Create smart contract session with the actual quiz code - Using Wagmi
-          const sessionResult = await createSession({
+          const sessionResult = await createSnarkelSession({
             snarkelCode, // Use the actual quiz code from database
             entryFeeWei, // entryFee in wei
             platformFeePercentage: 5, // 5%

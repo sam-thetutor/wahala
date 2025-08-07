@@ -20,7 +20,7 @@ if (!projectId) {
 const metadata = {
   name: 'Snarkels',
   description: 'Snarkels - Create and host interactive quizzes',
-  url: 'https://snarkels.com', // origin must match your domain & subdomain
+  url: 'https://snarkels.vercel.app', // origin must match your domain & subdomain
   icons: ['https://avatars.githubusercontent.com/u/179229932']
 }
 
@@ -28,7 +28,7 @@ const metadata = {
 const modal = createAppKit({
   adapters: [wagmiAdapter],
   projectId,
-  networks: [ celoAlfajores],
+  networks: [celoAlfajores],
   defaultNetwork: celoAlfajores,
   metadata: metadata,
   features: {

@@ -6,6 +6,7 @@ import { Plus, Trash2, Save, Settings, Users, Trophy, Shield, Home, Gamepad2, St
 import { useSnarkelCreation } from '@/hooks/useSnarkelCreation';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { RewardConfigurationSection } from '@/components/RewardConfigurationSection';
+import AIGenerateSnarkelModal from '@/components/AIGenerateSnarkelModal';
 import { useAccount } from 'wagmi';
 
 // Progress Modal Component
@@ -164,6 +165,9 @@ export default function SnarkelCreationPage() {
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
   const [currentProgressStep, setCurrentProgressStep] = useState(0);
+  
+  // AI Modal state
+  const [showAIModal, setShowAIModal] = useState(false);
   
   // Use the custom hook for snarkel creation
   const { isSubmitting, error, validationErrors, setValidationErrors, createSnarkel, clearErrors } = useSnarkelCreation();
@@ -610,6 +614,30 @@ export default function SnarkelCreationPage() {
     setCurrentProgressStep(stepIndex);
   }, []);
 
+  // Handle AI generated quiz
+  const handleAIGeneratedQuiz = useCallback((quizData: any) => {
+    // Update the snarkel with AI generated data
+    setSnarkel(prev => ({
+      ...prev,
+      title: quizData.title,
+      description: quizData.description,
+      maxQuestions: quizData.questions.length,
+      questions: quizData.questions.map((q: any, index: number) => ({
+        id: `ai-generated-${index}`,
+        text: q.question,
+        timeLimit: 15,
+        options: Object.entries(q.options).map(([key, value]: [string, any], optIndex: number) => ({
+          id: `ai-option-${index}-${optIndex}`,
+          text: value,
+          isCorrect: key === q.correctAnswer
+        }))
+      }))
+    }));
+    
+    // Switch to questions tab to show the generated questions
+    setActiveTab('questions');
+  }, []);
+
   // Show wallet connection requirement if not connected
   if (!isConnected) {
     return (
@@ -1042,13 +1070,22 @@ export default function SnarkelCreationPage() {
                      <Edit3 className="w-5 h-5" />
                      Questions ({snarkel.questions.length})
                    </h3>
-                   <button
-                     onClick={addQuestion}
-                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
-                   >
-                     <Plus size={16} />
-                     Add Question
-                   </button>
+                   <div className="flex gap-2">
+                     <button
+                       onClick={() => setShowAIModal(true)}
+                       className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
+                     >
+                       <Sparkles size={16} />
+                       AI Generate
+                     </button>
+                     <button
+                       onClick={addQuestion}
+                       className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
+                     >
+                       <Plus size={16} />
+                       Add Question
+                     </button>
+                   </div>
                  </div>
 
                  {snarkel.questions.length === 0 ? (
@@ -1063,12 +1100,21 @@ export default function SnarkelCreationPage() {
                          </p>
                        </div>
                      )}
-                     <button
-                       onClick={addQuestion}
-                       className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold"
-                     >
-                       🚀 Create Your First Question
-                     </button>
+                     <div className="flex gap-3 justify-center">
+                       <button
+                         onClick={() => setShowAIModal(true)}
+                         className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 font-handwriting font-bold flex items-center gap-2"
+                       >
+                         <Sparkles size={16} />
+                         AI Generate Quiz
+                       </button>
+                       <button
+                         onClick={addQuestion}
+                         className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold"
+                       >
+                         🚀 Create Your First Question
+                       </button>
+                     </div>
                    </div>
                  ) : (
                    <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-4 border border-gray-200">
@@ -1507,6 +1553,13 @@ export default function SnarkelCreationPage() {
          </div>
        </div>
      )}
+
+     {/* AI Generate Modal */}
+     <AIGenerateSnarkelModal
+       isOpen={showAIModal}
+       onClose={() => setShowAIModal(false)}
+       onGenerate={handleAIGeneratedQuiz}
+     />
 
      <style jsx>{`
        @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap');

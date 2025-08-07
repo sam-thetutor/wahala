@@ -94,6 +94,21 @@ model Snarkel {
   maxSpeedBonus         Int                @default(500)
   rewardsEnabled        Boolean            @default(false)
   onchainSessionId      String?
+  
+  // NEW: Quiz functionality fields
+  maxPossibleScore      Int?               // Maximum score achievable in quiz
+  rewardPerPoint        String?            // Reward amount per point (as string for precision)
+  totalRewardPool       String?            // Total reward pool for the quiz (moved from SnarkelReward)
+  rewardToken           String?            // Single reward token address
+  rewardTokenSymbol     String?            // Token symbol
+  rewardTokenName       String?            // Token name  
+  rewardTokenDecimals   Int?               // Token decimals
+  
+  // UPDATED: Quiz completion tracking
+  isCompleted           Boolean            @default(false)  // Track if quiz is completed
+  resultsSubmitted      Boolean            @default(false)  // Track if results submitted
+  completedAt           DateTime?          // When quiz was completed
+  
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   creatorId             String
@@ -102,6 +117,7 @@ model Snarkel {
   rooms                 Room[]
   allowlist             SnarkelAllowlist[]
   rewards               SnarkelReward[]
+  rewardTracking        QuizRewardTracking[]  // NEW: Add this relation
   creator               User               @relation("SnarkelCreator", fields: [creatorId], references: [id])
   submissions           Submission[]
 
@@ -139,12 +155,36 @@ model SnarkelReward {
   isDistributed   Boolean              @default(false)
   distributedAt   DateTime?
   onchainSessionId String?
+  
+  // NEW: Session-level reward tracking
+  sessionRewardsDistributed String?         @default("0")    // Total rewards distributed this session
+  participantsRewarded      Int?            @default(0)      // Number who claimed rewards
+  rewardClaimPercentage     Float?          @default(0)      // Percentage of participants who claimed
+  allRewardsClaimed         Boolean         @default(false)  // Whether all rewards claimed
+  
   createdAt       DateTime             @default(now())
   snarkelId       String
   distributions   RewardDistribution[]
   snarkel         Snarkel              @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
 
   @@map("snarkel_rewards")
+}
+
+model QuizRewardTracking {
+  id                        String   @id @default(cuid())
+  quizCode                  String   // Links to Snarkel.snarkelCode
+  tokenAddress              String
+  tokenSymbol               String
+  tokenName                 String
+  totalRewardsDistributed   String   @default("0")  // Total across ALL sessions
+  totalSessionsCompleted    Int      @default(0)    // Number of completed sessions
+  lastUpdated               DateTime @updatedAt
+  createdAt                 DateTime @default(now())
+  snarkelId                 String
+  snarkel                   Snarkel  @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
+
+  @@unique([snarkelId, tokenAddress])
+  @@map("quiz_reward_tracking")
 }
 
 model RewardDistribution {
@@ -197,6 +237,13 @@ model Submission {
   timeSpent              Int?
   averageTimePerQuestion Float?
   completedAt            DateTime             @default(now())
+  
+  // NEW: Quiz result tracking
+  rewardAmount              String?          // Individual reward amount earned
+  rewardClaimed             Boolean          @default(false)  // Whether user claimed their reward
+  rewardClaimedAt           DateTime?        // When reward was claimed
+  rewardTxHash              String?          // Transaction hash of reward claim
+  
   userId                 String
   snarkelId              String
   answers                Answer[]

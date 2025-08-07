@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { io, Socket } from 'socket.io-client';
 import { isValidWalletAddress } from '@/lib/wallet-utils';
-import { useWagmiContract } from '@/hooks/useViemContract';
+import { useQuizContract } from '@/hooks/useViemContract';
 import { 
   Users, 
   Clock, 
@@ -96,7 +96,7 @@ export default function QuizRoomPage() {
     areRewardsDistributed,
     getExpectedRewardToken,
     getExpectedRewardAmount
-  } = useWagmiContract();
+  } = useQuizContract();
   
   const [room, setRoom] = useState<Room | null>(null);
   const [snarkel, setSnarkel] = useState<Snarkel | null>(null);

@@ -49,6 +49,7 @@ interface Snarkel {
   spamControlEnabled: boolean;
   entryFee: string;
   entryFeeToken: string;
+  entryFeeNetwork: string;
   allowlistCount: number;
   hasRewards: boolean;
   autoStartEnabled: boolean;
@@ -522,6 +523,11 @@ export default function AdminPage() {
                             {snarkel.hasRewards && (
                               <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
                                 Rewards
+                              </span>
+                            )}
+                            {snarkel.entryFeeNetwork && (
+                              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                {snarkel.entryFeeNetwork}
                               </span>
                             )}
                           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useWagmiContract } from '../hooks/useViemContract';
+import { useQuizContract } from '../hooks/useViemContract';
 import { useAccount } from 'wagmi';
 import { TokenConfig, NetworkConfig } from '../lib/tokens-config';
 import { 
@@ -37,7 +37,7 @@ export default function QuizRewards({ sessionId, isAdmin, onClose }: QuizRewards
     getExpectedRewardToken,
     getExpectedRewardAmount,
     resetState
-  } = useWagmiContract();
+  } = useQuizContract();
 
   const [showAddRewardModal, setShowAddRewardModal] = useState(false);
   const [showCustomTokenInput, setShowCustomTokenInput] = useState(false);

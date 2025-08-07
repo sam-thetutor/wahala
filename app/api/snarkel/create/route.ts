@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       spamControlEnabled,
       entryFee,
       entryFeeToken,
+      entryFeeNetwork,
       creatorAddress,
       rewards,
       questions,
@@ -174,6 +175,7 @@ export async function POST(request: NextRequest) {
         spamControlEnabled,
         entryFeeAmount: spamControlEnabled ? entryFee.toString() : '0',
         entryFeeTokenAddress: spamControlEnabled ? entryFeeToken : '',
+        entryFeeNetwork: spamControlEnabled ? entryFeeNetwork : '',
         creatorId: user.id,
         questions: {
           create: questions.map((q: any, index: number) => ({
@@ -220,7 +222,8 @@ export async function POST(request: NextRequest) {
           tokenSymbol: 'CELO', // Default token symbol
           tokenName: 'Celo Native Token', // Default token name
           tokenDecimals: 18, // Default decimals
-          network: 'Celo', // Default network
+          network: rewards.chainId ? `Chain ${rewards.chainId}` : 'Celo', // Use chain ID if provided
+          chainId: rewards.chainId || 44787, // Default to Celo Alfajores
           totalWinners: rewards.type === 'LINEAR' ? rewards.totalWinners : undefined,
           rewardAmounts: rewards.type === 'LINEAR' ? rewards.rewardAmounts : undefined,
           totalRewardPool: rewards.type === 'QUADRATIC' ? rewards.totalRewardPool : undefined,

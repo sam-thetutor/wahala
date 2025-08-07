@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useWagmiContract } from './useViemContract';
+import { useQuizContract } from './useViemContract';
 import { Address } from 'viem';
 
 interface RewardConfig {
@@ -63,7 +63,7 @@ export const useRewardCreation = (): UseRewardCreationReturn => {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { createSession, contractState } = useWagmiContract();
+  const { createSnarkelSession, contractState } = useQuizContract();
 
   const updateStep = useCallback((stepIndex: number, updates: Partial<CreationStep>) => {
     setSteps(prev => prev.map((step, index) => 
@@ -132,7 +132,7 @@ export const useRewardCreation = (): UseRewardCreationReturn => {
         }
 
         // Create session with proper parameters
-        const sessionResult = await createSession({
+        const sessionResult = await createSnarkelSession({
           snarkelCode: snarkelId,
           entryFeeWei: entryFeeWei,
           platformFeePercentage: 5,
@@ -184,7 +184,7 @@ export const useRewardCreation = (): UseRewardCreationReturn => {
     } finally {
       setIsCreating(false);
     }
-  }, [updateStep, createSession, contractState]);
+  }, [updateStep, createSnarkelSession, contractState]);
 
   const resetCreation = useCallback(() => {
     setSteps(prev => prev.map(step => ({ ...step, status: 'pending', error: undefined })));
