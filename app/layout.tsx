@@ -7,9 +7,25 @@ import { FarcasterProvider, useFarcaster } from '@/components/FarcasterProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
-function LayoutContent({ children }: { children: React.ReactNode }) {
+function AppContent({ children }: { children: React.ReactNode }) {
   const { isFarcasterApp, context } = useFarcaster()
 
+  return (
+    <div 
+      className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100"
+      style={{
+        paddingTop: isFarcasterApp ? (context?.client?.safeAreaInsets?.top ?? 0) : 0,
+        paddingBottom: isFarcasterApp ? (context?.client?.safeAreaInsets?.bottom ?? 0) : 0,
+        paddingLeft: isFarcasterApp ? (context?.client?.safeAreaInsets?.left ?? 0) : 0,
+        paddingRight: isFarcasterApp ? (context?.client?.safeAreaInsets?.right ?? 0) : 0,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -24,17 +40,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <body className={inter.className}>
         <ContextProvider cookies={null}>
           <FarcasterProvider>
-            <div 
-              className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100"
-              style={{
-                paddingTop: isFarcasterApp ? (context?.client?.safeAreaInsets?.top ?? 0) : 0,
-                paddingBottom: isFarcasterApp ? (context?.client?.safeAreaInsets?.bottom ?? 0) : 0,
-                paddingLeft: isFarcasterApp ? (context?.client?.safeAreaInsets?.left ?? 0) : 0,
-                paddingRight: isFarcasterApp ? (context?.client?.safeAreaInsets?.right ?? 0) : 0,
-              }}
-            >
+            <AppContent>
               {children}
-            </div>
+            </AppContent>
           </FarcasterProvider>
         </ContextProvider>
       </body>

@@ -1,4 +1,9 @@
 {
+  "accountAssociation": {
+    "header": "eyJmaWQiOjgxMDc4MiwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweEVhMzg3NzJCN2I2MjVGODY1M0MwMzQxNzk3QjE3MUUzMDI5RTEzMjUifQ",
+    "payload": "eyJkb21haW4iOiJzbmFya2Vscy52ZXJjZWwuYXBwIn0",
+    "signature": "MHhhZDQ4NGY4MDM2OTkxYzgxMDk5MzIxZmNmOTczMDgzYjZhODQxZGYyMTk3ZmE3MDJmYzg2MmFiMWQyOGQxMjRkMmZlMGVmZWYwMTMzODVjMjlhMzY2N2I5NDY3MDhjOWEwMGM3NWRjNmZlYzIyZjQzNzBiOTRhMDRlMjQ0MDE3YjFi"
+  },
   "miniapp": {
     "version": "1",
     "name": "Snarkels",

@@ -236,6 +236,30 @@ function JoinSnarkelContent() {
     }
   };
 
+  const handleGoHome = () => {
+    router.push('/');
+  };
+
+  const handleJoinRoom = (snarkelId: string, roomId: string) => {
+    router.push(`/quiz/${snarkelId}/room/${roomId}`);
+  };
+
+  const handleShowMessageModal = () => {
+    setShowMessageModal(true);
+  };
+
+  const handleCloseMessageModal = () => {
+    setShowMessageModal(false);
+  };
+
+  const handleCloseCountdownModal = () => {
+    setShowCountdownModal(false);
+  };
+
+  const handleJoinRoomWithParams = (snarkelId: string, roomId: string) => {
+    handleJoinRoom(snarkelId, roomId);
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#FCF6F1' }}>
       {/* Enhanced notebook background */}
@@ -341,7 +365,7 @@ function JoinSnarkelContent() {
                 </div>
                 
                 <button 
-                  onClick={() => router.push('/')}
+                  onClick={handleGoHome}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors font-handwriting text-sm"
                   style={{ color: '#476520' }}
                 >
@@ -533,7 +557,7 @@ function JoinSnarkelContent() {
                   </h2>
                 </div>
                 <button
-                  onClick={() => router.push(`/quiz/${snarkel.id}/room/${room.id}`)}
+                  onClick={() => handleJoinRoomWithParams(snarkel.id, room.id)}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                   <Gamepad2 className="w-4 h-4" />
@@ -652,7 +676,7 @@ function JoinSnarkelContent() {
                   </button>
                   
                   <button
-                    onClick={() => setShowMessageModal(true)}
+                    onClick={handleShowMessageModal}
                     className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-400 hover:to-purple-500 transition-all duration-300 font-handwriting font-bold"
                   >
                     <MessageSquare className="w-5 h-5" />
@@ -792,7 +816,7 @@ function JoinSnarkelContent() {
                   Start Quiz
                 </button>
                 <button
-                  onClick={() => setShowCountdownModal(false)}
+                  onClick={handleCloseCountdownModal}
                   className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-handwriting font-bold"
                 >
                   Cancel
@@ -830,7 +854,7 @@ function JoinSnarkelContent() {
                   Send Message
                 </button>
                 <button
-                  onClick={() => setShowMessageModal(false)}
+                  onClick={handleCloseMessageModal}
                   className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-handwriting font-bold"
                 >
                   Cancel

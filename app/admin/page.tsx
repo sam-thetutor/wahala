@@ -136,14 +136,99 @@ interface QuizSession {
 
 export default function AdminPage() {
   const { address, isConnected } = useAccount();
-  const [snarkels, setSnarkels] = useState<Snarkel[]>([]);
-  const [sessions, setSessions] = useState<QuizSession[]>([]);
+  const [activeTab, setActiveTab] = useState<'quizzes' | 'sessions'>('quizzes');
+  const [mySnarkels, setMySnarkels] = useState<Snarkel[]>([]);
+  const [quizSessions, setQuizSessions] = useState<QuizSession[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sessionsLoading, setSessionsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedSnarkel, setSelectedSnarkel] = useState<Snarkel | null>(null);
   const [selectedSession, setSelectedSession] = useState<QuizSession | null>(null);
-  const [activeTab, setActiveTab] = useState<'quizzes' | 'sessions'>('quizzes');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Extract onClick handlers into separate functions
+  const handleCreateNew = () => {
+    window.location.href = '/create';
+  };
+
+  const handleTabChange = (tab: 'quizzes' | 'sessions') => {
+    setActiveTab(tab);
+  };
+
+  const handleRefreshQuizzes = () => {
+    fetchMySnarkels();
+  };
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+  };
+
+  const handleJoinSnarkel = (code: string) => {
+    window.open(`/join?code=${code}`, '_blank');
+  };
+
+  const handleEditSnarkel = (id: string) => {
+    window.open(`/create?edit=${id}`, '_blank');
+  };
+
+  const handleSelectSnarkel = (snarkel: Snarkel) => {
+    setSelectedSnarkel(snarkel);
+  };
+
+  const handleSelectSession = (session: QuizSession) => {
+    setSelectedSession(session);
+  };
+
+  const handleCloseSnarkelModal = () => {
+    setSelectedSnarkel(null);
+  };
+
+  const handleCloseSessionModal = () => {
+    setSelectedSession(null);
+  };
+
+  const handleJoinSelectedSnarkel = (code: string) => {
+    window.open(`/join?code=${code}`, '_blank');
+  };
+
+  const handleEditSelectedSnarkel = (id: string) => {
+    window.open(`/create?edit=${id}`, '_blank');
+  };
+
+  const handleTabChangeQuizzes = () => {
+    handleTabChange('quizzes');
+  };
+
+  const handleTabChangeSessions = () => {
+    handleTabChange('sessions');
+  };
+
+  const handleCopySnarkelCode = (code: string) => {
+    handleCopyCode(code);
+  };
+
+  const handleJoinSnarkelCode = (code: string) => {
+    handleJoinSnarkel(code);
+  };
+
+  const handleEditSnarkelId = (id: string) => {
+    handleEditSnarkel(id);
+  };
+
+  const handleSelectSnarkelItem = (snarkel: Snarkel) => {
+    handleSelectSnarkel(snarkel);
+  };
+
+  const handleSelectSessionItem = (session: QuizSession) => {
+    handleSelectSession(session);
+  };
+
+  const handleJoinSelectedSnarkelCode = (code: string) => {
+    handleJoinSelectedSnarkel(code);
+  };
+
+  const handleEditSelectedSnarkelId = (id: string) => {
+    handleEditSelectedSnarkel(id);
+  };
 
   useEffect(() => {
     if (isConnected && address) {
@@ -156,16 +241,23 @@ export default function AdminPage() {
 
   const fetchMySnarkels = async () => {
     try {
-      setLoading(true);
-      const response = await fetch(`/api/snarkel/my-snarkels?address=${address}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        setSnarkels(data.snarkels);
+      setError(null);
+      const response = await fetch('/api/snarkel/my-snarkels', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userAddress: address }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setMySnarkels(data.snarkels);
       } else {
         setError('Failed to fetch your snarkels');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error fetching my snarkels:', error);
       setError('Network error occurred');
     } finally {
       setLoading(false);
@@ -174,25 +266,25 @@ export default function AdminPage() {
 
   const fetchQuizSessions = async () => {
     try {
-      setSessionsLoading(true);
-      const response = await fetch(`/api/admin/quiz-sessions?address=${address}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        setSessions(data.sessions);
-      } else {
-        console.error('Failed to fetch quiz sessions');
+      const response = await fetch('/api/snarkel/quiz-sessions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userAddress: address }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setQuizSessions(data.sessions);
       }
-    } catch (err) {
-      console.error('Network error occurred while fetching sessions');
-    } finally {
-      setSessionsLoading(false);
+    } catch (error) {
+      console.error('Error fetching quiz sessions:', error);
     }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    // You could add a toast notification here
   };
 
   const formatDate = (dateString: string) => {
@@ -201,12 +293,12 @@ export default function AdminPage() {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
   const getStatusColor = (isActive: boolean) => {
-    return isActive ? 'text-green-600 bg-green-100' : 'text-gray-600 bg-gray-100';
+    return isActive ? 'text-green-600' : 'text-red-600';
   };
 
   const getStatusText = (isActive: boolean) => {
@@ -214,19 +306,16 @@ export default function AdminPage() {
   };
 
   const getSessionStatus = (session: QuizSession) => {
-    if (session.isFinished) return { text: 'Finished', color: 'text-gray-600 bg-gray-100', icon: StopCircle };
-    if (session.isStarted) return { text: 'Running', color: 'text-green-600 bg-green-100', icon: Play };
-    if (session.isWaiting) return { text: 'Waiting', color: 'text-yellow-600 bg-yellow-100', icon: Clock };
-    return { text: 'Inactive', color: 'text-gray-600 bg-gray-100', icon: Pause };
+    if (session.isFinished) return { text: 'Finished', color: 'text-gray-600' };
+    if (session.isStarted) return { text: 'In Progress', color: 'text-blue-600' };
+    if (session.isWaiting) return { text: 'Waiting', color: 'text-yellow-600' };
+    return { text: 'Scheduled', color: 'text-purple-600' };
   };
 
   const getRewardStatus = (session: QuizSession) => {
-    const hasRewards = session.rewards.length > 0;
-    const isDistributed = session.rewards.some(r => r.isDistributed);
-    
-    if (!hasRewards) return { text: 'No Rewards', color: 'text-gray-600 bg-gray-100', icon: XCircle };
-    if (isDistributed) return { text: 'Distributed', color: 'text-green-600 bg-green-100', icon: CheckCircle };
-    return { text: 'Pending', color: 'text-yellow-600 bg-yellow-100', icon: Clock };
+    const distributedRewards = session.rewards.filter(r => r.isDistributed).length;
+    const totalRewards = session.rewards.length;
+    return `${distributedRewards}/${totalRewards} distributed`;
   };
 
   if (!isConnected) {
@@ -270,7 +359,7 @@ export default function AdminPage() {
             <div className="flex items-center gap-4">
               <WalletConnectButton />
               <button
-                onClick={() => window.location.href = '/create'}
+                onClick={handleCreateNew}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all font-handwriting font-medium"
               >
                 <Plus size={16} />
@@ -287,7 +376,7 @@ export default function AdminPage() {
         <div className="mb-6">
           <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
             <button
-              onClick={() => setActiveTab('quizzes')}
+              onClick={handleTabChangeQuizzes}
               className={`flex items-center gap-2 px-4 py-2 rounded-md font-handwriting font-medium transition-all ${
                 activeTab === 'quizzes'
                   ? 'bg-white text-purple-600 shadow-sm'
@@ -295,10 +384,10 @@ export default function AdminPage() {
               }`}
             >
               <Trophy size={16} />
-              My Quizzes ({snarkels.length})
+              My Quizzes ({mySnarkels.length})
             </button>
             <button
-              onClick={() => setActiveTab('sessions')}
+              onClick={handleTabChangeSessions}
               className={`flex items-center gap-2 px-4 py-2 rounded-md font-handwriting font-medium transition-all ${
                 activeTab === 'sessions'
                   ? 'bg-white text-purple-600 shadow-sm'
@@ -306,7 +395,7 @@ export default function AdminPage() {
               }`}
             >
               <Activity size={16} />
-              Quiz Sessions ({sessions.length})
+              Quiz Sessions ({quizSessions.length})
             </button>
           </div>
         </div>
@@ -323,14 +412,14 @@ export default function AdminPage() {
               <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
                 <p className="text-red-600 mb-4">{error}</p>
                 <button
-                  onClick={fetchMySnarkels}
+                  onClick={handleRefreshQuizzes}
                   className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                 >
                   Try Again
                 </button>
               </div>
             </div>
-          ) : snarkels.length === 0 ? (
+          ) : mySnarkels.length === 0 ? (
             <div className="text-center py-12">
               <div className="bg-white rounded-xl shadow-lg p-8 max-w-md mx-auto">
                 <Gamepad2 className="w-16 h-16 mx-auto text-gray-400 mb-4" />
@@ -341,7 +430,7 @@ export default function AdminPage() {
                   Create your first snarkel to get started!
                 </p>
                 <button
-                  onClick={() => window.location.href = '/create'}
+                  onClick={handleCreateNew}
                   className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all font-handwriting font-medium mx-auto"
                 >
                   <Plus size={18} />
@@ -361,7 +450,7 @@ export default function AdminPage() {
                     <div>
                       <p className="text-sm text-gray-600">Total Quizzes</p>
                       <p className="text-2xl font-handwriting font-bold text-gray-800">
-                        {snarkels.length}
+                        {mySnarkels.length}
                       </p>
                     </div>
                   </div>
@@ -375,7 +464,7 @@ export default function AdminPage() {
                     <div>
                       <p className="text-sm text-gray-600">Active</p>
                       <p className="text-2xl font-handwriting font-bold text-gray-800">
-                        {snarkels.filter(s => s.isActive).length}
+                        {mySnarkels.filter(s => s.isActive).length}
                       </p>
                     </div>
                   </div>
@@ -389,7 +478,7 @@ export default function AdminPage() {
                     <div>
                       <p className="text-sm text-gray-600">Total Questions</p>
                       <p className="text-2xl font-handwriting font-bold text-gray-800">
-                        {snarkels.reduce((sum, s) => sum + s.totalQuestions, 0)}
+                        {mySnarkels.reduce((sum, s) => sum + s.totalQuestions, 0)}
                       </p>
                     </div>
                   </div>
@@ -403,7 +492,7 @@ export default function AdminPage() {
                     <div>
                       <p className="text-sm text-gray-600">With Rewards</p>
                       <p className="text-2xl font-handwriting font-bold text-gray-800">
-                        {snarkels.filter(s => s.hasRewards).length}
+                        {mySnarkels.filter(s => s.hasRewards).length}
                       </p>
                     </div>
                   </div>
@@ -419,7 +508,7 @@ export default function AdminPage() {
                 </div>
                 
                 <div className="divide-y divide-gray-100">
-                  {snarkels.map((snarkel) => (
+                  {mySnarkels.map((snarkel) => (
                     <div key={snarkel.id} className="p-6 hover:bg-gray-50 transition-colors">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -461,7 +550,7 @@ export default function AdminPage() {
                         
                         <div className="flex items-center gap-2 ml-4">
                           <button
-                            onClick={() => copyToClipboard(snarkel.snarkelCode)}
+                            onClick={() => handleCopySnarkelCode(snarkel.snarkelCode)}
                             className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm"
                             title="Copy code"
                           >
@@ -470,7 +559,7 @@ export default function AdminPage() {
                           </button>
                           
                           <button
-                            onClick={() => window.open(`/join?code=${snarkel.snarkelCode}`, '_blank')}
+                            onClick={() => handleJoinSnarkelCode(snarkel.snarkelCode)}
                             className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
                             title="View snarkel"
                           >
@@ -478,7 +567,7 @@ export default function AdminPage() {
                           </button>
                           
                           <button
-                            onClick={() => window.open(`/create?edit=${snarkel.id}`, '_blank')}
+                            onClick={() => handleEditSnarkelId(snarkel.id)}
                             className="p-2 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition-colors"
                             title="Edit snarkel"
                           >
@@ -486,7 +575,7 @@ export default function AdminPage() {
                           </button>
                           
                           <button
-                            onClick={() => setSelectedSnarkel(snarkel)}
+                            onClick={() => handleSelectSnarkelItem(snarkel)}
                             className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors"
                             title="View details"
                           >
@@ -494,7 +583,7 @@ export default function AdminPage() {
                           </button>
                           
                           <button
-                            onClick={() => setSelectedSnarkel(snarkel)}
+                            onClick={() => handleSelectSnarkelItem(snarkel)}
                             className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
                             title="Quiz details"
                           >
@@ -521,7 +610,7 @@ export default function AdminPage() {
                   <div>
                     <p className="text-sm text-gray-600">Total Sessions</p>
                     <p className="text-2xl font-handwriting font-bold text-gray-800">
-                      {sessions.length}
+                      {quizSessions.length}
                     </p>
                   </div>
                 </div>
@@ -535,7 +624,7 @@ export default function AdminPage() {
                   <div>
                     <p className="text-sm text-gray-600">Running</p>
                     <p className="text-2xl font-handwriting font-bold text-gray-800">
-                      {sessions.filter(s => s.isStarted && !s.isFinished).length}
+                      {quizSessions.filter(s => s.isStarted && !s.isFinished).length}
                     </p>
                   </div>
                 </div>
@@ -549,7 +638,7 @@ export default function AdminPage() {
                   <div>
                     <p className="text-sm text-gray-600">Total Participants</p>
                     <p className="text-2xl font-handwriting font-bold text-gray-800">
-                      {sessions.reduce((sum, s) => sum + s.stats.totalParticipants, 0)}
+                      {quizSessions.reduce((sum, s) => sum + s.stats.totalParticipants, 0)}
                     </p>
                   </div>
                 </div>
@@ -563,7 +652,7 @@ export default function AdminPage() {
                   <div>
                     <p className="text-sm text-gray-600">Rewards Distributed</p>
                     <p className="text-2xl font-handwriting font-bold text-gray-800">
-                      {sessions.reduce((sum, s) => sum + s.stats.totalRewardsDistributed, 0)}
+                      {quizSessions.reduce((sum, s) => sum + s.stats.totalRewardsDistributed, 0)}
                     </p>
                   </div>
                 </div>
@@ -578,12 +667,12 @@ export default function AdminPage() {
                 </h2>
               </div>
               
-              {sessionsLoading ? (
+              {loading ? (
                 <div className="p-6 text-center">
                   <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                   <p className="text-gray-600">Loading sessions...</p>
                 </div>
-              ) : sessions.length === 0 ? (
+              ) : quizSessions.length === 0 ? (
                 <div className="p-6 text-center">
                   <Activity className="w-16 h-16 mx-auto text-gray-400 mb-4" />
                   <h3 className="text-xl font-handwriting font-bold text-gray-800 mb-2">
@@ -595,11 +684,9 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {sessions.map((session) => {
+                  {quizSessions.map((session) => {
                     const sessionStatus = getSessionStatus(session);
                     const rewardStatus = getRewardStatus(session);
-                    const StatusIcon = sessionStatus.icon;
-                    const RewardIcon = rewardStatus.icon;
                     
                     return (
                       <div key={session.id} className="p-6 hover:bg-gray-50 transition-colors">
@@ -609,13 +696,11 @@ export default function AdminPage() {
                               <h3 className="text-lg font-handwriting font-bold text-gray-800">
                                 {session.snarkel.title} - Session {session.sessionNumber}
                               </h3>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${sessionStatus.color}`}>
-                                <StatusIcon size={12} />
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${sessionStatus.color}`}>
                                 {sessionStatus.text}
                               </span>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${rewardStatus.color}`}>
-                                <RewardIcon size={12} />
-                                {rewardStatus.text}
+                              <span className="px-2 py-1 rounded-full text-xs font-medium text-gray-600 bg-gray-100">
+                                {rewardStatus}
                               </span>
                             </div>
                             
@@ -647,7 +732,7 @@ export default function AdminPage() {
                           
                           <div className="flex items-center gap-2 ml-4">
                             <button
-                              onClick={() => setSelectedSession(session)}
+                              onClick={() => handleSelectSessionItem(session)}
                               className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors"
                               title="View session details"
                             >
@@ -675,7 +760,7 @@ export default function AdminPage() {
                   {selectedSnarkel.title}
                 </h3>
                 <button
-                  onClick={() => setSelectedSnarkel(null)}
+                  onClick={handleCloseSnarkelModal}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <span className="text-2xl">&times;</span>
@@ -791,21 +876,21 @@ export default function AdminPage() {
               
               <div className="flex gap-3 pt-4 border-t border-gray-100">
                 <button
-                  onClick={() => window.open(`/join?code=${selectedSnarkel.snarkelCode}`, '_blank')}
+                  onClick={() => handleJoinSelectedSnarkelCode(selectedSnarkel.snarkelCode)}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                   <Eye size={16} />
                   View Snarkel
                 </button>
                 <button
-                  onClick={() => window.open(`/create?edit=${selectedSnarkel.id}`, '_blank')}
+                  onClick={() => handleEditSelectedSnarkelId(selectedSnarkel.id)}
                   className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                 >
                   <Edit3 size={16} />
                   Edit
                 </button>
                 <button
-                  onClick={() => setSelectedSnarkel(null)}
+                  onClick={handleCloseSnarkelModal}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 >
                   Close
@@ -826,7 +911,7 @@ export default function AdminPage() {
                   {selectedSession.snarkel.title} - Session {selectedSession.sessionNumber}
                 </h3>
                 <button
-                  onClick={() => setSelectedSession(null)}
+                  onClick={handleCloseSessionModal}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <span className="text-2xl">&times;</span>
@@ -1049,7 +1134,7 @@ export default function AdminPage() {
               
               <div className="flex gap-3 pt-4 border-t border-gray-100">
                 <button
-                  onClick={() => setSelectedSession(null)}
+                  onClick={handleCloseSessionModal}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 >
                   Close

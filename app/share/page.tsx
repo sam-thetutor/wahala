@@ -105,6 +105,10 @@ function ShareSnarkelContent() {
     }
   };
 
+  const handleGoHome = () => {
+    router.push('/');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 flex items-center justify-center">
@@ -126,7 +130,7 @@ function ShareSnarkelContent() {
           <h2 className="text-2xl font-handwriting font-bold text-gray-800 mb-2">Oops!</h2>
           <p className="text-gray-600 mb-6">{error || 'Snarkel not found'}</p>
           <button
-            onClick={() => router.push('/')}
+            onClick={handleGoHome}
             className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 font-handwriting font-bold flex items-center gap-2 mx-auto"
           >
             <Home className="w-5 h-5" />
@@ -144,7 +148,7 @@ function ShareSnarkelContent() {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => router.push('/')}
+              onClick={handleGoHome}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors font-handwriting"
             >
               <Home className="w-5 h-5" />
