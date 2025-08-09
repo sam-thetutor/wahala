@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Hex } from 'viem';
+import { getReferralDataSuffix, submitDivviReferral } from '@/lib/divvi';
 import { PrismaClient } from '@prisma/client';
 import { createPublicClient, createWalletClient, http, parseEther, getAddress } from 'viem';
-import { celoAlfajores } from 'viem/chains';
+import { celo, celoAlfajores, base, baseSepolia } from 'viem/chains';
 import { erc20Abi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { SNARKEL_ABI } from '@/contracts/abi';
@@ -83,27 +85,48 @@ export async function POST(request: NextRequest) {
     // Create admin account from private key
     const adminAccount = privateKeyToAccount(adminPrivateKey as `0x${string}`);
     
-    // Create wallet client for transactions
+    // Determine chain from snarkel reward config
+    const firstUndistributed = room.snarkel.rewards[0];
+    const chainId = firstUndistributed?.chainId || 42220;
+
+    const chain = (() => {
+      switch (chainId) {
+        case 42220: return celo;
+        case 44787: return celoAlfajores;
+        case 8453: return base;
+        case 84532:
+        case 84531: return baseSepolia;
+        default: return celo;
+      }
+    })();
+
+    // Create wallet/public clients on selected chain
     const walletClient = createWalletClient({
       account: adminAccount,
-      chain: celoAlfajores,
+      chain,
       transport: http()
     });
 
-    // Create public client for reading contract data
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain,
       transport: http()
     });
 
     console.log('Found admin wallet:', adminAccount.address);
 
-    // Get contract address
-    const contractAddress = process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS;
+    // Resolve contract address per chain
+    const CONTRACTS: Record<number, string> = {
+      42220: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO || '0x8b8fb708758dc8185ef31e685305c1aa0827ea65',
+      44787: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO || '0x8b8fb708758dc8185ef31e685305c1aa0827ea65',
+      8453: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40',
+      84532: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40',
+      84531: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40'
+    };
+    const contractAddress = CONTRACTS[chain.id];
     if (!contractAddress) {
       return NextResponse.json({
         success: false,
-        error: 'Contract address not configured'
+        error: `Contract address not configured for chain ${chain.id}`
       }, { status: 500 });
     }
 
@@ -184,13 +207,15 @@ export async function POST(request: NextRequest) {
             args: [
               BigInt(sessionNumber),
               getAddress(reward.tokenAddress)
-            ]
+            ],
+            dataSuffix: getReferralDataSuffix()
           });
           
           console.log(`Transaction submitted: ${hash}`);
           
           // Wait for transaction confirmation
           const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          submitDivviReferral(hash as Hex, chain.id).catch(() => {});
           console.log(`Transaction confirmed: ${hash}`);
           
           // Create reward distribution records in database for all participants

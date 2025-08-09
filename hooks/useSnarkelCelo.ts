@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useContractRead, useContractWrite, useTransaction } from 'wagmi';
 import { parseEther, formatEther, Address } from 'viem';
+import { celoAlfajores } from 'viem/chains';
+import type { Hex } from 'viem';
+import { getReferralDataSuffix, submitDivviReferral } from '@/lib/divvi';
 import { SNARKEL_ABI } from '../contracts/abi'; // Import your ABI file
 
 // Contract address - Replace with your deployed contract address
@@ -215,7 +218,8 @@ export function useSnarkelContract(contractAddress?: Address) {
           BigInt(maxParticipants),
           expectedRewardToken,
           BigInt(expectedRewardAmount)
-        ]
+        ],
+        dataSuffix: getReferralDataSuffix()
       });
     } catch (error: any) {
       updateState({ error: { message: error.message }, isLoading: false });
@@ -246,7 +250,8 @@ export function useSnarkelContract(contractAddress?: Address) {
         abi: SNARKEL_ABI,
         functionName: 'joinSnarkel',
         args: [BigInt(sessionId)],
-        value: entryFeeWei
+        value: entryFeeWei,
+        dataSuffix: getReferralDataSuffix()
       });
     } catch (error: any) {
       updateState({ error: { message: error.message }, isLoading: false });
@@ -275,7 +280,8 @@ export function useSnarkelContract(contractAddress?: Address) {
         address: contractAddr,
         abi: SNARKEL_ABI,
         functionName: 'addParticipant',
-        args: [BigInt(sessionId), participantAddress]
+        args: [BigInt(sessionId), participantAddress],
+        dataSuffix: getReferralDataSuffix()
       });
     } catch (error: any) {
       updateState({ error: { message: error.message }, isLoading: false });
@@ -304,7 +310,8 @@ export function useSnarkelContract(contractAddress?: Address) {
         address: contractAddr,
         abi: SNARKEL_ABI,
         functionName: 'batchAddParticipants',
-        args: [BigInt(sessionId), participants]
+        args: [BigInt(sessionId), participants],
+        dataSuffix: getReferralDataSuffix()
       });
     } catch (error: any) {
       updateState({ error: { message: error.message }, isLoading: false });
@@ -333,7 +340,8 @@ export function useSnarkelContract(contractAddress?: Address) {
         address: contractAddr,
         abi: SNARKEL_ABI,
         functionName: 'addReward',
-        args: [BigInt(sessionId), tokenAddress, BigInt(amount)]
+        args: [BigInt(sessionId), tokenAddress, BigInt(amount)],
+        dataSuffix: getReferralDataSuffix()
       });
     } catch (error: any) {
       updateState({ error: { message: error.message }, isLoading: false });
@@ -362,7 +370,8 @@ export function useSnarkelContract(contractAddress?: Address) {
         address: contractAddr,
         abi: SNARKEL_ABI,
         functionName: 'distributeRewards',
-        args: [BigInt(sessionId), tokenAddress]
+        args: [BigInt(sessionId), tokenAddress],
+        dataSuffix: getReferralDataSuffix()
       });
     } catch (error: any) {
       updateState({ error: { message: error.message }, isLoading: false });
@@ -391,7 +400,8 @@ export function useSnarkelContract(contractAddress?: Address) {
         address: contractAddr,
         abi: SNARKEL_ABI,
         functionName: 'deactivateSession',
-        args: [BigInt(sessionId)]
+        args: [BigInt(sessionId)],
+        dataSuffix: getReferralDataSuffix()
       });
     } catch (error: any) {
       updateState({ error: { message: error.message }, isLoading: false });
@@ -415,6 +425,32 @@ export function useSnarkelContract(contractAddress?: Address) {
   useEffect(() => {
     updateState({ isLoading: isAnyTransactionLoading });
   }, [isAnyTransactionLoading, updateState]);
+
+  // Submit Divvi referral for any new tx hash emitted by wagmi write hooks
+  useEffect(() => {
+    const hashes: (string | undefined)[] = [
+      createSessionData,
+      joinSnarkelData,
+      addParticipantData,
+      batchAddParticipantsData,
+      addRewardData,
+      distributeRewardsData,
+      deactivateSessionData
+    ];
+    for (const h of hashes) {
+      if (h) {
+        submitDivviReferral(h as Hex, celoAlfajores.id).catch(() => {});
+      }
+    }
+  }, [
+    createSessionData,
+    joinSnarkelData,
+    addParticipantData,
+    batchAddParticipantsData,
+    addRewardData,
+    distributeRewardsData,
+    deactivateSessionData
+  ]);
 
   return {
     // Contract state

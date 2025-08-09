@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Hex } from 'viem';
+import { getReferralDataSuffix, submitDivviReferral } from '@/lib/divvi';
 import { PrismaClient } from '@prisma/client/edge';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createWalletClient, createPublicClient, http, parseEther, getAddress } from 'viem';
-import { celoAlfajores } from 'viem/chains';
+import { celo, celoAlfajores, base, baseSepolia } from 'viem/chains';
 import { erc20Abi } from 'viem';
 
 const prisma = new PrismaClient();
@@ -65,16 +67,28 @@ export async function POST(request: NextRequest) {
     // Create admin account from private key
     const adminAccount = privateKeyToAccount(adminPrivateKey as `0x${string}`);
     
-    // Create wallet client for transactions
+    // Determine chain from rewardConfig or default to Celo mainnet
+    const chainId = rewardConfig?.totalRewardPool || rewardConfig?.rewardAmounts ? (rewardConfig as any).chainId : undefined;
+    const selectedChain = (() => {
+      switch (chainId) {
+        case 42220: return celo;
+        case 44787: return celoAlfajores;
+        case 8453: return base;
+        case 84532:
+        case 84531: return baseSepolia;
+        default: return celo; // default mainnet
+      }
+    })();
+
+    // Create wallet/public clients on selected chain
     const walletClient = createWalletClient({
       account: adminAccount,
-      chain: celoAlfajores,
+      chain: selectedChain,
       transport: http()
     });
 
-    // Create public client for reading contract data
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: selectedChain,
       transport: http()
     });
 
@@ -208,11 +222,13 @@ async function executeBatchTransfers(
         args: [
           getAddress(distribution.walletAddress),
           parseEther(distribution.rewardAmount)
-        ]
+        ],
+        dataSuffix: getReferralDataSuffix()
       });
 
       // Wait for transaction confirmation
       const receipt = await walletClient.waitForTransactionReceipt({ hash });
+      submitDivviReferral(hash as Hex, celoAlfajores.id).catch(() => {});
 
       results.push({
         ...distribution,

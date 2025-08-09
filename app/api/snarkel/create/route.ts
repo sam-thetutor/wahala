@@ -25,7 +25,9 @@ export async function POST(request: NextRequest) {
       questions,
       startTime,
       autoStartEnabled,
-      redCode
+      redCode,
+      isFeatured,
+      featuredPriority
     } = body;
 
     // Validate required fields
@@ -171,7 +173,7 @@ export async function POST(request: NextRequest) {
         maxQuestions,
         isPublic,
         isActive: true,
-        isFeatured: false,
+        isFeatured: isFeatured || false,
         spamControlEnabled,
         entryFeeAmount: spamControlEnabled ? entryFee.toString() : '0',
         entryFeeTokenAddress: spamControlEnabled ? entryFeeToken : '',
@@ -198,7 +200,14 @@ export async function POST(request: NextRequest) {
           create: allowlist.map((address: string) => ({
             address: address.trim()
           }))
-        }
+        },
+        // Create featured content if marked as featured
+        featuredContent: isFeatured ? {
+          create: {
+            priority: featuredPriority || 1,
+            isActive: true
+          }
+        } : undefined
       },
       include: {
         questions: {
@@ -209,7 +218,8 @@ export async function POST(request: NextRequest) {
             order: 'asc'
           }
         },
-        allowlist: true
+        allowlist: true,
+        featuredContent: true
       }
     });
 

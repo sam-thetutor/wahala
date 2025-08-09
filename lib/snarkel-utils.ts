@@ -393,6 +393,15 @@ export async function getFeaturedSnarkels(limit: number = 10) {
       creator: true,
       featuredContent: true,
       rooms: true,
+      questions: {
+        select: {
+          timeLimit: true
+        },
+        take: 1,
+        orderBy: {
+          order: 'asc'
+        }
+      },
       _count: {
         select: {
           questions: true,

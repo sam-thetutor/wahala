@@ -15,6 +15,8 @@ import {
   createPublicClient,
   http
 } from 'viem';
+import type { Hex } from 'viem'
+import { getReferralDataSuffix, submitDivviReferral } from '@/lib/divvi'
 import { celoAlfajores } from 'viem/chains';
 import { SNARKEL_ABI } from '../contracts/abi';
 import { ERC20_ABI } from '../contracts/erc20-abi';
@@ -80,6 +82,16 @@ interface UseQuizContractReturn {
     expectedRewardToken: Address;
     expectedRewardAmount: string;
   }) => Promise<{ success: boolean; transactionHash?: string; error?: string }>;
+  finalizeSessionRewards: (params: {
+    sessionId: number;
+    winners: Address[];
+    amounts: string[]; // raw token units
+  }) => Promise<{ success: boolean; transactionHash?: string; error?: string }>;
+  claimUserReward: (params: { sessionId: number; tokenAddress: Address }) => Promise<{
+    success: boolean;
+    transactionHash?: string;
+    error?: string;
+  }>;
   addReward: (params: {
     sessionId: number;
     tokenAddress: Address;
@@ -125,6 +137,9 @@ interface UseQuizContractReturn {
   areRewardsDistributed: (snarkelCode: string) => Promise<boolean>;
   getExpectedRewardToken: (sessionId: number) => Promise<Address>;
   getExpectedRewardAmount: (sessionId: number) => Promise<string>;
+  canStartNewSession: (snarkelCode: string) => Promise<{ canStart: boolean; lastSessionId: string; lastIsActive: boolean }>;
+  getUserClaimable: (sessionId: number, user: Address) => Promise<string>;
+  getUserWins: (sessionId: number, user: Address) => Promise<string>;
   resetState: () => void;
 }
 
@@ -225,12 +240,18 @@ export function useQuizContract(): UseQuizContractReturn {
           BigInt(params.maxParticipants),
           params.expectedRewardToken,
           BigInt(params.expectedRewardAmount)
-        ]
+        ],
+        // @ts-expect-error dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
       });
 
       console.log('Transaction hash:', hash);
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
+
+      // Submit referral asynchronously
+      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
     } catch (error: any) {
@@ -276,7 +297,9 @@ export function useQuizContract(): UseQuizContractReturn {
           BigInt(params.sessionId),
           params.tokenAddress,
           BigInt(params.amount)
-        ]
+        ],
+        // @ts-expect-error dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
       });
 
       console.log('Add reward transaction hash:', hash);
@@ -299,6 +322,86 @@ export function useQuizContract(): UseQuizContractReturn {
       
       updateState({ isLoading: false, error: errorMessage });
       return { success: false, error: errorMessage };
+    }
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+
+  // Finalize session rewards (set per-user claimables)
+  const finalizeSessionRewards = useCallback(async (params: {
+    sessionId: number;
+    winners: Address[];
+    amounts: string[];
+  }): Promise<{ success: boolean; transactionHash?: string; error?: string }> => {
+    try {
+      resetState();
+      updateState({ isLoading: true, error: null });
+
+      if (!isConnected || !userAddress) {
+        throw new Error('Wallet not connected - please connect your wallet first');
+      }
+
+      await ensureCorrectChain();
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      if (params.winners.length !== params.amounts.length) {
+        throw new Error('Winners and amounts length mismatch');
+      }
+
+      const hash = await writeContractAsync({
+        address: QUIZ_CONTRACT_ADDRESS,
+        abi: SNARKEL_ABI,
+        functionName: 'finalizeSessionRewards',
+        args: [BigInt(params.sessionId), params.winners, params.amounts.map(a => BigInt(a))],
+        // @ts-expect-error dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
+      });
+
+      updateState({ transactionHash: hash });
+      updateState({ isLoading: false, success: true });
+
+      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
+
+      return { success: true, transactionHash: hash };
+    } catch (error: any) {
+      console.error('Finalize session rewards error:', error);
+      updateState({ isLoading: false, error: error.message || 'Failed to finalize rewards' });
+      return { success: false, error: error.message || 'Failed to finalize rewards' };
+    }
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+
+  // Claim user's reward for a session
+  const claimUserReward = useCallback(async (params: { sessionId: number; tokenAddress: Address }): Promise<{ success: boolean; transactionHash?: string; error?: string }> => {
+    try {
+      resetState();
+      updateState({ isLoading: true, error: null });
+
+      if (!isConnected || !userAddress) {
+        throw new Error('Wallet not connected - please connect your wallet first');
+      }
+
+      await ensureCorrectChain();
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const hash = await writeContractAsync({
+        address: QUIZ_CONTRACT_ADDRESS,
+        abi: SNARKEL_ABI,
+        functionName: 'claimUserReward',
+        args: [BigInt(params.sessionId), params.tokenAddress],
+        // @ts-expect-error dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
+      });
+
+      updateState({ transactionHash: hash });
+      updateState({ isLoading: false, success: true });
+
+      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
+
+      return { success: true, transactionHash: hash };
+    } catch (error: any) {
+      console.error('Claim user reward error:', error);
+      updateState({ isLoading: false, error: error.message || 'Failed to claim reward' });
+      return { success: false, error: error.message || 'Failed to claim reward' };
     }
   }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
 
@@ -327,12 +430,17 @@ export function useQuizContract(): UseQuizContractReturn {
         args: [
           BigInt(params.sessionId),
           params.tokenAddress
-        ]
+        ],
+        // @ts-expect-error dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
       });
 
       console.log('Distribute rewards transaction hash:', hash);
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
+
+      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
     } catch (error: any) {
@@ -378,12 +486,17 @@ export function useQuizContract(): UseQuizContractReturn {
           BigInt(params.sessionId),
           params.tokenAddress,
           BigInt(params.amount)
-        ]
+        ],
+        // @ts-expect-error dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
       });
 
       console.log('Admin distribute remaining reward transaction hash:', hash);
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
+
+      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
     } catch (error: any) {
@@ -413,11 +526,16 @@ export function useQuizContract(): UseQuizContractReturn {
         address: QUIZ_CONTRACT_ADDRESS,
         abi: SNARKEL_ABI,
         functionName: 'addParticipant',
-        args: [BigInt(params.sessionId), params.participant]
+        args: [BigInt(params.sessionId), params.participant],
+        // @ts-expect-error dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
       });
 
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
+
+      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
     } catch (error: any) {
@@ -447,11 +565,16 @@ export function useQuizContract(): UseQuizContractReturn {
         address: QUIZ_CONTRACT_ADDRESS,
         abi: SNARKEL_ABI,
         functionName: 'batchAddParticipants',
-        args: [BigInt(params.sessionId), params.participants]
+        args: [BigInt(params.sessionId), params.participants],
+        // @ts-expect-error dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
       });
 
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
+
+      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
     } catch (error: any) {
@@ -481,11 +604,16 @@ export function useQuizContract(): UseQuizContractReturn {
         address: QUIZ_CONTRACT_ADDRESS,
         abi: SNARKEL_ABI,
         functionName: 'removeParticipant',
-        args: [BigInt(params.sessionId), params.participant]
+        args: [BigInt(params.sessionId), params.participant],
+        // @ts-expect-error dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
       });
 
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
+
+      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
     } catch (error: any) {
@@ -518,12 +646,17 @@ export function useQuizContract(): UseQuizContractReturn {
         address: params.tokenAddress,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [params.spenderAddress, BigInt(params.amount)]
+        args: [params.spenderAddress, BigInt(params.amount)],
+        // @ts-expect-error dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
       });
 
       console.log('Approve transaction hash:', hash);
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
+
+      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
     } catch (error: any) {
@@ -562,12 +695,17 @@ export function useQuizContract(): UseQuizContractReturn {
         address: params.tokenAddress,
         abi: ERC20_ABI,
         functionName: 'transfer',
-        args: [params.toAddress, BigInt(params.amount)]
+        args: [params.toAddress, BigInt(params.amount)],
+        // @ts-expect-error dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
       });
 
       console.log('Transfer transaction hash:', hash);
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
+
+      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
     } catch (error: any) {
@@ -684,12 +822,78 @@ export function useQuizContract(): UseQuizContractReturn {
     }
   }, []);
 
+  const canStartNewSession = useCallback(async (snarkelCode: string): Promise<{ canStart: boolean; lastSessionId: string; lastIsActive: boolean }> => {
+    try {
+      const client = createPublicClient({
+        chain: celoAlfajores,
+        transport: http()
+      });
+
+      const result = await readContract(client, {
+        address: QUIZ_CONTRACT_ADDRESS,
+        abi: SNARKEL_ABI,
+        functionName: 'canStartNewSession',
+        args: [snarkelCode]
+      }) as any[];
+
+      const [canStart, lastSessionId, lastIsActive] = result as [boolean, bigint, boolean];
+      return { canStart, lastSessionId: lastSessionId.toString(), lastIsActive };
+    } catch (error: any) {
+      console.error('canStartNewSession error:', error);
+      return { canStart: true, lastSessionId: '0', lastIsActive: false };
+    }
+  }, []);
+
+  const getUserClaimable = useCallback(async (sessionId: number, user: Address): Promise<string> => {
+    try {
+      const client = createPublicClient({
+        chain: celoAlfajores,
+        transport: http()
+      });
+
+      const result = await readContract(client, {
+        address: QUIZ_CONTRACT_ADDRESS,
+        abi: SNARKEL_ABI,
+        functionName: 'getUserClaimable',
+        args: [BigInt(sessionId), user]
+      }) as bigint;
+
+      return result.toString();
+    } catch (error: any) {
+      console.error('getUserClaimable error:', error);
+      return '0';
+    }
+  }, []);
+
+  const getUserWins = useCallback(async (sessionId: number, user: Address): Promise<string> => {
+    try {
+      const client = createPublicClient({
+        chain: celoAlfajores,
+        transport: http()
+      });
+
+      const result = await readContract(client, {
+        address: QUIZ_CONTRACT_ADDRESS,
+        abi: SNARKEL_ABI,
+        functionName: 'getUserWins',
+        args: [BigInt(sessionId), user]
+      }) as bigint;
+
+      return result.toString();
+    } catch (error: any) {
+      console.error('getUserWins error:', error);
+      return '0';
+    }
+  }, []);
+
   return {
     contractState,
     // Quiz session management
     createSnarkelSession,
     addReward,
     distributeRewards,
+    finalizeSessionRewards,
+    claimUserReward,
     adminDistributeReward,
     // Participant management
     addParticipant,
@@ -705,6 +909,9 @@ export function useQuizContract(): UseQuizContractReturn {
     areRewardsDistributed,
     getExpectedRewardToken,
     getExpectedRewardAmount,
+    canStartNewSession,
+    getUserClaimable,
+    getUserWins,
     resetState
   };
 }

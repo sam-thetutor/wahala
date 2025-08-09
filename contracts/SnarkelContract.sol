@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract SnarkelCelo is Ownable, ReentrancyGuard {
+contract SnarkelContract is Ownable, ReentrancyGuard {
 
     // Structs
     struct SnarkelSession {
@@ -42,6 +42,12 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
 
     mapping(uint256 => SnarkelSession) public snarkelSessions;
     mapping(uint256 => Reward[]) public sessionRewards;
+    // Per-session per-user claimable rewards set after a quiz ends
+    mapping(uint256 => mapping(address => uint256)) public sessionClaimableRewards;
+    // Per-session per-user wins counter
+    mapping(uint256 => mapping(address => uint256)) public sessionWinsCount;
+    // Whether rewards for a session have been finalized (winners/amounts set)
+    mapping(uint256 => bool) public sessionRewardsFinalized;
     mapping(uint256 => SnarkelFee) public snarkelFees;
     mapping(address => bool) public adminWallets;
     mapping(address => bool) public verifiedUsers;
@@ -56,6 +62,9 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
     event RewardClaimed(uint256 indexed sessionId, address indexed participant, address indexed token, uint256 amount);
     event RewardDistributed(uint256 indexed sessionId, address indexed token, uint256 totalAmount);
     event AdminRewardDistributed(uint256 indexed sessionId, address indexed recipient, address indexed token, uint256 amount, address admin);
+    event SessionRewardsFinalized(uint256 indexed sessionId, address indexed token, uint256 totalAmount, uint256 winnersCount);
+    event UserRewardSet(uint256 indexed sessionId, address indexed user, uint256 amount);
+    event UserWinRecorded(uint256 indexed sessionId, address indexed user, uint256 newWinsCount);
     event SnarkelFeeUpdated(uint256 indexed snarkelId, uint256 feeAmount, address tokenAddress);
     event UserVerified(address indexed user, address indexed admin);
     event AdminWalletAdded(address indexed admin);
@@ -103,9 +112,13 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         uint256 maxParticipants,
         address expectedRewardToken,
         uint256 expectedRewardAmount
-    ) external onlyAdmin returns (uint256) {
+    ) external returns (uint256) {
         require(bytes(snarkelCode).length > 0, "Snarkel code cannot be empty");
-        require(snarkelCodeToSessionId[snarkelCode] == 0, "Snarkel code already exists");
+        // Allow reusing the same snarkel code only after the previous session has ended
+        uint256 previousSessionId = snarkelCodeToSessionId[snarkelCode];
+        if (previousSessionId != 0) {
+            require(!snarkelSessions[previousSessionId].isActive, "Previous session still active");
+        }
         require(platformFeePercentage <= 1000, "Platform fee cannot exceed 10%");
         require(expectedRewardToken != address(0), "Invalid reward token address");
         require(expectedRewardAmount > 0, "Reward amount must be greater than 0");
@@ -222,6 +235,7 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         nonReentrant 
         sessionExists(sessionId) 
     {
+        require(!sessionRewardsFinalized[sessionId], "Finalized: use claims");
         SnarkelSession storage session = snarkelSessions[sessionId];
         
         require(session.isParticipant[msg.sender] || verifiedUsers[msg.sender], "Not eligible for reward");
@@ -262,6 +276,7 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         onlyAdmin 
         sessionExists(sessionId) 
     {
+        require(!sessionRewardsFinalized[sessionId], "Finalized: use claims");
         SnarkelSession storage session = snarkelSessions[sessionId];
         Reward[] storage rewards = sessionRewards[sessionId];
         
@@ -306,14 +321,9 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         address recipient, 
         uint256 amount
     ) external onlyAdmin sessionExists(sessionId) nonReentrant {
+        require(!sessionRewardsFinalized[sessionId], "Finalized: use claims");
         // Get session details
         SnarkelSession storage session = snarkelSessions[sessionId];
-        
-        // Check if rewards for this snarkel code have already been distributed
-        if (snarkelCodeRewardsDistributed[session.snarkelCode]) {
-            emit SnarkelRewardsAlreadyDistributed(session.snarkelCode, msg.sender);
-            revert("Rewards for this snarkel code already distributed");
-        }
         
         // Validate inputs
         if (recipient == address(0)) {
@@ -346,10 +356,7 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         if (!transferSuccess) {
             revert("Token transfer failed");
         }
-        
-        // Mark rewards as distributed for this snarkel code
-        snarkelCodeRewardsDistributed[session.snarkelCode] = true;
-        
+
         // Update the reward amount
         rewards[0].amount = availableReward - amount;
         if (rewards[0].amount == 0) {
@@ -357,6 +364,118 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
         }
         
         emit AdminRewardDistributed(sessionId, recipient, rewardTokenAddress, amount, msg.sender);
+    }
+
+    /**
+     * @dev Finalize a session by setting per-user claimable rewards. Distribution is optional; users may claim later.
+     *      Requirements:
+     *        - Session must exist and be inactive (ended)
+     *        - Rewards for the session must have been added and token must match expected
+     *        - Sum of amounts must be <= available reward pool
+     *      Note: Passing the same user multiple times accumulates their claimable amount.
+     */
+    function finalizeSessionRewards(
+        uint256 sessionId,
+        address[] calldata winners,
+        uint256[] calldata amounts
+    ) external onlyAdmin sessionExists(sessionId) {
+        require(winners.length == amounts.length, "Length mismatch");
+        require(!snarkelSessions[sessionId].isActive, "Session must be ended");
+
+        Reward[] storage rewards = sessionRewards[sessionId];
+        require(rewards.length > 0, "No rewards added");
+
+        // Ensure token consistency
+        address rewardTokenAddress = snarkelSessions[sessionId].expectedRewardToken;
+        require(rewards[0].tokenAddress == rewardTokenAddress, "Reward token mismatch");
+
+        // Compute total to assign and validate against available pool
+        uint256 totalAssign = 0;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            totalAssign += amounts[i];
+        }
+
+        require(totalAssign <= rewards[0].amount, "Exceeds available reward");
+
+        for (uint256 i = 0; i < winners.length; i++) {
+            address user = winners[i];
+            require(user != address(0), "Invalid winner address");
+            sessionClaimableRewards[sessionId][user] += amounts[i];
+            emit UserRewardSet(sessionId, user, amounts[i]);
+            // Increment wins if they received a positive amount
+            if (amounts[i] > 0) {
+                sessionWinsCount[sessionId][user] += 1;
+                emit UserWinRecorded(sessionId, user, sessionWinsCount[sessionId][user]);
+            }
+        }
+
+        sessionRewardsFinalized[sessionId] = true;
+        emit SessionRewardsFinalized(sessionId, rewardTokenAddress, totalAssign, winners.length);
+    }
+
+    /**
+     * @dev Claim a user's finalized reward for a session.
+     *      Transfers from the session's reward pool to the caller.
+     */
+    function claimUserReward(uint256 sessionId, address tokenAddress)
+        external
+        nonReentrant
+        sessionExists(sessionId)
+    {
+        uint256 amount = sessionClaimableRewards[sessionId][msg.sender];
+        require(amount > 0, "Nothing to claim");
+
+        // Validate token and available pool
+        Reward[] storage rewards = sessionRewards[sessionId];
+        uint256 rewardIndex = type(uint256).max;
+        for (uint256 i = 0; i < rewards.length; i++) {
+            if (rewards[i].tokenAddress == tokenAddress && !rewards[i].isDistributed) {
+                rewardIndex = i;
+                break;
+            }
+        }
+        require(rewardIndex != type(uint256).max, "Reward not found");
+        require(rewards[rewardIndex].amount >= amount, "Insufficient pool");
+
+        // Effects
+        sessionClaimableRewards[sessionId][msg.sender] = 0;
+        snarkelSessions[sessionId].hasClaimedReward[msg.sender] = true;
+        rewards[rewardIndex].amount -= amount;
+        if (rewards[rewardIndex].amount == 0) {
+            rewards[rewardIndex].isDistributed = true;
+        }
+
+        // Interactions
+        IERC20 token = IERC20(tokenAddress);
+        require(token.transfer(msg.sender, amount), "Token transfer failed");
+
+        emit RewardClaimed(sessionId, msg.sender, tokenAddress, amount);
+    }
+
+    /**
+     * @dev Helper: Can a new session be started for this snarkel code?
+     *      Returns (canStart, lastSessionId, lastIsActive)
+     */
+    function canStartNewSession(string memory snarkelCode)
+        external
+        view
+        returns (bool, uint256, bool)
+    {
+        uint256 lastId = snarkelCodeToSessionId[snarkelCode];
+        if (lastId == 0) {
+            return (true, 0, false);
+        }
+        bool active = snarkelSessions[lastId].isActive;
+        return (!active, lastId, active);
+    }
+
+    // Views for frontends
+    function getUserClaimable(uint256 sessionId, address user) external view returns (uint256) {
+        return sessionClaimableRewards[sessionId][user];
+    }
+
+    function getUserWins(uint256 sessionId, address user) external view returns (uint256) {
+        return sessionWinsCount[sessionId][user];
     }
 
     // Admin functions
@@ -607,6 +726,7 @@ contract SnarkelCelo is Ownable, ReentrancyGuard {
     {
         return snarkelSessions[sessionId].currentParticipants;
     }
+    
 
     /**
      * @dev Withdraw platform fees (owner only)

@@ -83,6 +83,7 @@ function JoinSnarkelContent() {
 
   // Admin state
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSessionStarter, setIsSessionStarter] = useState(false);
   const [room, setRoom] = useState<Room | null>(null);
   const [snarkel, setSnarkel] = useState<Snarkel | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -151,6 +152,7 @@ function JoinSnarkelContent() {
         
         // Set admin state
         setIsAdmin(data.isAdmin);
+        setIsSessionStarter(data.isSessionStarter || false);
         setRoom(data.room);
         setSnarkel(data.snarkel);
         setParticipants(data.participants || []);
@@ -564,6 +566,23 @@ function JoinSnarkelContent() {
                   Join Room
                 </button>
               </div>
+
+              {/* Session Starter Message */}
+              {isSessionStarter && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-yellow-50 to-amber-100 rounded-lg border border-yellow-300">
+                  <div className="flex items-center gap-3">
+                    <Star className="w-6 h-6 text-yellow-600" />
+                    <div>
+                      <h3 className="font-handwriting text-lg font-bold" style={{ color: '#476520' }}>
+                        🎉 You Started a Featured Quiz Session!
+                      </h3>
+                      <p className="text-sm mt-1" style={{ color: '#655947' }}>
+                        As the session starter, you have admin privileges. Anyone can join this featured quiz!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Room Info */}
               <div className="grid md:grid-cols-2 gap-6 mb-6">

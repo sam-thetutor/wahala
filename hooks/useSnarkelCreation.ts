@@ -20,6 +20,8 @@ interface SnarkelData {
   creatorAddress?: string; // Wallet address of the creator
   autoStartEnabled?: boolean;
   scheduledStartTime?: string | null;
+  isFeatured?: boolean;
+  featuredPriority?: number;
   rewards: {
     enabled: boolean;
     type: 'LINEAR' | 'QUADRATIC';

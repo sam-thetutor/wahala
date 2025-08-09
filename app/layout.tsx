@@ -3,6 +3,7 @@
 import { Inter } from 'next/font/google'
 import './globals.css'
 import ContextProvider from '@/context'
+import AccountModalProvider from '@/components/AccountModalProvider'
 import { FarcasterProvider, useFarcaster } from '@/components/FarcasterProvider'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -41,7 +42,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <ContextProvider cookies={null}>
           <FarcasterProvider>
             <AppContent>
-              {children}
+              <AccountModalProvider>
+                {children}
+              </AccountModalProvider>
             </AppContent>
           </FarcasterProvider>
         </ContextProvider>

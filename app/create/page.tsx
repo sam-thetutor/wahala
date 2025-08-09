@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Save, Settings, Users, Trophy, Shield, Home, Gamepad2, Star, Sparkles, ArrowLeft, ArrowRight, Clock, Edit3, CheckCircle, XCircle, Loader } from 'lucide-react';
+import { Plus, Trash2, Save, Settings, Users, Trophy, Shield, Home, Gamepad2, Star, Sparkles, ArrowLeft, ArrowRight, Clock, Edit3, CheckCircle, XCircle, Loader, Info, Link as LinkIcon } from 'lucide-react';
 import { useSnarkelCreation } from '@/hooks/useSnarkelCreation';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { RewardConfigurationSection } from '@/components/RewardConfigurationSection';
@@ -81,6 +81,23 @@ const ProgressModal: React.FC<ProgressModalProps> = ({ isOpen, steps, currentSte
                   {step.error && (
                     <p className="text-xs text-red-500 mt-1">{step.error}</p>
                   )}
+                  
+                  {/* Featured Quiz Info for featured-setup step */}
+                  {step.id === 'featured-setup' && step.status === 'loading' && (
+                    <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
+                      <div className="flex items-start gap-2">
+                        <Star className="w-3 h-3 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-xs" style={{ color: '#655947' }}>
+                          <p className="font-medium">Featured Quiz Benefits:</p>
+                          <ul className="mt-1 space-y-0.5">
+                            <li>• Appears on homepage for all users</li>
+                            <li>• Anyone can start the quiz session</li>
+                            <li>• Higher visibility and participation</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -102,6 +119,104 @@ const ProgressModal: React.FC<ProgressModalProps> = ({ isOpen, steps, currentSte
               </button>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface SuccessModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  snarkelCode: string;
+  rewardsEnabled: boolean;
+  chainId?: number;
+}
+
+const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, snarkelCode, rewardsEnabled, chainId }) => {
+  if (!isOpen) return null;
+
+  const CELO_CONTRACT = '0x8b8fb708758dc8185ef31e685305c1aa0827ea65';
+  const BASE_CONTRACT = '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40';
+
+  const networkName = (() => {
+    if (!rewardsEnabled) return undefined;
+    if (chainId === 42220) return 'Celo';
+    if (chainId === 44787) return 'Celo Alfajores';
+    if (chainId === 8453) return 'Base';
+    if (chainId === 84532 || chainId === 84531) return 'Base Sepolia';
+    return undefined;
+  })();
+
+  const explorerLink = (() => {
+    if (!rewardsEnabled) return undefined;
+    if (chainId === 42220) return `https://celoscan.io/address/${CELO_CONTRACT}`;
+    if (chainId === 44787) return `https://alfajores.celoscan.io/address/${CELO_CONTRACT}`;
+    if (chainId === 8453) return `https://basescan.org/address/${BASE_CONTRACT}`;
+    if (chainId === 84532 || chainId === 84531) return `https://sepolia.basescan.org/address/${BASE_CONTRACT}`;
+    return undefined;
+  })();
+
+  const formatAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all duration-300 scale-100">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-handwriting text-lg font-bold">Quiz Created</h3>
+              <p className="text-emerald-100 text-sm">Your snarkel is ready to go!</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-4">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+            <div className="text-sm font-handwriting text-gray-700">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Snarkel Code</span>
+                <span className="font-mono font-bold">{snarkelCode}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-handwriting text-gray-700">
+              <Sparkles className="w-4 h-4 text-yellow-500" />
+              <span>Anyone can start a session for featured quizzes.</span>
+            </div>
+            {rewardsEnabled && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-600">Rewards Network</span>
+                    <span className="text-sm font-handwriting font-semibold text-gray-800">{networkName || 'Unknown'}</span>
+                  </div>
+                  {explorerLink && (
+                    <a href={explorerLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-700 underline text-sm">
+                      <LinkIcon className="w-4 h-4" /> View Contract
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-gray-50 rounded-b-2xl flex gap-3">
+          <button onClick={onClose} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium">
+            Close
+          </button>
+          <button onClick={() => { onClose(); }} className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-colors font-handwriting font-bold">
+            Done
+          </button>
         </div>
       </div>
     </div>
@@ -133,6 +248,8 @@ interface SnarkelData {
   entryFeeToken: string;
   autoStartEnabled: boolean;
   scheduledStartTime: string | null;
+  isFeatured: boolean;
+  featuredPriority: number;
   rewards: {
     enabled: boolean;
     type: 'LINEAR' | 'QUADRATIC';
@@ -168,6 +285,8 @@ export default function SnarkelCreationPage() {
   
   // AI Modal state
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successData, setSuccessData] = useState<{ snarkelCode: string; rewardsEnabled: boolean; chainId?: number } | null>(null);
   
   // Use the custom hook for snarkel creation
   const { isSubmitting, error, validationErrors, setValidationErrors, createSnarkel, clearErrors } = useSnarkelCreation();
@@ -186,6 +305,8 @@ export default function SnarkelCreationPage() {
     entryFeeToken: '',
     autoStartEnabled: false,
     scheduledStartTime: null,
+    isFeatured: false,
+    featuredPriority: 0,
     rewards: {
       enabled: false,
       type: 'LINEAR',
@@ -536,6 +657,12 @@ export default function SnarkelCreationPage() {
         description: 'Creating quiz in database and setting up blockchain',
         status: 'pending'
       },
+      ...(snarkel.isFeatured ? [{
+        id: 'featured-setup',
+        title: 'Featured Quiz Setup',
+        description: 'Setting up featured content and homepage visibility',
+        status: 'pending' as const
+      }] : []),
       {
         id: 'blockchain',
         title: 'Blockchain Transaction',
@@ -570,35 +697,40 @@ export default function SnarkelCreationPage() {
         updateProgressStep(1, 'completed');
         console.log('Quiz creation completed, snarkelCode:', result.snarkelCode);
         
-        // If rewards are enabled, the blockchain and token operations are handled within createSnarkel
-        // We just need to mark them as completed since the real waiting happens inside
-        if (snarkelData.rewards.enabled) {
+        // Handle featured quiz setup if enabled
+        if (snarkelData.isFeatured) {
           updateProgressStep(2, 'loading');
-          console.log('Blockchain transaction step completed');
+          console.log('Setting up featured quiz...');
+          await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate featured setup
           updateProgressStep(2, 'completed');
-          
-          updateProgressStep(3, 'loading');
-          console.log('Token operations step completed');
-          updateProgressStep(3, 'completed');
-        } else {
-          // Skip blockchain and token steps if no rewards
-          updateProgressStep(2, 'completed');
-          updateProgressStep(3, 'completed');
+          console.log('Featured quiz setup completed');
         }
         
-        // Show success message
+        // If rewards are enabled, the blockchain and token operations are handled within createSnarkel
+        // We just need to mark them as completed since the real waiting happens inside
+        const blockchainStepIndex = snarkelData.isFeatured ? 3 : 2;
+        const tokenStepIndex = snarkelData.isFeatured ? 4 : 3;
+        
+        if (snarkelData.rewards.enabled) {
+          updateProgressStep(blockchainStepIndex, 'loading');
+          console.log('Blockchain transaction step completed');
+          updateProgressStep(blockchainStepIndex, 'completed');
+          
+          updateProgressStep(tokenStepIndex, 'loading');
+          console.log('Token operations step completed');
+          updateProgressStep(tokenStepIndex, 'completed');
+        } else {
+          // Skip blockchain and token steps if no rewards
+          updateProgressStep(blockchainStepIndex, 'completed');
+          updateProgressStep(tokenStepIndex, 'completed');
+        }
+        
+        // Show success details modal
         setTimeout(() => {
           setShowProgressModal(false);
-          if (snarkelData.rewards.enabled && result.error) {
-            alert(`Quiz created successfully! However, reward setup failed: ${result.error}. You can still use the quiz without rewards.`);
-          } else if (snarkelData.rewards.enabled) {
-            alert('Quiz created successfully with rewards! Smart contract session has been deployed.');
-          } else {
-            alert('Quiz created successfully!');
-          }
-          // Redirect to share page
-          // router.push(`/share?code=${result.snarkelCode}`);
-        }, 1000);
+          setSuccessData({ snarkelCode: result.snarkelCode!, rewardsEnabled: !!snarkelData.rewards.enabled, chainId: snarkelData.rewards.chainId });
+          setShowSuccessModal(true);
+        }, 600);
       } else {
         updateProgressStep(1, 'error', result.error || 'Failed to create quiz');
       }
@@ -972,6 +1104,80 @@ export default function SnarkelCreationPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
                       placeholder="Describe your snarkel..."
                     />
+                  </div>
+
+                  {/* Featured Quiz Section */}
+                  <div className="bg-gradient-to-r from-yellow-50 to-amber-100 p-4 rounded-lg border border-yellow-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Star className="w-5 h-5 text-yellow-600" />
+                      <h3 className="font-handwriting text-lg font-medium" style={{ color: '#476520' }}>
+                        Featured Quiz Options
+                      </h3>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {/* Featured Toggle */}
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={snarkel.isFeatured}
+                            onChange={(e) => setSnarkel(prev => ({ 
+                              ...prev, 
+                              isFeatured: e.target.checked,
+                              featuredPriority: e.target.checked ? prev.featuredPriority : 0
+                            }))}
+                            className="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
+                          />
+                          <span className="font-handwriting text-sm" style={{ color: '#655947' }}>
+                            Make this quiz featured on homepage
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Priority Setting */}
+                      {snarkel.isFeatured && (
+                        <div>
+                          <label className="block font-handwriting text-sm font-medium mb-1" style={{ color: '#476520' }}>
+                            🏆 Featured Priority (1-10)
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              value={snarkel.featuredPriority}
+                              onChange={(e) => setSnarkel(prev => ({ 
+                                ...prev, 
+                                featuredPriority: Math.min(10, Math.max(1, parseInt(e.target.value) || 1))
+                              }))}
+                              className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting"
+                              min="1"
+                              max="10"
+                            />
+                            <span className="text-sm" style={{ color: '#655947' }}>
+                              Higher number = higher priority
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Featured Quiz Info */}
+                      {snarkel.isFeatured && (
+                        <div className="bg-white bg-opacity-60 p-3 rounded-lg border border-yellow-300">
+                          <div className="flex items-start gap-2">
+                            <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm" style={{ color: '#655947' }}>
+                              <p className="font-medium mb-1">Featured Quiz Benefits:</p>
+                              <ul className="space-y-1 text-xs">
+                                <li>• Appears on homepage for all users</li>
+                                <li>• Can be started by anyone (not just creator)</li>
+                                <li>• Higher visibility and participation</li>
+                                <li>• Priority determines display order</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1491,6 +1697,14 @@ export default function SnarkelCreationPage() {
        currentStep={currentProgressStep}
        onClose={() => setShowProgressModal(false)}
      />
+
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        snarkelCode={successData?.snarkelCode || ''}
+        rewardsEnabled={!!successData?.rewardsEnabled}
+        chainId={successData?.chainId}
+      />
 
      {/* Error Popup */}
      {error && (

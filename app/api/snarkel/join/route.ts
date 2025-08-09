@@ -133,7 +133,9 @@ export async function POST(request: NextRequest) {
           minParticipants: 1,
           autoStartEnabled: false,
           countdownDuration: 10,
-          adminId: snarkel.creatorId,
+          // For featured quizzes, the first person to join becomes the admin
+          // For regular quizzes, the creator is always the admin
+          adminId: snarkel.isFeatured ? user.id : snarkel.creatorId,
           snarkelId: snarkel.id,
           sessionNumber: nextSessionNumber
         },
@@ -206,11 +208,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is the creator (admin) of the snarkel
-    const isAdmin = snarkel.creator?.address?.toLowerCase() === walletAddress.toLowerCase();
-    console.log('isAdmin check:', {
+    // Check if user is the creator (admin) of the snarkel OR if it's a featured quiz
+    const isSnarkelCreator = snarkel.creator?.address?.toLowerCase() === walletAddress.toLowerCase();
+    const isFeaturedQuiz = snarkel.isFeatured;
+    const isAdmin = isSnarkelCreator || isFeaturedQuiz;
+    
+    console.log('Admin check:', {
       creatorAddress: snarkel.creator?.address,
       walletAddress: walletAddress,
+      isSnarkelCreator: isSnarkelCreator,
+      isFeaturedQuiz: isFeaturedQuiz,
       isAdmin: isAdmin
     });
 
@@ -239,14 +246,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
-          return NextResponse.json({
-        success: true,
-        roomId: room?.id,
-        snarkelId: snarkel.id,
-        snarkelCode: snarkel.snarkelCode,
-        message: 'Successfully joined room',
-        isAdmin: participant.isAdmin,
-        isReady: participant.isReady,
+    // Check if this is the first person joining a featured quiz (session starter)
+    const isSessionStarter = snarkel.isFeatured && room?.currentParticipants === 0;
+
+                    return NextResponse.json({
+            success: true,
+            roomId: room?.id,
+            snarkelId: snarkel.id,
+            snarkelCode: snarkel.snarkelCode,
+            message: isSessionStarter ? 'You started a featured quiz session!' : 'Successfully joined room',
+            isAdmin: participant.isAdmin,
+            isReady: participant.isReady,
+            isSessionStarter: isSessionStarter,
         room: {
           id: room?.id,
           name: room?.name,

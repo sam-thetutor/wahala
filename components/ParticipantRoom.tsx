@@ -277,6 +277,23 @@ export default function ParticipantRoom({
                 <Users className="w-4 h-4 text-purple-600" />
                 <span className="text-sm font-medium text-purple-700">Participants</span>
               </button>
+              {gameState === 'waiting' && (
+                <button
+                  onClick={onToggleReady}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors shadow-sm ${
+                    isReady
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                  }`}
+                >
+                  {isReady ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    <Clock className="w-4 h-4" />
+                  )}
+                  <span className="text-sm font-semibold">{isReady ? 'Ready' : "I'm Ready!"}</span>
+                </button>
+              )}
               
               <button
                 onClick={onLeaveRoom}
@@ -334,22 +351,12 @@ export default function ParticipantRoom({
                   </div>
                   
                   <div className="text-center mb-6">
-                    <p className="text-gray-600 mb-4">
+                    <p className="text-gray-600">
                       {isReady 
                         ? 'Great! You\'re ready to play. Waiting for others...'
-                        : 'Click the button below when you\'re ready to start'
+                        : 'Use the Ready button at the top to signal you\'re ready.'
                       }
                     </p>
-                    <button
-                      onClick={onToggleReady}
-                      className={`px-8 py-4 rounded-xl font-handwriting font-bold text-lg transition-all duration-300 ${
-                        isReady
-                          ? 'bg-green-500 hover:bg-green-600 text-white'
-                          : 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                      }`}
-                    >
-                      {isReady ? 'Not Ready' : 'I\'m Ready!'}
-                    </button>
                   </div>
 
                   {/* Progress Bar */}
