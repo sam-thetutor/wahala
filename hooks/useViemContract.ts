@@ -241,7 +241,7 @@ export function useQuizContract(): UseQuizContractReturn {
           params.expectedRewardToken,
           BigInt(params.expectedRewardAmount)
         ],
-        // @ts-expect-error dataSuffix not in wagmi types yet
+        // @ts-ignore dataSuffix not in wagmi types yet
         dataSuffix: getReferralDataSuffix()
       });
 
@@ -298,7 +298,7 @@ export function useQuizContract(): UseQuizContractReturn {
           params.tokenAddress,
           BigInt(params.amount)
         ],
-        // @ts-expect-error dataSuffix not in wagmi types yet
+        // @ts-ignore dataSuffix not in wagmi types yet
         dataSuffix: getReferralDataSuffix()
       });
 
@@ -351,7 +351,7 @@ export function useQuizContract(): UseQuizContractReturn {
         abi: SNARKEL_ABI,
         functionName: 'finalizeSessionRewards',
         args: [BigInt(params.sessionId), params.winners, params.amounts.map(a => BigInt(a))],
-        // @ts-expect-error dataSuffix not in wagmi types yet
+        // @ts-ignore dataSuffix not in wagmi types yet
         dataSuffix: getReferralDataSuffix()
       });
 
@@ -387,7 +387,7 @@ export function useQuizContract(): UseQuizContractReturn {
         abi: SNARKEL_ABI,
         functionName: 'claimUserReward',
         args: [BigInt(params.sessionId), params.tokenAddress],
-        // @ts-expect-error dataSuffix not in wagmi types yet
+        // @ts-ignore dataSuffix not in wagmi types yet
         dataSuffix: getReferralDataSuffix()
       });
 
@@ -431,7 +431,7 @@ export function useQuizContract(): UseQuizContractReturn {
           BigInt(params.sessionId),
           params.tokenAddress
         ],
-        // @ts-expect-error dataSuffix not in wagmi types yet
+        // @ts-ignore dataSuffix not in wagmi types yet
         dataSuffix: getReferralDataSuffix()
       });
 
@@ -487,7 +487,7 @@ export function useQuizContract(): UseQuizContractReturn {
           params.tokenAddress,
           BigInt(params.amount)
         ],
-        // @ts-expect-error dataSuffix not in wagmi types yet
+        // @ts-ignore dataSuffix not in wagmi types yet
         dataSuffix: getReferralDataSuffix()
       });
 
@@ -527,7 +527,7 @@ export function useQuizContract(): UseQuizContractReturn {
         abi: SNARKEL_ABI,
         functionName: 'addParticipant',
         args: [BigInt(params.sessionId), params.participant],
-        // @ts-expect-error dataSuffix not in wagmi types yet
+        // @ts-ignore dataSuffix not in wagmi types yet
         dataSuffix: getReferralDataSuffix()
       });
 
@@ -566,7 +566,7 @@ export function useQuizContract(): UseQuizContractReturn {
         abi: SNARKEL_ABI,
         functionName: 'batchAddParticipants',
         args: [BigInt(params.sessionId), params.participants],
-        // @ts-expect-error dataSuffix not in wagmi types yet
+        // @ts-ignore dataSuffix not in wagmi types yet
         dataSuffix: getReferralDataSuffix()
       });
 
@@ -605,7 +605,7 @@ export function useQuizContract(): UseQuizContractReturn {
         abi: SNARKEL_ABI,
         functionName: 'removeParticipant',
         args: [BigInt(params.sessionId), params.participant],
-        // @ts-expect-error dataSuffix not in wagmi types yet
+        // @ts-ignore dataSuffix not in wagmi types yet
         dataSuffix: getReferralDataSuffix()
       });
 
@@ -647,7 +647,7 @@ export function useQuizContract(): UseQuizContractReturn {
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [params.spenderAddress, BigInt(params.amount)],
-        // @ts-expect-error dataSuffix not in wagmi types yet
+        // @ts-ignore dataSuffix not in wagmi types yet
         dataSuffix: getReferralDataSuffix()
       });
 
@@ -696,7 +696,7 @@ export function useQuizContract(): UseQuizContractReturn {
         abi: ERC20_ABI,
         functionName: 'transfer',
         args: [params.toAddress, BigInt(params.amount)],
-        // @ts-expect-error dataSuffix not in wagmi types yet
+        // @ts-ignore dataSuffix not in wagmi types yet
         dataSuffix: getReferralDataSuffix()
       });
 
@@ -834,9 +834,9 @@ export function useQuizContract(): UseQuizContractReturn {
         abi: SNARKEL_ABI,
         functionName: 'canStartNewSession',
         args: [snarkelCode]
-      }) as any[];
+      }) as readonly [boolean, bigint, boolean];
 
-      const [canStart, lastSessionId, lastIsActive] = result as [boolean, bigint, boolean];
+      const [canStart, lastSessionId, lastIsActive] = result;
       return { canStart, lastSessionId: lastSessionId.toString(), lastIsActive };
     } catch (error: any) {
       console.error('canStartNewSession error:', error);

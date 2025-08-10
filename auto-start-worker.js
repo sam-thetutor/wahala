@@ -1,10 +1,31 @@
 const { PrismaClient } = require('@prisma/client');
 const { io } = require('socket.io-client');
+const { privateKeyToAccount } = require('viem/accounts');
+
+// Required environment variables:
+// ADMIN_WALLET - Private key for admin wallet (used for socket authentication)
+// SOCKET_URL - Socket server URL (optional, defaults to localhost:3001)
+
 
 const prisma = new PrismaClient();
 
-// Connect to socket server
-const socket = io(process.env.SOCKET_URL || 'http://localhost:3001');
+const adminPrivateKey = process.env.ADMIN_WALLET;
+
+if (!adminPrivateKey) {
+  throw new Error('ADMIN_WALLET is not defined');
+}
+
+const adminWallet = privateKeyToAccount(adminPrivateKey);
+const adminAddress = adminWallet.address;
+console.log('Admin address:', adminAddress);
+
+// Connect to socket server with admin address
+const socket = io(process.env.SOCKET_URL || 'http://localhost:3001', {
+  query: {
+    roomId: 'admin',
+    walletAddress: adminAddress
+  }
+});
 
 // Check for scheduled quizzes every minute
 setInterval(async () => {

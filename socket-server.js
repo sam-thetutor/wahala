@@ -154,12 +154,15 @@ io.on('connection', (socket) => {
   // Handle regular messages (for backward compatibility)
   socket.on('sendMessage', async (data) => {
     try {
+      console.log('Received sendMessage event:', data);
       const { message } = data;
       
       // Verify user is admin
       const user = await prisma.user.findUnique({
         where: { address: walletAddress.toLowerCase() }
       });
+
+      console.log('User found:', user ? user.address : 'not found');
 
       if (user) {
         const participant = await prisma.roomParticipant.findFirst({
@@ -170,12 +173,18 @@ io.on('connection', (socket) => {
           }
         });
 
+        console.log('Participant found:', participant ? { isAdmin: participant.isAdmin, userId: participant.userId } : 'not found');
+
         if (participant && message) {
+          console.log('Broadcasting message to room:', roomId, 'Message:', message);
           // Broadcast message to all clients in room
           io.to(roomId).emit('adminMessageReceived', { 
             message, 
             timestamp: new Date().toISOString() 
           });
+          console.log('Message broadcasted successfully');
+        } else {
+          console.log('Message not sent - participant not admin or message empty');
         }
       }
     } catch (error) {

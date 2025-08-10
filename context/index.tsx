@@ -3,7 +3,7 @@
 import { wagmiAdapter } from '@/config'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createAppKit } from '@reown/appkit/react'
-import { celoAlfajores } from '@reown/appkit/networks'
+import { base, celo, celoAlfajores } from '@reown/appkit/networks'
 import React, { type ReactNode } from 'react'
 import { cookieToInitialState, WagmiProvider, type Config } from 'wagmi'
 
@@ -28,8 +28,8 @@ const metadata = {
 const modal = createAppKit({
   adapters: [wagmiAdapter],
   projectId,
-  networks: [celoAlfajores],
-  defaultNetwork: celoAlfajores,
+  networks: [celo, base],
+  defaultNetwork: celo,
   metadata: metadata,
   features: {
     analytics: true // Optional - defaults to your Cloud configuration
@@ -37,7 +37,16 @@ const modal = createAppKit({
 })
 
 function ContextProvider({ children, cookies }: { children: ReactNode; cookies: string | null }) {
-  const initialState = cookieToInitialState(wagmiAdapter.wagmiConfig as Config, cookies)
+  let initialState = undefined
+  
+  try {
+    if (cookies) {
+      initialState = cookieToInitialState(wagmiAdapter.wagmiConfig as Config, cookies)
+    }
+  } catch (error) {
+    console.warn('Error parsing cookies for wagmi state:', error)
+    // Continue without initial state if cookie parsing fails
+  }
 
   return (
     <WagmiProvider config={wagmiAdapter.wagmiConfig as Config} initialState={initialState}>

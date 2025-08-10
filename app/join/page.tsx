@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
 
+
+
 interface Participant {
   id: string;
   userId: string;
@@ -62,7 +64,21 @@ interface Snarkel {
 }
 
 function JoinSnarkelContent() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, isConnecting } = useAccount();
+  
+  // Force re-render when wallet state changes
+  const [forceUpdate, setForceUpdate] = useState(0);
+  
+  // Add a manual refresh function
+  const refreshWalletState = () => {
+    setForceUpdate(prev => prev + 1);
+    console.log('Manual refresh triggered');
+  };
+  
+  // Debug wallet connection state changes
+  useEffect(() => {
+    console.log('Join page - Wallet state changed:', { isConnected, address, isConnecting });
+  }, [isConnected, address, isConnecting]);
   const searchParams = useSearchParams();
   const [snarkelCode, setSnarkelCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -92,6 +108,8 @@ function JoinSnarkelContent() {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [countdownTime, setCountdownTime] = useState<number>(5);
   const [showCountdownModal, setShowCountdownModal] = useState(false);
+
+
 
   useEffect(() => {
     setIsLoaded(true);
@@ -349,21 +367,7 @@ function JoinSnarkelContent() {
               <div className="flex items-center gap-3">
                 {/* Wallet Connect Button in Header */}
                 <div className="flex items-center gap-2">
-                  {isConnected ? (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-400 to-emerald-500 rounded-lg shadow-md">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                      <span className="font-handwriting text-sm font-medium text-white">
-                        {address?.slice(0, 6)}...{address?.slice(-4)}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
-                      <Wallet className="w-4 h-4 text-gray-800" />
-                      <span className="font-handwriting text-sm font-medium text-gray-800">
-                        Connect Wallet
-                      </span>
-                    </div>
-                  )}
+                  <WalletConnectButton />
                 </div>
                 
                 <button 
@@ -497,7 +501,7 @@ function JoinSnarkelContent() {
                 )}
 
                 {/* Wallet Connect Button - only show if not connected */}
-                {!isConnected && (
+                {!isConnected && !isConnecting && (
                   <div className="text-center mb-4">
                     <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 mb-4">
                       <p className="font-handwriting text-yellow-800 mb-3">
@@ -507,6 +511,37 @@ function JoinSnarkelContent() {
                     </div>
                   </div>
                 )}
+
+                {/* Show connecting state */}
+                {isConnecting && (
+                  <div className="text-center mb-4">
+                    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
+                      <p className="font-handwriting text-blue-800 mb-3">
+                        🔄 Connecting wallet...
+                      </p>
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                        <span className="text-blue-600">Please complete the connection in your wallet</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
+
+                {/* Debug wallet state */}
+                <div className="text-center text-xs text-gray-500 mb-2">
+                  useAccount: isConnected={isConnected.toString()}, address={address || 'none'}, isConnecting={isConnecting.toString()}
+                  <br />
+                  WalletConnectButton should show connected state above
+                  <br />
+                  <button 
+                    onClick={refreshWalletState}
+                    className="mt-1 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                  >
+                    🔄 Refresh State
+                  </button>
+                </div>
 
                 {/* Compact submit button */}
                 <div className="text-center">

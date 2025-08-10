@@ -2,10 +2,30 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Users, Trophy, Zap, Star, Shield, Gift, Play, Sparkles, Gamepad2, ArrowDown, ExternalLink, ChevronUp, BookOpen, Clock, Users as UsersIcon, Award, Link as LinkIcon } from 'lucide-react';
+import { 
+  Play, 
+  Users, 
+  Plus, 
+  Sparkles, 
+  Trophy, 
+  Star, 
+  TrendingUp,
+  Clock,
+  Gift,
+  Gamepad2,
+  ArrowDown,
+  ExternalLink,
+  ChevronUp,
+  BookOpen,
+  Award,
+  Zap,
+  Shield,
+  Link as LinkIcon
+} from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { FarcasterUI, FarcasterShareButton, FarcasterAddButton, FarcasterComposeButton } from '@/components/FarcasterUI';
 import { FarcasterContextDisplay, FarcasterUserInfo } from '@/components/FarcasterContextDisplay';
+import { useAccount } from 'wagmi';
 
 // Quiz type definition
 interface Quiz {
@@ -23,6 +43,7 @@ interface Quiz {
 
 // Featured Quiz Card Component
 const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
+  const { isConnected } = useAccount();
   const [isHovered, setIsHovered] = useState(false);
   
   const difficultyColors = {
@@ -87,7 +108,7 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
           {/* Stats row */}
           <div className="flex items-center justify-between mb-4 text-sm">
             <div className="flex items-center gap-1">
-              <UsersIcon className="w-4 h-4" style={{ color: '#476520' }} />
+              <Users className="w-4 h-4" style={{ color: '#476520' }} />
               <span style={{ color: '#655947' }}>{quiz.participants}</span>
             </div>
             <div className="flex items-center gap-1">
@@ -122,7 +143,7 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
             <Link href={`/join?code=${quiz.snarkelCode}`}>
               <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
                 <Play className="w-4 h-4" />
-                Join Now
+                {isConnected ? 'Join Now' : 'Connect Wallet to Join'}
               </button>
             </Link>
           ) : (
@@ -138,7 +159,7 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
 };
 
 // Action Bar Component
-const ActionBar = () => {
+const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white shadow-2xl z-50 border-t-2 border-yellow-400 rounded-t-3xl md:left-1/2 md:transform md:-translate-x-1/2 md:w-3/5"
          style={{
@@ -163,7 +184,7 @@ const ActionBar = () => {
               <button className="w-full px-6 py-3 rounded-2xl font-bold text-white transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden group bg-gradient-to-r from-green-500 to-emerald-600 shadow-xl">
                 <span className="relative z-10 flex items-center justify-center gap-2 text-sm md:text-base">
                   <Users className="w-4 h-4 md:w-5 md:h-5" />
-                  JOIN A SNARKEL
+                  {isConnected ? 'JOIN A SNARKEL' : 'CONNECT WALLET'}
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
@@ -211,6 +232,7 @@ export default function HomePage() {
   const [featuredQuizzes, setFeaturedQuizzes] = useState<Quiz[]>([]);
   const [loadingQuizzes, setLoadingQuizzes] = useState(true);
   const [quizError, setQuizError] = useState<string | null>(null);
+  const { isConnected } = useAccount();
 
   // Contract addresses - Base and Celo mainnet
   const CELO_CONTRACT = '0x8b8fb708758dc8185ef31e685305c1aa0827ea65';
@@ -510,7 +532,7 @@ export default function HomePage() {
             </div>
             
             {/* Action Bar */}
-            <ActionBar />
+            <ActionBar isConnected={isConnected} />
           </div>
         ) : (
           /* Desktop Layout */
@@ -742,7 +764,7 @@ export default function HomePage() {
             </div>
             
             {/* Action Bar */}
-            <ActionBar />
+            <ActionBar isConnected={isConnected} />
           </div>
         )}
 

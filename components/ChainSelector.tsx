@@ -25,11 +25,11 @@ const CHAIN_OPTIONS: ChainOption[] = [
     color: 'bg-green-500',
   },
   {
-    id: 44787,
-    name: 'Celo Alfajores',
-    shortName: 'Alfajores',
-    icon: '🧪',
-    color: 'bg-yellow-500',
+    id: 8453,
+    name: 'Base',
+    shortName: 'Base',
+    icon: '🔵',
+    color: 'bg-blue-500',
   },
 ];
 

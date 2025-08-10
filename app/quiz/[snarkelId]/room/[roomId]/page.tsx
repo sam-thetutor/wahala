@@ -241,6 +241,17 @@ export default function QuizRoomPage() {
 
     newSocket.on('connect', () => {
       console.log('Connected to socket server');
+      console.log('Socket ID:', newSocket.id);
+      console.log('Room ID:', roomId);
+      console.log('Wallet Address:', address);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from socket server');
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
     });
 
     newSocket.on('participantJoined', (participant: Participant) => {
@@ -349,8 +360,12 @@ export default function QuizRoomPage() {
     });
 
     newSocket.on('adminMessageReceived', (data: { message: string, timestamp: string }) => {
+      console.log('Received adminMessageReceived event:', data);
       setAdminMessageDisplay(data.message);
       setShowAdminMessage(true);
+      // Also update the TV message
+      setTvMessage(data.message);
+      console.log('Updated tvMessage to:', data.message);
       // Auto-hide after 3 seconds
       setTimeout(() => {
         setShowAdminMessage(false);
@@ -468,7 +483,18 @@ export default function QuizRoomPage() {
 
   const sendMessage = () => {
     if (socket && isAdmin && adminMessage.trim()) {
-      socket.emit('sendMessage', { message: adminMessage.trim() });
+      const message = adminMessage.trim();
+      
+      console.log('Sending message:', message);
+      console.log('Socket connected:', socket.connected);
+      console.log('Is admin:', isAdmin);
+      
+      // Immediately show the message on admin's TV
+      setTvMessage(message);
+      
+      // Emit the socket event
+      socket.emit('sendMessage', { message });
+      
       setMessageSentNotification('Message sent successfully!');
       setAdminMessage('');
       setShowAdminMessageModal(false);
@@ -477,6 +503,13 @@ export default function QuizRoomPage() {
       setTimeout(() => {
         setMessageSentNotification('');
       }, 3000);
+    } else {
+      console.log('Cannot send message:', { 
+        hasSocket: !!socket, 
+        isAdmin, 
+        hasMessage: !!adminMessage.trim(),
+        socketConnected: socket?.connected 
+      });
     }
   };
 
@@ -767,8 +800,30 @@ export default function QuizRoomPage() {
                 
                 {/* Default Message */}
                 {!tvMessage && gameState === 'waiting' && (
-                  <div className="bg-gray-900 rounded-lg p-6 mb-4">
-                    <p className="text-xl text-gray-300">Waiting for admin message...</p>
+                  <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6 mb-4">
+                    <div className="text-center">
+                      <h3 className="text-2xl font-handwriting font-bold text-blue-300 mb-4">
+                        🎯 Quiz Room Ready
+                      </h3>
+                      <div className="grid grid-cols-2 gap-6 text-center">
+                        <div className="bg-blue-800 rounded-lg p-4">
+                          <p className="text-blue-200 text-sm mb-1">Participants</p>
+                          <p className="text-3xl font-bold text-white">{participants.length}</p>
+                        </div>
+                        <div className="bg-green-800 rounded-lg p-4">
+                          <p className="text-green-200 text-sm mb-1">Ready</p>
+                          <p className="text-3xl font-bold text-white">{participants.filter(p => p.isReady).length}</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 text-center">
+                        <p className="text-blue-200 text-lg">
+                          {participants.filter(p => p.isReady).length >= (room?.minParticipants || 1) 
+                            ? '✅ Ready to start!' 
+                            : `⏳ Need ${(room?.minParticipants || 1) - participants.filter(p => p.isReady).length} more ready`
+                          }
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
                 

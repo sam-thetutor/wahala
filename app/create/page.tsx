@@ -142,18 +142,14 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, snarkelCod
   const networkName = (() => {
     if (!rewardsEnabled) return undefined;
     if (chainId === 42220) return 'Celo';
-    if (chainId === 44787) return 'Celo Alfajores';
     if (chainId === 8453) return 'Base';
-    if (chainId === 84532 || chainId === 84531) return 'Base Sepolia';
     return undefined;
   })();
 
   const explorerLink = (() => {
     if (!rewardsEnabled) return undefined;
     if (chainId === 42220) return `https://celoscan.io/address/${CELO_CONTRACT}`;
-    if (chainId === 44787) return `https://alfajores.celoscan.io/address/${CELO_CONTRACT}`;
     if (chainId === 8453) return `https://basescan.org/address/${BASE_CONTRACT}`;
-    if (chainId === 84532 || chainId === 84531) return `https://sepolia.basescan.org/address/${BASE_CONTRACT}`;
     return undefined;
   })();
 
@@ -311,7 +307,7 @@ export default function SnarkelCreationPage() {
       enabled: false,
       type: 'LINEAR',
       tokenAddress: '',
-      chainId: 44787, // Changed from 42220 (Celo Mainnet) to 44787 (Alfajores)
+      chainId: 42220, // Celo Mainnet
       totalWinners: 3,
       rewardAmounts: [100, 50, 25],
       totalRewardPool: '1000',

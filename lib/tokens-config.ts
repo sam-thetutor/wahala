@@ -36,13 +36,13 @@ export const SUPPORTED_NETWORKS: Record<string, NetworkConfig> = {
     },
   },
   celoAlfajores: {
-    name: 'Celo Alfajores',
-    chainId: 44787,
-    rpcUrl: 'https://alfajores-forno.celo-testnet.org',
-    blockExplorer: 'https://alfajores.celoscan.io',
+    name: 'Base',
+    chainId: 8453,
+    rpcUrl: 'https://mainnet.base.org',
+    blockExplorer: 'https://basescan.org',
     nativeCurrency: {
-      name: 'Celo',
-      symbol: 'CELO',
+      name: 'Ether',
+      symbol: 'ETH',
       decimals: 18,
     },
   },
@@ -122,14 +122,14 @@ export const ENTRY_FEE_TOKENS: TokenConfig[] = [
     chainId: 42220,
     isStablecoin: true,
   },
-  // Celo Alfajores (Testnet)
+  // Base Network
   {
-    address: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
-    symbol: 'cUSD',
-    name: 'Celo Dollar (Testnet)',
-    decimals: 18,
-    network: 'Celo Alfajores',
-    chainId: 44787,
+    address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    symbol: 'USDC',
+    name: 'USD Coin (Base)',
+    decimals: 6,
+    network: 'Base',
+    chainId: 8453,
     isStablecoin: true,
   },
   // Ethereum

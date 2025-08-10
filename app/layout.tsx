@@ -1,32 +1,34 @@
-'use client'
-
 import { Inter } from 'next/font/google'
 import './globals.css'
 import ContextProvider from '@/context'
 import AccountModalProvider from '@/components/AccountModalProvider'
-import { FarcasterProvider, useFarcaster } from '@/components/FarcasterProvider'
+import { FarcasterProvider } from '@/components/FarcasterProvider'
+import { cookies } from 'next/headers'
+import ClientLayout from '@/components/ClientLayout'
 
 const inter = Inter({ subsets: ['latin'] })
 
-function AppContent({ children }: { children: React.ReactNode }) {
-  const { isFarcasterApp, context } = useFarcaster()
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  // Get cookies for wagmi state persistence
+  const cookieStore = await cookies()
+  let cookieString: string | null = null
+  
+  try {
+    // Get all cookies and convert to a proper format
+    const allCookies = cookieStore.getAll()
+    if (allCookies.length > 0) {
+      // Convert cookies to a format that wagmi can understand
+      cookieString = allCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ')
+    }
+  } catch (error) {
+    console.warn('Error processing cookies:', error)
+    cookieString = null
+  }
 
-  return (
-    <div 
-      className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100"
-      style={{
-        paddingTop: isFarcasterApp ? (context?.client?.safeAreaInsets?.top ?? 0) : 0,
-        paddingBottom: isFarcasterApp ? (context?.client?.safeAreaInsets?.bottom ?? 0) : 0,
-        paddingLeft: isFarcasterApp ? (context?.client?.safeAreaInsets?.left ?? 0) : 0,
-        paddingRight: isFarcasterApp ? (context?.client?.safeAreaInsets?.right ?? 0) : 0,
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -39,24 +41,16 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <meta name="fc:frame" content='{"version":"1","imageUrl":"https://snarkels.vercel.app/api/og","button":{"title":"🎯 Start Quiz","action":{"type":"launch_frame","url":"https://snarkels.vercel.app","name":"Snarkels","splashImageUrl":"https://snarkels.vercel.app/logo.png","splashBackgroundColor":"#1f2937"}}}' />
       </head>
       <body className={inter.className}>
-        <ContextProvider cookies={null}>
+        <ContextProvider cookies={cookieString}>
           <FarcasterProvider>
-            <AppContent>
+            <ClientLayout>
               <AccountModalProvider>
                 {children}
               </AccountModalProvider>
-            </AppContent>
+            </ClientLayout>
           </FarcasterProvider>
         </ContextProvider>
       </body>
     </html>
   )
-}
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return <LayoutContent>{children}</LayoutContent>
 }

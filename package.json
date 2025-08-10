@@ -20,7 +20,8 @@
     "db:generate": "npx prisma generate --no-engine",
     "db:push": "npx prisma db push",
     "db:migrate": "npx prisma migrate dev",
-    "db:studio": "npx prisma studio"
+    "db:studio": "npx prisma studio",
+    "test:turbopack": "node scripts/test-turbopack.js"
   },
   "dependencies": {
     "@divvi/referral-sdk": "^2.3.0",
@@ -59,6 +60,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "babel-plugin-react-compiler": "19.1.0-rc.2",
     "concurrently": "^8.2.2",
     "prisma": "^5.22.0",
     "tailwindcss": "^4",

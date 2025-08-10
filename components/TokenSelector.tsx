@@ -27,8 +27,8 @@ const getChainName = (chainId: number) => {
   switch (chainId) {
     case 42220:
       return 'Celo Mainnet';
-    case 44787:
-      return 'Celo Alfajores';
+    case 8453:
+      return 'Base';
     case 1:
       return 'Ethereum';
     case 137:
@@ -41,12 +41,13 @@ const getChainName = (chainId: number) => {
 const getChainColor = (chainId: number) => {
   switch (chainId) {
     case 42220:
-    case 44787:
       return 'bg-green-100 text-green-800 border-green-200';
+    case 8453:
+      return 'bg-blue-100 text-blue-800 border-blue-200';
     case 1:
       return 'bg-blue-100 text-blue-800 border-blue-200';
     case 137:
-      return 'bg-purple-100 text-purple-800 border-purple-200';
+      return 'bg-purple-100 text-purple-800 border-green-200';
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
   }
@@ -55,8 +56,9 @@ const getChainColor = (chainId: number) => {
 const getChainIcon = (chainId: number) => {
   switch (chainId) {
     case 42220:
-    case 44787:
       return '🌾';
+    case 8453:
+      return '🔵';
     case 1:
       return '🔷';
     case 137:
@@ -69,7 +71,7 @@ const getChainIcon = (chainId: number) => {
 export const TokenSelector: React.FC<TokenSelectorProps> = ({
   value,
   onChange,
-  chainId = 44787, // Default to Celo Alfajores
+  chainId = 42220, // Default to Celo Mainnet
   placeholder = 'Select a token...',
   className = '',
   error,
