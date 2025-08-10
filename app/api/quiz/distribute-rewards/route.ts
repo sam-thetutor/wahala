@@ -22,6 +22,17 @@ interface DistributeRewardsRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check required environment variables first
+    if (!process.env.ADMIN_WALLET) {
+      console.error('ADMIN_WALLET environment variable is not set');
+      return NextResponse.json({
+        success: false,
+        error: 'Server configuration error',
+        details: 'Admin wallet not configured. Please contact the administrator.',
+        code: 'MISSING_ADMIN_WALLET'
+      }, { status: 500 });
+    }
+
     const body: DistributeRewardsRequest = await request.json();
     const { roomId, sessionNumber, finalLeaderboard } = body;
 
@@ -76,9 +87,11 @@ export async function POST(request: NextRequest) {
     // Get admin wallet private key from environment
     const adminPrivateKey = process.env.ADMIN_WALLET;
     if (!adminPrivateKey) {
+      console.error('ADMIN_WALLET environment variable is not set');
       return NextResponse.json({
         success: false,
-        error: 'Admin wallet not configured'
+        error: 'Admin wallet not configured. Please set the ADMIN_WALLET environment variable.',
+        details: 'This is required for automatic reward distribution to work.'
       }, { status: 500 });
     }
 
@@ -122,11 +135,23 @@ export async function POST(request: NextRequest) {
       84532: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40',
       84531: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40'
     };
+    
+    // Check if we have contract addresses configured
+    const missingContracts = Object.entries(CONTRACTS)
+      .filter(([chainId, address]) => !address || address === '0x...')
+      .map(([chainId]) => chainId);
+    
+    if (missingContracts.length > 0) {
+      console.warn(`Missing contract addresses for chains: ${missingContracts.join(', ')}`);
+    }
+    
     const contractAddress = CONTRACTS[chain.id];
-    if (!contractAddress) {
+    if (!contractAddress || contractAddress === '0x...') {
       return NextResponse.json({
         success: false,
-        error: `Contract address not configured for chain ${chain.id}`
+        error: `Contract address not configured for chain ${chain.id}`,
+        details: 'Please configure the appropriate contract address environment variable.',
+        code: 'MISSING_CONTRACT_ADDRESS'
       }, { status: 500 });
     }
 

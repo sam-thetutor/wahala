@@ -87,7 +87,10 @@ io.on('connection', (socket) => {
   // Handle game start (admin only)
   socket.on('startGame', async (data) => {
     try {
+      console.log('=== startGame event received on server ===');
+      console.log('Data received:', data);
       const { countdownTime = 5 } = data || {};
+      console.log('Countdown time:', countdownTime);
       
       // Verify user is admin
       const user = await prisma.user.findUnique({
@@ -104,19 +107,34 @@ io.on('connection', (socket) => {
         });
 
         if (participant) {
-          // Start countdown with custom time (default 10 seconds)
-          let countdown = countdownTime || 10; // Use countdownTime or default to 10 seconds
+          console.log('Admin verified, emitting gameStarting event');
+          // Emit gameStarting event to show countdown
+          io.to(roomId).emit('gameStarting', countdownTime);
+          console.log('gameStarting event emitted with countdown:', countdownTime);
+          
+          // Start countdown with custom time
+          let countdown = countdownTime || 10;
+          console.log('Starting countdown from:', countdown);
+          
           const countdownInterval = setInterval(() => {
+            console.log('Countdown update:', countdown);
             io.to(roomId).emit('countdownUpdate', countdown);
             countdown--;
 
             if (countdown < 0) {
+              console.log('Countdown finished, starting quiz');
               clearInterval(countdownInterval);
               startQuiz(roomId);
             }
           }, 1000);
+        } else {
+          console.log('User is not admin');
         }
+      } else {
+        console.log('User not found');
       }
+      
+      console.log('=== startGame event processed ===');
     } catch (error) {
       console.error('Error starting game:', error);
     }
@@ -669,6 +687,33 @@ async function endQuiz(roomId) {
               finalLeaderboard
             }),
           });
+
+          // Check if response is successful before trying to parse JSON
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Reward distribution API returned ${response.status}: ${errorText}`);
+            
+            // Try to parse as JSON if possible, otherwise use the text
+            let errorMessage = 'Failed to distribute rewards automatically';
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorMessage = errorJson.error || errorMessage;
+            } catch (parseError) {
+              // If it's HTML or other non-JSON content, use a generic message
+              if (response.status === 500) {
+                errorMessage = 'Server error during reward distribution';
+              } else {
+                errorMessage = `HTTP ${response.status}: ${errorText.substring(0, 100)}...`;
+              }
+            }
+            
+            io.to(roomId).emit('rewardsDistributed', {
+              success: false,
+              message: errorMessage,
+              error: `HTTP ${response.status}`
+            });
+            return;
+          }
 
           const result = await response.json();
           

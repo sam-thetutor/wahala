@@ -26,7 +26,8 @@ import {
   Wallet,
   Settings,
   Crown,
-  Coins
+  Coins,
+  LogOut
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import AdminControls from '@/components/AdminControls';
@@ -133,6 +134,10 @@ export default function QuizRoomPage() {
   const [showRewardsSection, setShowRewardsSection] = useState(false);
   const [rewardsDistributed, setRewardsDistributed] = useState(false);
   const [distributingRewards, setDistributingRewards] = useState(false);
+  const [messageProgress, setMessageProgress] = useState<number>(100);
+  const [messageDuration, setMessageDuration] = useState<number>(5000);
+  const [messageTimeout, setMessageTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [fadeTimeout, setFadeTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Enhanced wallet address validation
@@ -164,6 +169,16 @@ export default function QuizRoomPage() {
     if (roomId) {
       joinExistingRoom();
     }
+    
+    return () => {
+      // Cleanup timeouts on unmount
+      if (messageTimeout) {
+        clearTimeout(messageTimeout);
+      }
+      if (fadeTimeout) {
+        clearTimeout(fadeTimeout);
+      }
+    };
   }, [isConnected, address, roomId]);
 
   const joinExistingRoom = async () => {
@@ -349,10 +364,20 @@ export default function QuizRoomPage() {
     });
 
     newSocket.on('gameStarting', (countdownTime: number) => {
+      console.log('=== gameStarting event received ===');
+      console.log('Countdown time received:', countdownTime);
+      console.log('Previous gameState:', gameState);
+      
       setGameState('countdown');
       setCountdown(countdownTime);
+      setCountdownDisplay(countdownTime);
+      setShowCountdownDisplay(true);
       setQuizStartTime(new Date());
-      // Countdown now shown on TV, no full-screen overlay
+      
+      console.log('New gameState set to:', 'countdown');
+      console.log('Countdown set to:', countdownTime);
+      console.log('CountdownDisplay set to:', countdownTime);
+      console.log('=== gameStarting event processed ===');
     });
 
     newSocket.on('tvMessage', (message: string) => {
@@ -361,20 +386,84 @@ export default function QuizRoomPage() {
 
     newSocket.on('adminMessageReceived', (data: { message: string, timestamp: string }) => {
       console.log('Received adminMessageReceived event:', data);
+      
+      // Clear any existing timeouts
+      if (messageTimeout) {
+        clearTimeout(messageTimeout);
+        setMessageTimeout(null);
+      }
+      if (fadeTimeout) {
+        clearTimeout(fadeTimeout);
+        setFadeTimeout(null);
+      }
+      
       setAdminMessageDisplay(data.message);
       setShowAdminMessage(true);
       // Also update the TV message
       setTvMessage(data.message);
       console.log('Updated tvMessage to:', data.message);
-      // Auto-hide after 3 seconds
-      setTimeout(() => {
+      
+      // Calculate duration based on word count: min 5s, max 10s
+      const wordCount = data.message.split(' ').length;
+      const duration = Math.min(Math.max(wordCount * 0.5, 5), 10) * 1000; // Convert to milliseconds
+      
+      console.log('Message duration:', duration, 'ms, word count:', wordCount);
+      
+      // Set message duration and start progress animation
+      setMessageDuration(duration);
+      setMessageProgress(100);
+      
+      // Animate progress bar smoothly
+      const startTime = Date.now();
+      const animateProgress = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.max(0, 100 - (elapsed / duration) * 100);
+        setMessageProgress(progress);
+        
+        if (progress > 0) {
+          requestAnimationFrame(animateProgress);
+        }
+      };
+      requestAnimationFrame(animateProgress);
+      
+      // Auto-hide after calculated duration
+      const timeout = setTimeout(() => {
+        console.log('Hiding message after duration:', duration, 'ms');
         setShowAdminMessage(false);
-      }, 3000);
+        // Start fade out by reducing progress to 0
+        setMessageProgress(0);
+        // Wait for fade out animation then clear message
+        const fadeOut = setTimeout(() => {
+          console.log('Clearing tvMessage completely');
+          setTvMessage('');
+          setMessageProgress(100);
+          setShowAdminMessage(false);
+          setMessageTimeout(null);
+          setFadeTimeout(null);
+        }, 500);
+        setFadeTimeout(fadeOut);
+      }, duration);
+      
+      setMessageTimeout(timeout);
     });
 
     newSocket.on('countdownUpdate', (timeLeft: number) => {
+      console.log('=== countdownUpdate event received ===');
+      console.log('Time left:', timeLeft);
+      console.log('Current gameState:', gameState);
+      
       setCountdown(timeLeft);
-      // Countdown now shown on TV, no full-screen overlay
+      setCountdownDisplay(timeLeft);
+      
+      // When countdown reaches 0, transition to playing state
+      if (timeLeft <= 0) {
+        console.log('Countdown finished, transitioning to playing state');
+        setGameState('playing');
+        setShowCountdownDisplay(false);
+        console.log('GameState changed to: playing');
+      }
+      
+      console.log('=== countdownUpdate event processed ===');
     });
 
     newSocket.on('questionStart', (question: Question) => {
@@ -468,16 +557,39 @@ export default function QuizRoomPage() {
     }
   };
 
-  const startGame = () => {
-    if (socket && isAdmin) {
-      setShowCountdownModal(true);
-    }
-  };
+  // Remove the startGame function - it's redundant
+  // const startGame = () => {
+  //   console.log('startGame called, socket:', !!socket, 'isAdmin:', isAdmin);
+  //   if (socket && isAdmin) {
+  //     console.log('Opening countdown modal, current state:', showCountdownModal);
+  //     setShowCountdownModal(true);
+  //     console.log('Modal state set to true');
+  //   } else {
+  //     console.log('Cannot open modal:', { hasSocket: !!socket, isAdmin });
+  //   }
+  // };
 
   const confirmStartGame = () => {
+    console.log('=== confirmStartGame called ===');
+    console.log('Socket exists:', !!socket);
+    console.log('Is admin:', isAdmin);
+    console.log('Current countdownTime (minutes):', countdownTime);
+    console.log('Current gameState:', gameState);
+    
     if (socket && isAdmin) {
-      socket.emit('startGame', { countdownTime });
+      // Convert minutes to seconds before sending to server
+      const countdownSeconds = countdownTime * 60;
+      console.log(`Converting ${countdownTime} minutes to ${countdownSeconds} seconds`);
+      console.log(`Emitting startGame event with countdownTime: ${countdownSeconds}`);
+      
+      socket.emit('startGame', { countdownTime: countdownSeconds });
+      
+      console.log('Closing countdown modal');
       setShowCountdownModal(false);
+      
+      console.log('=== confirmStartGame completed ===');
+    } else {
+      console.log('Cannot start game:', { hasSocket: !!socket, isAdmin });
     }
   };
 
@@ -489,10 +601,12 @@ export default function QuizRoomPage() {
       console.log('Socket connected:', socket.connected);
       console.log('Is admin:', isAdmin);
       
-      // Immediately show the message on admin's TV
-      setTvMessage(message);
+      // Clear previous message and reset progress
+      setTvMessage('');
+      setMessageProgress(100);
+      setShowAdminMessage(false);
       
-      // Emit the socket event
+      // Emit the socket event - let the socket event handle setting tvMessage
       socket.emit('sendMessage', { message });
       
       setMessageSentNotification('Message sent successfully!');
@@ -643,26 +757,16 @@ export default function QuizRoomPage() {
                 <WalletConnectButton />
               </div>
               
-              {/* Admin Quick Actions */}
-              {isAdmin && gameState === 'waiting' && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={sendMessage}
-                    className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    <MessageSquare size={14} />
-                    Message
-                  </button>
-                  <button
-                    onClick={startGame}
-                    disabled={participants.filter(p => p.isReady).length < (room?.minParticipants || 1)}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Play size={16} />
-                    Start Quiz
-                  </button>
-                </div>
-              )}
+
+              
+              {/* Exit Button */}
+              <button
+                onClick={leaveRoom}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+              >
+                <LogOut size={16} />
+                Exit Room
+              </button>
             </div>
           </div>
         </div>
@@ -693,174 +797,190 @@ export default function QuizRoomPage() {
                   </div>
                 )}
                 
-                {/* Countdown Display */}
-                {countdown && (gameState === 'countdown' || room?.scheduledStartTime) && (
+                {/* Dynamic Content Based on Game State */}
+                {gameState === 'countdown' && countdownDisplay > 0 ? (
                   <div className="bg-gradient-to-r from-red-900 to-pink-900 rounded-lg p-6 mb-4 animate-pulse">
-                    <div className="text-6xl font-bold text-white mb-2">{formatTime(countdown)}</div>
+                    <div className="text-6xl font-bold text-white mb-2">{formatTime(countdownDisplay)}</div>
                     <p className="text-xl font-handwriting">Quiz Starting Soon!</p>
                   </div>
-                )}
-                
-                                 {/* Question Display */}
-                 {gameState === 'playing' && currentQuestion && !showAnswerReveal && (
-                   <div className="bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-6 mb-4">
-                     <div className="flex items-center justify-between mb-4">
-                       <h3 className="text-2xl font-handwriting font-bold text-white">Question</h3>
-                       <div className="flex items-center gap-2 px-4 py-2 bg-red-800 rounded-lg">
-                         <Clock className="w-5 h-5 text-white" />
-                         <span className="font-bold text-white">{formatTime(questionTimeLeft)}</span>
-                       </div>
-                     </div>
-                     <p className="text-2xl font-handwriting text-white mb-4">{currentQuestion.text}</p>
-                     
-                     {/* Dynamic Progress Bar */}
-                     <div className="w-full bg-gray-700 rounded-full h-3 mb-4">
-                       <div 
-                         className="bg-gradient-to-r from-green-400 to-blue-500 h-3 rounded-full transition-all duration-1000 ease-linear"
-                         style={{ 
-                           width: `${((currentQuestion.timeLimit - questionTimeLeft) / currentQuestion.timeLimit) * 100}%` 
-                         }}
-                       ></div>
-                     </div>
-                   </div>
-                 )}
-
-                 {/* Answer Reveal Display */}
-                 {showAnswerReveal && currentAnswer && (
-                   <div className="bg-gradient-to-r from-yellow-900 to-orange-900 rounded-lg p-6 mb-4">
-                     <div className="text-center mb-4">
-                       <h3 className="text-2xl font-handwriting font-bold text-white mb-2">Answer Reveal!</h3>
-                       <div className="text-4xl font-handwriting font-bold text-yellow-400 mb-2">
-                         {currentAnswer.correctAnswer}
-                       </div>
-                     </div>
-                     
-                     {/* User Answers */}
-                     <div className="space-y-2 mb-4">
-                       {currentAnswer.userAnswers.map((userAnswer, index) => (
-                         <div key={index} className="flex items-center justify-between bg-gray-800 rounded-lg p-3">
-                           <span className="text-white font-medium">
-                             {(() => {
-                               const participant = participants.find(p => p.userId === userAnswer.userId);
-                               return participant && participant.user && participant.user.address 
-                                 ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` 
-                                 : 'Unknown';
-                             })()}
-                           </span>
-                           <div className="flex items-center gap-2">
-                             <span className={`px-2 py-1 rounded text-sm font-bold ${
-                               userAnswer.isCorrect ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                             }`}>
-                               {userAnswer.isCorrect ? '✓' : '✗'}
-                             </span>
-                             <span className="text-yellow-400 font-bold">
-                               +{userAnswer.points} pts
-                             </span>
-                           </div>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-                 )}
-
-                 {/* Leaderboard Display */}
-                 {leaderboard.length > 0 && (
-                   <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6 mb-4">
-                     <h3 className="text-2xl font-handwriting font-bold text-white mb-4 text-center">🏆 Leaderboard</h3>
-                     <div className="space-y-2">
-                       {leaderboard.slice(0, 5).map((entry, index) => (
-                         <div key={entry.userId} className="flex items-center justify-between bg-gray-800 rounded-lg p-3">
-                           <div className="flex items-center gap-3">
-                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                               index === 0 ? 'bg-yellow-500' : 
-                               index === 1 ? 'bg-gray-400' : 
-                               index === 2 ? 'bg-orange-600' : 'bg-gray-600'
-                             }`}>
-                               {index + 1}
-                             </div>
-                             <span className="text-white font-medium">{entry.name}</span>
-                           </div>
-                           <span className="text-yellow-400 font-bold text-lg">{entry.score} pts</span>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-                 )}
-                
-                {/* Admin Message */}
-                {tvMessage && gameState !== 'playing' && (
-                  <div className="bg-blue-900 rounded-lg p-6 mb-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <MessageSquare className="w-5 h-5 text-blue-300" />
-                      <h3 className="font-handwriting font-bold text-lg text-blue-300">Admin Message</h3>
-                    </div>
-                    <p className="text-2xl font-handwriting text-white">{tvMessage}</p>
-                  </div>
-                )}
-                
-                {/* Default Message */}
-                {!tvMessage && gameState === 'waiting' && (
+                ) : gameState === 'waiting' ? (
                   <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6 mb-4">
+                    <h3 className="text-2xl font-handwriting font-bold text-white mb-4">🎯 Quiz Room Ready</h3>
+                    <div className="grid grid-cols-2 gap-6 text-center">
+                      <div>
+                        <div className="text-4xl font-bold text-yellow-400 mb-2">{participants.length}</div>
+                        <p className="text-blue-200">Participants</p>
+                      </div>
+                      <div>
+                        <div className="text-4xl font-bold text-green-400 mb-2">{participants.filter(p => p.isReady).length}</div>
+                        <p className="text-blue-200">Ready</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 text-center">
+                      <p className="text-blue-200 text-lg">
+                        {participants.filter(p => p.isReady).length >= (room?.minParticipants || 1) 
+                          ? '✅ Ready to start!' 
+                          : `⏳ Need ${(room?.minParticipants || 1) - participants.filter(p => p.isReady).length} more ready`
+                        }
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+                
+                {/* Question Display - Prominent when playing */}
+                {gameState === 'playing' && currentQuestion && !showAnswerReveal && (
+                  <div className="bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-8 mb-6 border-4 border-blue-400 shadow-2xl">
+                    <div className="text-center mb-6">
+                      <div className="flex items-center justify-center gap-3 mb-4">
+                        <h3 className="text-3xl font-handwriting font-bold text-white">🎯 Question</h3>
+                        <div className="flex items-center gap-2 px-4 py-2 bg-red-800 rounded-lg border-2 border-red-600">
+                          <Clock className="w-6 h-6 text-white animate-pulse" />
+                          <span className="font-bold text-white text-xl">{formatTime(questionTimeLeft)}</span>
+                        </div>
+                      </div>
+                      <p className="text-3xl font-handwriting text-white leading-relaxed">{currentQuestion.text}</p>
+                    </div>
+                    
+                    {/* Enhanced Progress Bar */}
+                    <div className="w-full bg-gray-700 rounded-full h-4 mb-4 border-2 border-gray-600">
+                      <div 
+                        className="bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 h-4 rounded-full transition-all duration-1000 ease-linear shadow-lg"
+                        style={{ 
+                          width: `${((currentQuestion.timeLimit - questionTimeLeft) / currentQuestion.timeLimit) * 100}%` 
+                        }}
+                      ></div>
+                    </div>
+                    
+                    {/* Answer Options Preview */}
                     <div className="text-center">
-                      <h3 className="text-2xl font-handwriting font-bold text-blue-300 mb-4">
-                        🎯 Quiz Room Ready
-                      </h3>
-                      <div className="grid grid-cols-2 gap-6 text-center">
-                        <div className="bg-blue-800 rounded-lg p-4">
-                          <p className="text-blue-200 text-sm mb-1">Participants</p>
-                          <p className="text-3xl font-bold text-white">{participants.length}</p>
-                        </div>
-                        <div className="bg-green-800 rounded-lg p-4">
-                          <p className="text-green-200 text-sm mb-1">Ready</p>
-                          <p className="text-3xl font-bold text-white">{participants.filter(p => p.isReady).length}</p>
-                        </div>
+                      <p className="text-blue-200 text-lg font-handwriting">
+                        Select your answer below ↓
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Answer Reveal Display - Prominent after question */}
+                {showAnswerReveal && currentAnswer && (
+                  <div className="bg-gradient-to-r from-yellow-900 to-orange-900 rounded-lg p-8 mb-6 border-4 border-yellow-400 shadow-2xl animate-pulse">
+                    <div className="text-center mb-6">
+                      <h3 className="text-4xl font-handwriting font-bold text-white mb-4">🎉 Answer Reveal!</h3>
+                      <div className="text-6xl font-handwriting font-bold text-yellow-400 mb-4 animate-bounce">
+                        {currentAnswer.correctAnswer}
                       </div>
-                      <div className="mt-4 text-center">
-                        <p className="text-blue-200 text-lg">
-                          {participants.filter(p => p.isReady).length >= (room?.minParticipants || 1) 
-                            ? '✅ Ready to start!' 
-                            : `⏳ Need ${(room?.minParticipants || 1) - participants.filter(p => p.isReady).length} more ready`
-                          }
-                        </p>
-                      </div>
+                      <p className="text-xl text-yellow-200 font-handwriting">Correct Answer</p>
+                    </div>
+                    
+                    {/* User Answers with Better Layout */}
+                    <div className="space-y-3 mb-4">
+                      <h4 className="text-xl font-handwriting font-bold text-white text-center mb-4">Player Results</h4>
+                      {currentAnswer.userAnswers.map((userAnswer, index) => (
+                        <div key={index} className="flex items-center justify-between bg-gray-800 rounded-lg p-4 border border-gray-600">
+                          <span className="text-white font-medium text-lg">
+                            {(() => {
+                              const participant = participants.find(p => p.userId === userAnswer.userId);
+                              return participant && participant.user && participant.user.address 
+                                ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` 
+                                : 'Unknown';
+                            })()}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className={`px-3 py-1 rounded-lg text-lg font-bold ${
+                              userAnswer.isCorrect ? 'bg-green-600 text-white border-2 border-green-400' : 'bg-red-600 text-white border-2 border-red-400'
+                            }`}>
+                              {userAnswer.isCorrect ? '✓ Correct' : '✗ Wrong'}
+                            </span>
+                            <span className="text-yellow-400 font-bold text-xl">
+                              +{userAnswer.points} pts
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Leaderboard Display - Prominent when available */}
+                {leaderboard.length > 0 && (
+                  <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-8 mb-6 border-4 border-blue-400 shadow-2xl">
+                    <h3 className="text-4xl font-handwriting font-bold text-white mb-6 text-center">🏆 Leaderboard</h3>
+                    <div className="space-y-3">
+                      {leaderboard.slice(0, 5).map((entry, index) => (
+                        <div key={entry.userId} className={`flex items-center justify-between rounded-lg p-4 transition-all duration-300 ${
+                          index === 0 ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 border-2 border-yellow-400' :
+                          index === 1 ? 'bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-400' :
+                          index === 2 ? 'bg-gradient-to-r from-orange-600 to-orange-700 border-2 border-orange-400' :
+                          'bg-gray-800 border-2 border-gray-600'
+                        }`}>
+                          <div className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                              index === 0 ? 'bg-yellow-500 shadow-lg' : 
+                              index === 1 ? 'bg-gray-400 shadow-lg' : 
+                              index === 2 ? 'bg-orange-500 shadow-lg' : 'bg-gray-600'
+                            }`}>
+                              {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                            </div>
+                            <span className="text-white font-medium text-lg">{entry.name}</span>
+                          </div>
+                          <span className="text-yellow-400 font-bold text-2xl">{entry.score} pts</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
                 
-                {/* Recent Joins */}
+                {/* Admin Message - Prominent when displayed */}
+                {tvMessage && gameState !== 'playing' && (
+                  <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-8 mb-6 border-4 border-blue-400 shadow-2xl relative overflow-hidden transition-all duration-500">
+                    {/* Enhanced Fading Progress Bar */}
+                    <div className="absolute bottom-0 left-0 h-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 transition-all duration-100 ease-linear rounded-full"
+                         style={{ width: `${messageProgress}%` }}>
+                    </div>
+                    
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <MessageSquare className="w-8 h-8 text-blue-300" />
+                      <h3 className="font-handwriting font-bold text-2xl text-blue-300">📢 Admin Message</h3>
+                    </div>
+                    <p className="text-3xl font-handwriting text-white text-center leading-relaxed">{tvMessage}</p>
+                  </div>
+                )}
+                
+
+                
+                {/* Recent Joins - Enhanced display */}
                 {participantTabs.length > 0 && (
-                  <div className="mb-4">
-                    <h3 className="text-lg font-handwriting font-bold mb-2 text-yellow-400">Recent Joins</h3>
-                    <div className="flex flex-wrap justify-center gap-2">
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-handwriting font-bold mb-4 text-center text-yellow-400">🎉 Recent Joins</h3>
+                    <div className="flex flex-wrap justify-center gap-3">
                       {participantTabs.slice(-3).map((participant, index) => (
                         <div
                           key={participant.id}
-                          className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all duration-500 ${
+                          className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all duration-500 hover:scale-105 ${
                             participant.isAdmin 
-                              ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black shadow-lg' 
+                              ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black shadow-lg border-2 border-yellow-300' 
                               : participant.isReady
-                              ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-black shadow-lg'
-                              : 'bg-gradient-to-r from-blue-400 to-purple-500 text-black shadow-lg'
+                              ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-black shadow-lg border-2 border-green-300'
+                              : 'bg-gradient-to-r from-blue-400 to-purple-500 text-black shadow-lg border-2 border-blue-300'
                           }`}
                           style={{
                             animationDelay: `${index * 200}ms`,
                             animation: 'fadeInUp 0.5s ease-out forwards'
                           }}
                         >
-                          <div className="w-4 h-4 rounded-full bg-white bg-opacity-30 flex items-center justify-center">
+                          <div className="w-5 h-5 rounded-full bg-white bg-opacity-30 flex items-center justify-center">
                             {participant.isAdmin ? (
-                              <Crown className="w-2 h-2" />
+                              <Crown className="w-3 h-3" />
                             ) : participant.isReady ? (
-                              <CheckCircle className="w-2 h-2" />
+                              <CheckCircle className="w-3 h-3" />
                             ) : (
-                              <Users className="w-2 h-2" />
+                              <Users className="w-3 h-3" />
                             )}
                           </div>
-                          <span className="text-xs font-medium">
+                          <span className="text-sm font-bold">
                             {participant.name}
                           </span>
                           {participant.isAdmin && (
-                            <Crown className="w-2 h-2" />
+                            <Crown className="w-3 h-3" />
                           )}
                         </div>
                       ))}
@@ -871,49 +991,40 @@ export default function QuizRoomPage() {
                 {/* Join Notification */}
                 {participantJoinNotification && (
                   <div className="mb-4">
-                    <div className="bg-gradient-to-r from-green-800 to-blue-800 rounded-lg p-3 text-white text-center animate-pulse">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                        <span className="font-handwriting font-bold">{participantJoinNotification}</span>
+                    <div className="bg-gradient-to-r from-green-800 to-blue-800 rounded-lg p-4 text-white text-center animate-pulse border-2 border-green-400 shadow-lg">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="w-3 h-3 bg-green-400 rounded-full animate-bounce"></div>
+                        <span className="font-handwriting font-bold text-lg">🎉 {participantJoinNotification}</span>
                       </div>
                     </div>
                   </div>
                 )}
 
-                                 {/* Message Sent Notification */}
-                 {messageSentNotification && (
-                   <div className="mb-4">
-                     <div className="bg-gradient-to-r from-green-800 to-blue-800 rounded-lg p-3 text-white text-center animate-pulse">
-                       <div className="flex items-center justify-center gap-2">
-                         <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                         <span className="font-handwriting font-bold">{messageSentNotification}</span>
-                       </div>
-                     </div>
-                   </div>
-                 )}
+                {/* Message Sent Notification */}
+                {messageSentNotification && (
+                  <div className="mb-4">
+                    <div className="bg-gradient-to-r from-green-800 to-blue-800 rounded-lg p-4 text-white text-center animate-pulse border-2 border-green-400 shadow-lg">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="w-3 h-3 bg-green-400 rounded-full animate-bounce"></div>
+                        <span className="font-handwriting font-bold text-lg">📢 {messageSentNotification}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                 {/* Leave Notification */}
-                 {participantLeaveNotification && (
-                   <div className="mb-4">
-                     <div className="bg-gradient-to-r from-red-800 to-orange-800 rounded-lg p-3 text-white text-center animate-pulse">
-                       <div className="flex items-center justify-center gap-2">
-                         <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                         <span className="font-handwriting font-bold">{participantLeaveNotification}</span>
-                       </div>
-                     </div>
-                   </div>
-                 )}
+                {/* Leave Notification */}
+                {participantLeaveNotification && (
+                  <div className="mb-4">
+                    <div className="bg-gradient-to-r from-red-800 to-orange-800 rounded-lg p-4 text-white text-center animate-pulse border-2 border-red-400 shadow-lg">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="w-3 h-3 bg-red-400 rounded-full animate-bounce"></div>
+                        <span className="font-handwriting font-bold text-lg">👋 {participantLeaveNotification}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="bg-gray-800 rounded p-3">
-                    <p className="text-gray-400">Participants</p>
-                    <p className="text-2xl font-bold text-green-400">{participants.length}</p>
-                  </div>
-                  <div className="bg-gray-800 rounded p-3">
-                    <p className="text-gray-400">Ready</p>
-                    <p className="text-2xl font-bold text-yellow-400">{participants.filter(p => p.isReady).length}</p>
-                  </div>
-                </div>
+
               </div>
             </div>
           </div>
@@ -1068,7 +1179,7 @@ export default function QuizRoomPage() {
                     
                     <div className="flex flex-wrap gap-3">
                       <button
-                        onClick={startGame}
+                        onClick={() => setShowCountdownModal(true)}
                         disabled={participants.filter(p => p.isReady).length < (room?.minParticipants || 1)}
                         className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-400 hover:to-emerald-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 font-handwriting font-bold shadow-md"
                       >
@@ -1082,90 +1193,12 @@ export default function QuizRoomPage() {
                         <MessageSquare size={18} />
                         Send Message
                       </button>
-                      <button
-                        onClick={() => setShowCountdownModal(true)}
-                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:from-orange-400 hover:to-red-500 transition-all duration-300 font-handwriting font-bold shadow-md"
-                      >
-                        <Clock size={18} />
-                        Set Countdown
-                      </button>
+
                     </div>
                   </div>
                 )}
 
-                {/* Participant Controls */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <div className="text-center mb-6">
-                    <h2 className="text-2xl font-handwriting font-bold text-gray-800 mb-2">
-                      Waiting Room
-                    </h2>
-                    <p className="text-gray-600">
-                      Waiting for participants to join and get ready...
-                    </p>
-                  </div>
 
-                  <div className="flex items-center justify-center mb-6">
-                    <button
-                      onClick={toggleReady}
-                      className={`flex items-center gap-2 px-6 py-3 rounded-lg font-handwriting font-medium transition-all ${
-                        isReady 
-                          ? 'bg-green-500 text-white hover:bg-green-600' 
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      {isReady ? <CheckCircle size={18} /> : <XCircle size={18} />}
-                      {isReady ? 'Ready' : 'Not Ready'}
-                    </button>
-                  </div>
-
-                  <div className="text-center">
-                    <div className="text-3xl font-handwriting font-bold text-purple-600 mb-2">
-                      {participants.filter(p => p.isReady).length} / {room?.minParticipants || 1}
-                    </div>
-                    <p className="text-gray-600">Ready to start</p>
-                  </div>
-
-                  {/* Animated Participant Tabs */}
-                  <div className="mt-6">
-                    <h3 className="text-lg font-handwriting font-bold text-gray-700 mb-4 text-center">
-                      Participants Joining...
-                    </h3>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {participantTabs.map((participant, index) => (
-                        <div
-                          key={participant.id}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-500 transform hover:scale-105 ${
-                            participant.isAdmin 
-                              ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg' 
-                              : participant.isReady
-                              ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg'
-                              : 'bg-gradient-to-r from-blue-400 to-purple-500 text-white shadow-lg'
-                          }`}
-                          style={{
-                            animationDelay: `${index * 200}ms`,
-                            animation: 'fadeInUp 0.5s ease-out forwards'
-                          }}
-                        >
-                          <div className="w-6 h-6 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
-                            {participant.isAdmin ? (
-                              <Trophy className="w-3 h-3" />
-                            ) : participant.isReady ? (
-                              <CheckCircle className="w-3 h-3" />
-                            ) : (
-                              <Users className="w-3 h-3" />
-                            )}
-                          </div>
-                          <span className="text-sm font-medium">
-                            {participant.name}
-                          </span>
-                          {participant.isAdmin && (
-                            <Crown className="w-3 h-3" />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
 
@@ -1186,7 +1219,7 @@ export default function QuizRoomPage() {
                   
                   <div className="text-center">
                     <div className="text-4xl font-handwriting font-bold text-orange-600 mb-2">
-                      {formatTime(countdown || 0)}
+                      {formatTime(countdownDisplay || 0)}
                     </div>
                     <p className="text-gray-600">Quiz starting soon...</p>
                   </div>
@@ -1237,69 +1270,6 @@ export default function QuizRoomPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {gameState === 'countdown' && (
-              <div className="bg-white rounded-xl shadow-sm p-6 text-center">
-                <h2 className="text-3xl font-handwriting font-bold text-gray-800 mb-4">
-                  Game Starting in...
-                </h2>
-                <div className="text-6xl font-bold text-purple-600 mb-4">
-                  {countdown}
-                </div>
-                <p className="text-gray-600">Get ready!</p>
-              </div>
-            )}
-
-            {gameState === 'playing' && currentQuestion && (
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-handwriting font-bold text-gray-800">
-                    Question
-                  </h2>
-                  <div className="flex items-center gap-2 text-red-600">
-                    <Clock size={20} />
-                    <span className="text-lg font-bold">{formatTime(questionTimeLeft)}</span>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <p className="text-lg text-gray-700 mb-4">{currentQuestion.text}</p>
-                  
-                  <div className="space-y-3">
-                    {currentQuestion.options.map((option) => (
-                      <button
-                        key={option.id}
-                        onClick={() => selectAnswer(option.id)}
-                        className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
-                          selectedAnswers.includes(option.id)
-                            ? 'border-purple-500 bg-purple-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                            selectedAnswers.includes(option.id)
-                              ? 'border-purple-500 bg-purple-500'
-                              : 'border-gray-300'
-                          }`}>
-                            {selectedAnswers.includes(option.id) && (
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
-                            )}
-                          </div>
-                          <span className="font-handwriting">{option.text}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex justify-center">
-                  <div className="text-gray-500 text-sm">
-                    Click an option to submit your answer immediately
                   </div>
                 </div>
               </div>
@@ -1394,72 +1364,9 @@ export default function QuizRoomPage() {
               </div>
             </div>
 
-            {/* Enhanced Participants */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-handwriting font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Participants ({participants.length})
-              </h3>
-              <div className="space-y-3">
-                {participants.map((participant) => (
-                  <div key={participant.id} className={`flex items-center justify-between p-3 rounded-lg transition-all ${
-                    participant.isAdmin ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400' : 'bg-gray-50'
-                  }`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                        participant.isAdmin ? 'bg-gradient-to-r from-yellow-500 to-orange-500' : 
-                        participant.isReady ? 'bg-green-500' : 'bg-gray-400'
-                      }`}>
-                        {participant.isAdmin ? <Trophy className="w-4 h-4" /> : 
-                         participant.user?.address?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
-                      <div>
-                        <div className="font-handwriting text-sm font-medium">
-                          {participant.user?.address ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 'Unknown'}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {participant.user?.address ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 'Unknown'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {participant.isAdmin && (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 rounded-full">
-                          <Trophy className="w-3 h-3 text-yellow-600" />
-                          <span className="text-xs font-medium text-yellow-800">Admin</span>
-                        </div>
-                      )}
-                      {participant.isReady && <CheckCircle size={16} className="text-green-500" />}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
 
-            {/* Snarkel Info */}
-            {snarkel && (
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-lg font-handwriting font-bold text-gray-800 mb-4">
-                  Quiz Info
-                </h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Questions:</span>
-                    <span className="font-medium">{snarkel.totalQuestions}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Base Points:</span>
-                    <span className="font-medium">{snarkel.basePointsPerQuestion}</span>
-                  </div>
-                  {snarkel.speedBonusEnabled && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Speed Bonus:</span>
-                      <span className="font-medium">+{snarkel.maxSpeedBonus}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-                         )}
+
+
            </div>
          </div>
         )}
