@@ -138,6 +138,8 @@ export default function QuizRoomPage() {
   const [messageDuration, setMessageDuration] = useState<number>(5000);
   const [messageTimeout, setMessageTimeout] = useState<NodeJS.Timeout | null>(null);
   const [fadeTimeout, setFadeTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [futureStartCountdown, setFutureStartCountdown] = useState<number | null>(null);
+  const [showFutureStartCountdown, setShowFutureStartCountdown] = useState(false);
 
   useEffect(() => {
     // Enhanced wallet address validation
@@ -180,6 +182,47 @@ export default function QuizRoomPage() {
       }
     };
   }, [isConnected, address, roomId]);
+
+  // Add useEffect for future start time countdown
+  useEffect(() => {
+    if (room?.scheduledStartTime && !room.isStarted && gameState === 'waiting') {
+      const startTime = new Date(room.scheduledStartTime);
+      const now = new Date();
+      
+      if (startTime > now) {
+        // Quiz has a future start time
+        setShowFutureStartCountdown(true);
+        
+        const updateCountdown = () => {
+          const currentTime = new Date();
+          const timeDiff = startTime.getTime() - currentTime.getTime();
+          
+          if (timeDiff > 0) {
+            const secondsLeft = Math.floor(timeDiff / 1000);
+            setFutureStartCountdown(secondsLeft);
+          } else {
+            // Start time has passed, hide countdown
+            setShowFutureStartCountdown(false);
+            setFutureStartCountdown(null);
+          }
+        };
+        
+        // Update immediately
+        updateCountdown();
+        
+        // Update every second
+        const interval = setInterval(updateCountdown, 1000);
+        
+        return () => clearInterval(interval);
+      } else {
+        setShowFutureStartCountdown(false);
+        setFutureStartCountdown(null);
+      }
+    } else {
+      setShowFutureStartCountdown(false);
+      setFutureStartCountdown(null);
+    }
+  }, [room?.scheduledStartTime, room?.isStarted, gameState]);
 
   const joinExistingRoom = async () => {
     try {
@@ -797,13 +840,35 @@ export default function QuizRoomPage() {
                   </div>
                 )}
                 
+                {/* Future Start Time Countdown - Prominent Display */}
+                {showFutureStartCountdown && futureStartCountdown !== null && (
+                  <div className="bg-gradient-to-r from-purple-900 via-blue-900 to-indigo-900 rounded-lg p-8 mb-6 border-4 border-purple-400 shadow-2xl animate-pulse">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-4 mb-4">
+                        <Clock className="w-12 h-12 text-yellow-400 animate-bounce" />
+                        <h3 className="text-3xl font-handwriting font-bold text-white">⏰ Quiz Starts In</h3>
+                        <Clock className="w-12 h-12 text-yellow-400 animate-bounce" />
+                      </div>
+                      <div className="text-8xl font-bold text-yellow-400 mb-4 font-mono">
+                        {formatTime(futureStartCountdown)}
+                      </div>
+                      <p className="text-2xl font-handwriting text-blue-200 mb-2">
+                        Scheduled Start: {room?.scheduledStartTime ? new Date(room.scheduledStartTime).toLocaleString() : ''}
+                      </p>
+                      <p className="text-xl text-purple-200 font-handwriting">
+                        🎯 Get ready! The quiz will begin automatically
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Dynamic Content Based on Game State */}
                 {gameState === 'countdown' && countdownDisplay > 0 ? (
                   <div className="bg-gradient-to-r from-red-900 to-pink-900 rounded-lg p-6 mb-4 animate-pulse">
                     <div className="text-6xl font-bold text-white mb-2">{formatTime(countdownDisplay)}</div>
                     <p className="text-xl font-handwriting">Quiz Starting Soon!</p>
                   </div>
-                ) : gameState === 'waiting' ? (
+                ) : gameState === 'waiting' && !showFutureStartCountdown ? (
                   <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6 mb-4">
                     <h3 className="text-2xl font-handwriting font-bold text-white mb-4">🎯 Quiz Room Ready</h3>
                     <div className="grid grid-cols-2 gap-6 text-center">
@@ -988,6 +1053,20 @@ export default function QuizRoomPage() {
                   </div>
                 )}
 
+                {/* Future Start Time Notification for Participants */}
+                {showFutureStartCountdown && futureStartCountdown !== null && (
+                  <div className="mb-4">
+                    <div className="bg-gradient-to-r from-purple-800 to-indigo-800 rounded-lg p-4 text-white text-center animate-pulse border-2 border-purple-400 shadow-lg">
+                      <div className="flex items-center justify-center gap-3">
+                        <Clock className="w-5 h-5 text-yellow-400 animate-bounce" />
+                        <span className="font-handwriting font-bold text-lg">
+                          ⏰ Quiz starts in {formatTime(futureStartCountdown)} - Get ready!
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Join Notification */}
                 {participantJoinNotification && (
                   <div className="mb-4">
@@ -1115,6 +1194,51 @@ export default function QuizRoomPage() {
             <div className="lg:col-span-2">
             {gameState === 'waiting' && (
               <div className="space-y-6">
+
+                {/* Future Start Time Info for Admin */}
+                {showFutureStartCountdown && futureStartCountdown !== null && (
+                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl shadow-lg p-6 border-l-4 border-purple-400">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-handwriting font-bold text-gray-800 flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-purple-500" />
+                        ⏰ Scheduled Quiz Start
+                      </h3>
+                      <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 rounded-full">
+                        <Clock className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-medium text-purple-800">Auto-Start Enabled</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <h4 className="font-handwriting font-bold text-gray-700 mb-2">Countdown</h4>
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-purple-600 mb-1">{formatTime(futureStartCountdown)}</div>
+                          <p className="text-sm text-gray-600">Time Remaining</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <h4 className="font-handwriting font-bold text-gray-700 mb-2">Start Time</h4>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-gray-800 mb-1">
+                            {room?.scheduledStartTime ? new Date(room.scheduledStartTime).toLocaleTimeString() : ''}
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            {room?.scheduledStartTime ? new Date(room.scheduledStartTime).toLocaleDateString() : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-sm text-blue-800 text-center">
+                        💡 The quiz will start automatically when the scheduled time is reached. 
+                        Participants can join and get ready while waiting.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Enhanced Admin Controls */}
                 {isAdmin && (
@@ -1339,6 +1463,14 @@ export default function QuizRoomPage() {
                     {room?.isStarted ? 'Playing' : 'Waiting'}
                   </span>
                 </div>
+                {room?.scheduledStartTime && !room.isStarted && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Start Time:</span>
+                    <span className="font-medium text-purple-600">
+                      {new Date(room.scheduledStartTime).toLocaleTimeString()}
+                    </span>
+                  </div>
+                )}
                 {/* Admin Wallet Info */}
                 {participants.find(p => p.isAdmin) && (
                   <div className="pt-3 border-t border-gray-200">
