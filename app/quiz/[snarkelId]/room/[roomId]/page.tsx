@@ -758,21 +758,81 @@ export default function QuizRoomPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
-      {/* Enhanced Header with Admin Status */}
+      {/* Mobile-First Responsive Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
+          {/* Mobile Layout - Stacked */}
+          <div className="block sm:hidden space-y-3">
+            {/* Top Row - Title and Icon */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                  <Gamepad2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-lg sm:text-xl font-handwriting font-bold text-gray-800 truncate">
+                    {snarkel?.title || 'Quiz Room'}
+                  </h1>
+                  <p className="text-gray-600 text-xs sm:text-sm truncate">{room?.name || 'Loading...'}</p>
+                </div>
+              </div>
+              
+              {/* Mobile Exit Button */}
+              <button
+                onClick={leaveRoom}
+                className="flex items-center gap-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium text-sm"
+              >
+                <LogOut size={14} />
+                <span className="hidden min-[480px]:inline">Exit</span>
+              </button>
+            </div>
+            
+            {/* Bottom Row - Wallet Status and Connect */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Wallet Status - Compact */}
+              {isConnected ? (
+                <div className="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-400 to-emerald-500 rounded-lg shadow-md flex-1 min-w-0">
+                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse flex-shrink-0"></div>
+                  <span className="font-handwriting text-xs font-medium text-white truncate">
+                    {address?.slice(0, 4)}...{address?.slice(-4)}
+                  </span>
+                  {isAdmin && (
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-500 rounded text-xs text-white flex-shrink-0">
+                      <Trophy className="w-2.5 h-2.5" />
+                                              <span className="hidden min-[480px]:inline">Admin</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-lg shadow-md flex-1">
+                  <Wallet className="w-3 h-3 text-gray-800" />
+                  <span className="font-handwriting text-xs font-medium text-gray-800 truncate">
+                    Connect Wallet
+                  </span>
+                </div>
+              )}
+              
+              {/* Mobile Wallet Connect Button */}
+              <div className="flex-shrink-0">
+                <WalletConnectButton />
+              </div>
+            </div>
+          </div>
+          
+          {/* Desktop Layout - Horizontal */}
+          <div className="hidden sm:flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
                 <Gamepad2 className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-handwriting font-bold text-gray-800">
-                  {snarkel?.title}
+                  {snarkel?.title || 'Quiz Room'}
                 </h1>
-                <p className="text-gray-600 text-sm">{room?.name}</p>
+                <p className="text-gray-600 text-sm">{room?.name || 'Loading...'}</p>
               </div>
             </div>
+            
             <div className="flex items-center gap-4">
               {/* Wallet Connection Status */}
               <div className="flex items-center gap-3">
@@ -800,9 +860,7 @@ export default function QuizRoomPage() {
                 <WalletConnectButton />
               </div>
               
-
-              
-              {/* Exit Button */}
+              {/* Desktop Exit Button */}
               <button
                 onClick={leaveRoom}
                 className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
@@ -819,17 +877,17 @@ export default function QuizRoomPage() {
 
 
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
         {/* TV Display for All Participants */}
         {room && snarkel && (
           <div className="mb-6">
-            <div className="bg-black rounded-xl shadow-2xl p-8 border-4 border-gray-800 relative overflow-hidden">
-              <div className="absolute top-2 left-2 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-              <div className="absolute top-2 left-6 w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
-              <div className="absolute top-2 left-10 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="bg-black rounded-xl shadow-2xl p-2 sm:p-4 md:p-8 border-2 sm:border-4 border-gray-800 relative overflow-hidden">
+              <div className="absolute top-1 sm:top-2 left-1 sm:left-2 w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full animate-pulse"></div>
+              <div className="absolute top-1 sm:top-2 left-4 sm:left-6 w-2 h-2 sm:w-3 sm:h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+              <div className="absolute top-1 sm:top-2 left-7 sm:left-10 w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
               
               <div className="text-center text-white">
-                <h2 className="text-4xl font-handwriting font-bold mb-4 text-blue-400">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-handwriting font-bold mb-2 sm:mb-4 text-blue-400">
                   📺 SNARKEL TV
                 </h2>
                 {room?.sessionNumber && (
@@ -842,20 +900,20 @@ export default function QuizRoomPage() {
                 
                 {/* Future Start Time Countdown - Prominent Display */}
                 {showFutureStartCountdown && futureStartCountdown !== null && (
-                  <div className="bg-gradient-to-r from-purple-900 via-blue-900 to-indigo-900 rounded-lg p-8 mb-6 border-4 border-purple-400 shadow-2xl animate-pulse">
+                  <div className="bg-gradient-to-r from-purple-900 via-blue-900 to-indigo-900 rounded-lg p-4 sm:p-6 md:p-8 mb-6 border-2 sm:border-4 border-purple-400 shadow-2xl animate-pulse">
                     <div className="text-center">
-                      <div className="flex items-center justify-center gap-4 mb-4">
-                        <Clock className="w-12 h-12 text-yellow-400 animate-bounce" />
-                        <h3 className="text-3xl font-handwriting font-bold text-white">⏰ Quiz Starts In</h3>
-                        <Clock className="w-12 h-12 text-yellow-400 animate-bounce" />
+                      <div className="flex items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-4">
+                        <Clock className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-yellow-400 animate-bounce" />
+                        <h3 className="text-xl sm:text-2xl md:text-3xl font-handwriting font-bold text-white">⏰ Quiz Starts In</h3>
+                        <Clock className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-yellow-400 animate-bounce" />
                       </div>
-                      <div className="text-8xl font-bold text-yellow-400 mb-4 font-mono">
+                      <div className="text-4xl sm:text-6xl md:text-8xl font-bold text-yellow-400 mb-2 sm:mb-4 font-mono">
                         {formatTime(futureStartCountdown)}
                       </div>
-                      <p className="text-2xl font-handwriting text-blue-200 mb-2">
+                      <p className="text-lg sm:text-xl md:text-2xl font-handwriting text-blue-200 mb-2">
                         Scheduled Start: {room?.scheduledStartTime ? new Date(room.scheduledStartTime).toLocaleString() : ''}
                       </p>
-                      <p className="text-xl text-purple-200 font-handwriting">
+                      <p className="text-base sm:text-lg md:text-xl text-purple-200 font-handwriting">
                         🎯 Get ready! The quiz will begin automatically
                       </p>
                     </div>
@@ -1012,8 +1070,8 @@ export default function QuizRoomPage() {
                 
 
                 
-                {/* Recent Joins - Enhanced display */}
-                {participantTabs.length > 0 && (
+                {/* Recent Joins - Enhanced display - Hidden during quiz */}
+                {participantTabs.length > 0 && gameState === 'waiting' && (
                   <div className="mb-6">
                     <h3 className="text-2xl font-handwriting font-bold mb-4 text-center text-yellow-400">🎉 Recent Joins</h3>
                     <div className="flex flex-wrap justify-center gap-3">
@@ -1114,7 +1172,7 @@ export default function QuizRoomPage() {
                  {/* Answer Grid for All Participants */}
          {gameState === 'playing' && currentQuestion && (
            <div className="mt-6">
-             <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
+             <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-2xl mx-auto">
                {currentQuestion.options.map((option, index) => (
                  <button
                    key={option.id}
@@ -1130,7 +1188,7 @@ export default function QuizRoomPage() {
                      setSelectedAnswers([option.id]);
                    }}
                    disabled={selectedAnswers.length > 0}
-                   className={`p-6 rounded-xl border-2 transition-all duration-300 text-left font-handwriting text-lg ${
+                   className={`p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all duration-300 text-left font-handwriting text-sm sm:text-base md:text-lg ${
                      selectedAnswers.includes(option.id)
                        ? 'border-green-500 bg-green-50 shadow-lg scale-105'
                        : selectedAnswers.length > 0
@@ -1138,14 +1196,14 @@ export default function QuizRoomPage() {
                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:scale-105'
                    }`}
                  >
-                   <div className="flex items-center gap-3">
-                     <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                   <div className="flex items-center gap-2 sm:gap-3">
+                     <div className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center ${
                        selectedAnswers.includes(option.id)
                          ? 'border-green-500 bg-green-500'
                          : 'border-gray-300'
                      }`}>
                        {selectedAnswers.includes(option.id) && (
-                         <CheckCircle className="w-5 h-5 text-white" />
+                         <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white" />
                        )}
                      </div>
                      <span className="font-medium text-gray-800">{option.text}</span>
@@ -1164,6 +1222,56 @@ export default function QuizRoomPage() {
              )}
            </div>
          )}
+
+        {/* Ready Button and Participant Controls for All Non-Admin Users */}
+        {!isAdmin && room && snarkel && gameState === 'waiting' && (
+          <div className="mb-6">
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-l-4 border-blue-400">
+              <div className="text-center">
+                <h3 className="text-lg sm:text-xl font-handwriting font-bold text-gray-800 mb-3 sm:mb-4 flex items-center justify-center gap-2">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                  {isReady ? '🎮 Ready to Play!' : '👀 Spectator Mode'}
+                </h3>
+                
+                <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
+                  {isReady 
+                    ? 'You are ready and waiting for the quiz to start!' 
+                    : 'You are currently in spectator mode. Click below to join as a player when ready.'
+                  }
+                </p>
+                
+                <button
+                  onClick={toggleReady}
+                  className={`px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-xl font-handwriting font-bold text-sm sm:text-base md:text-lg transition-all duration-300 transform hover:scale-105 ${
+                    isReady
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:from-green-400 hover:to-emerald-500'
+                      : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg hover:from-blue-400 hover:to-purple-500'
+                  }`}
+                >
+                  {isReady ? (
+                    <>
+                      <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 inline mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Ready ✓</span>
+                      <span className="sm:hidden">Ready</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 inline mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Join as Player</span>
+                      <span className="sm:hidden">Join</span>
+                    </>
+                  )}
+                </button>
+                
+                {!isReady && (
+                  <p className="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4">
+                    💡 You can still watch the quiz and see all participants while in spectator mode
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Show Participant Room for non-admin users */}
         {!isAdmin && room && snarkel && (
@@ -1194,6 +1302,52 @@ export default function QuizRoomPage() {
             <div className="lg:col-span-2">
             {gameState === 'waiting' && (
               <div className="space-y-6">
+
+                {/* Ready Button for Admin */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-4 sm:p-6 border-l-4 border-blue-400">
+                  <div className="text-center">
+                    <h3 className="text-lg sm:text-xl font-handwriting font-bold text-gray-800 mb-3 sm:mb-4 flex items-center justify-center gap-2">
+                      <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                      {isReady ? '🎮 Admin Ready!' : '👑 Admin Spectator Mode'}
+                    </h3>
+                    
+                    <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
+                      {isReady 
+                        ? 'You are ready as an admin and can start the quiz when participants are ready!' 
+                        : 'You are in admin spectator mode. Click below to join as a player when ready.'
+                      }
+                    </p>
+                    
+                    <button
+                      onClick={toggleReady}
+                      className={`px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-xl font-handwriting font-bold text-sm sm:text-base md:text-lg transition-all duration-300 transform hover:scale-105 ${
+                        isReady
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:from-green-400 hover:to-emerald-500'
+                          : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg hover:from-blue-400 hover:to-purple-500'
+                      }`}
+                    >
+                      {isReady ? (
+                        <>
+                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 inline mr-1 sm:mr-2" />
+                          <span className="hidden sm:inline">Ready ✓</span>
+                          <span className="sm:hidden">Ready</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 inline mr-1 sm:mr-2" />
+                          <span className="hidden sm:inline">Join as Player</span>
+                          <span className="sm:hidden">Join</span>
+                        </>
+                      )}
+                    </button>
+                    
+                    {!isReady && (
+                      <p className="text-sm text-gray-500 mt-3 sm:mt-4">
+                        💡 As an admin, you can still control the quiz while in spectator mode
+                      </p>
+                    )}
+                  </div>
+                </div>
 
                 {/* Future Start Time Info for Admin */}
                 {showFutureStartCountdown && futureStartCountdown !== null && (
@@ -1255,10 +1409,11 @@ export default function QuizRoomPage() {
                         </div>
                         <button
                           onClick={() => setShowAdminControls(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-400 hover:to-purple-500 transition-all duration-300 font-handwriting font-bold shadow-md"
+                          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-400 hover:to-purple-500 transition-all duration-300 font-handwriting font-bold shadow-md text-xs sm:text-sm"
                         >
-                          <Settings size={16} />
-                          Full Controls
+                          <Settings size={14} className="sm:w-4 sm:h-4" />
+                          <span className="hidden sm:inline">Full Controls</span>
+                          <span className="sm:hidden">Controls</span>
                         </button>
                       </div>
                     </div>
@@ -1301,21 +1456,23 @@ export default function QuizRoomPage() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
                       <button
                         onClick={() => setShowCountdownModal(true)}
                         disabled={participants.filter(p => p.isReady).length < (room?.minParticipants || 1)}
-                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-400 hover:to-emerald-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 font-handwriting font-bold shadow-md"
+                        className="flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-400 hover:to-emerald-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 font-handwriting font-bold shadow-md text-sm sm:text-base"
                       >
-                        <Play size={18} />
-                        Start Quiz
+                        <Play size={16} className="sm:w-[18px] sm:h-[18px]" />
+                        <span className="hidden sm:inline">Start Quiz</span>
+                        <span className="sm:hidden">Start</span>
                       </button>
                       <button
                         onClick={() => setShowAdminMessageModal(true)}
-                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-400 hover:to-purple-500 transition-all duration-300 font-handwriting font-bold shadow-md"
+                        className="flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-400 hover:to-purple-500 transition-all duration-300 font-handwriting font-bold shadow-md text-sm sm:text-base"
                       >
-                        <MessageSquare size={18} />
-                        Send Message
+                        <MessageSquare size={16} className="sm:w-[18px] sm:h-[18px]" />
+                        <span className="hidden sm:inline">Send Message</span>
+                        <span className="sm:hidden">Message</span>
                       </button>
 
                     </div>
@@ -1512,51 +1669,52 @@ export default function QuizRoomPage() {
                ⏰ Set Countdown Time
              </h3>
              <div className="space-y-4">
-               <div className="grid grid-cols-3 gap-3">
+               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                  <button
                    onClick={() => setCountdownTime(1)}
-                   className={`p-4 rounded-lg border-2 transition-all ${
+                   className={`p-2 sm:p-3 md:p-4 rounded-lg border-2 transition-all ${
                      countdownTime === 1 
                        ? 'border-purple-500 bg-purple-50' 
                        : 'border-gray-200 hover:border-gray-300'
                    }`}
                  >
-                   <div className="text-2xl font-bold">1</div>
-                   <div className="text-sm text-gray-600">Minute</div>
+                   <div className="text-lg sm:text-xl md:text-2xl font-bold">1</div>
+                   <div className="text-xs sm:text-sm text-gray-600">Minute</div>
                  </button>
                  <button
                    onClick={() => setCountdownTime(2)}
-                   className={`p-4 rounded-lg border-2 transition-all ${
+                   className={`p-2 sm:p-3 md:p-4 rounded-lg border-2 transition-all ${
                      countdownTime === 2 
                        ? 'border-purple-500 bg-purple-50' 
                        : 'border-gray-200 hover:border-gray-300'
                    }`}
                  >
-                   <div className="text-2xl font-bold">2</div>
-                   <div className="text-sm text-gray-600">Minutes</div>
+                   <div className="text-lg sm:text-xl md:text-2xl font-bold">2</div>
+                   <div className="text-xs sm:text-sm text-gray-600">Minutes</div>
                  </button>
                  <button
                    onClick={() => setCountdownTime(5)}
-                   className={`p-4 rounded-lg border-2 transition-all ${
+                   className={`p-2 sm:p-3 md:p-4 rounded-lg border-2 transition-all ${
                      countdownTime === 5 
                        ? 'border-purple-500 bg-purple-50' 
                        : 'border-gray-200 hover:border-gray-300'
                    }`}
                  >
-                   <div className="text-2xl font-bold">5</div>
-                   <div className="text-sm text-gray-600">Minutes</div>
+                   <div className="text-lg sm:text-xl md:text-2xl font-bold">5</div>
+                   <div className="text-xs sm:text-sm text-gray-600">Minutes</div>
                  </button>
                </div>
-               <div className="flex gap-3 pt-4">
+               <div className="flex gap-2 sm:gap-3 pt-4">
                  <button
                    onClick={confirmStartGame}
-                   className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                   className="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm sm:text-base"
                  >
-                   Start Quiz
+                   <span className="hidden sm:inline">Start Quiz</span>
+                   <span className="sm:hidden">Start</span>
                  </button>
                  <button
                    onClick={() => setShowCountdownModal(false)}
-                   className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                   className="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm sm:text-base"
                  >
                    Cancel
                  </button>
@@ -1590,20 +1748,21 @@ export default function QuizRoomPage() {
                    {adminMessage.length}/200
                  </div>
                </div>
-               <div className="flex gap-3">
+               <div className="flex gap-2 sm:gap-3">
                  <button
                    onClick={sendMessage}
                    disabled={!adminMessage.trim()}
-                   className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-handwriting font-bold hover:from-blue-400 hover:to-purple-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300"
+                   className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-handwriting font-bold hover:from-blue-400 hover:to-purple-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 text-sm sm:text-base"
                  >
-                   Send Message
+                   <span className="hidden sm:inline">Send Message</span>
+                   <span className="sm:hidden">Send</span>
                  </button>
                  <button
                    onClick={() => {
                      setShowAdminMessageModal(false);
                      setAdminMessage('');
                    }}
-                   className="flex-1 px-4 py-3 bg-gray-500 text-white rounded-lg font-handwriting font-bold hover:bg-gray-600 transition-all duration-300"
+                   className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-gray-500 text-white rounded-lg font-handwriting font-bold hover:bg-gray-600 transition-all duration-300 text-sm sm:text-base"
                  >
                    Cancel
                  </button>
