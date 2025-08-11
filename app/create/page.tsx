@@ -256,6 +256,7 @@ interface SnarkelData {
     totalRewardPool?: string;
     minParticipants?: number;
     pointsWeight?: number;
+    rewardAllParticipants?: boolean;
   };
   questions: Question[];
 }
@@ -305,14 +306,15 @@ export default function SnarkelCreationPage() {
     featuredPriority: 0,
     rewards: {
       enabled: false,
-      type: 'LINEAR',
+      type: 'QUADRATIC',
       tokenAddress: '',
-      chainId: 42220, // Celo Mainnet
-      totalWinners: 3,
-      rewardAmounts: [100, 50, 25],
+      chainId: 42220, // Celo Mainnet (default)
+      totalWinners: 5,
+      rewardAmounts: [35, 25, 20, 15, 5],
       totalRewardPool: '1000',
-      minParticipants: 5,
-      pointsWeight: 0.7
+      minParticipants: 3,
+      pointsWeight: 0.7,
+      rewardAllParticipants: false
     },
     questions: []
   });
@@ -383,7 +385,8 @@ export default function SnarkelCreationPage() {
         errors.rewardsToken = 'Reward token address is required when rewards are enabled';
       }
       
-      if (snarkel.rewards.type === 'LINEAR') {
+      if (!snarkel.rewards.rewardAllParticipants) {
+        // Top winners mode
         if (!snarkel.rewards.totalWinners || snarkel.rewards.totalWinners < 1) {
           errors.rewardsWinners = 'Total winners must be at least 1';
         }
@@ -392,13 +395,12 @@ export default function SnarkelCreationPage() {
         }
       }
       
-      if (snarkel.rewards.type === 'QUADRATIC') {
-        if (!snarkel.rewards.totalRewardPool || snarkel.rewards.totalRewardPool === '0') {
-          errors.rewardsPool = 'Total reward pool is required';
-        }
-        if (!snarkel.rewards.minParticipants || snarkel.rewards.minParticipants < 1) {
-          errors.rewardsParticipants = 'Minimum participants must be at least 1';
-        }
+      // Both modes need quadratic settings
+      if (!snarkel.rewards.totalRewardPool || snarkel.rewards.totalRewardPool === '0') {
+        errors.rewardsPool = 'Total reward pool is required';
+      }
+      if (!snarkel.rewards.minParticipants || snarkel.rewards.minParticipants < 1) {
+        errors.rewardsParticipants = 'Minimum participants must be at least 1';
       }
     }
     return errors;
@@ -480,14 +482,19 @@ export default function SnarkelCreationPage() {
       return true; // Access tab is always valid (optional settings)
     } else if (tabId === 'rewards') {
       if (!snarkel.rewards.enabled) return true;
-      if (snarkel.rewards.type === 'LINEAR') {
-        return snarkel.rewards.tokenAddress.trim() !== '' &&
-               (snarkel.rewards.totalWinners ?? 0) > 0 &&
-               snarkel.rewards.rewardAmounts && snarkel.rewards.rewardAmounts.length > 0;
+      
+      const hasToken = snarkel.rewards.tokenAddress.trim() !== '';
+      const hasRewardPool = snarkel.rewards.totalRewardPool !== '0';
+      const hasMinParticipants = (snarkel.rewards.minParticipants ?? 0) > 0;
+      
+      if (snarkel.rewards.rewardAllParticipants) {
+        // All participants mode - only need token, pool, and min participants
+        return hasToken && hasRewardPool && hasMinParticipants;
       } else {
-        return snarkel.rewards.tokenAddress.trim() !== '' &&
-               snarkel.rewards.totalRewardPool !== '0' &&
-               (snarkel.rewards.minParticipants ?? 0) > 0;
+        // Top winners mode - need token, winners, amounts, pool, and min participants
+        const hasWinners = (snarkel.rewards.totalWinners ?? 0) > 0;
+        const hasAmounts = snarkel.rewards.rewardAmounts && snarkel.rewards.rewardAmounts.length > 0;
+        return hasToken && hasWinners && hasAmounts && hasRewardPool && hasMinParticipants;
       }
     } else if (tabId === 'spam') {
       if (!snarkel.spamControlEnabled) return true;
@@ -659,6 +666,12 @@ export default function SnarkelCreationPage() {
         description: 'Setting up featured content and homepage visibility',
         status: 'pending' as const
       }] : []),
+      ...(snarkel.rewards.enabled ? [{
+        id: 'create-session',
+        title: 'Creating Quiz Session',
+        description: 'Setting up quiz session with rewards pool',
+        status: 'pending' as const
+      }] : []),
       {
         id: 'blockchain',
         title: 'Blockchain Transaction',
@@ -702,12 +715,54 @@ export default function SnarkelCreationPage() {
           console.log('Featured quiz setup completed');
         }
         
-        // If rewards are enabled, the blockchain and token operations are handled within createSnarkel
-        // We just need to mark them as completed since the real waiting happens inside
-        const blockchainStepIndex = snarkelData.isFeatured ? 3 : 2;
-        const tokenStepIndex = snarkelData.isFeatured ? 4 : 3;
+        // Handle featured quiz setup if enabled
+        if (snarkelData.isFeatured) {
+          updateProgressStep(2, 'loading');
+          console.log('Setting up featured quiz...');
+          await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate featured setup
+          updateProgressStep(2, 'completed');
+          console.log('Featured quiz setup completed');
+        }
         
+        // If rewards are enabled, create session and handle blockchain operations
         if (snarkelData.rewards.enabled) {
+          const sessionStepIndex = snarkelData.isFeatured ? 3 : 2;
+          const blockchainStepIndex = snarkelData.isFeatured ? 4 : 3;
+          const tokenStepIndex = snarkelData.isFeatured ? 5 : 4;
+          
+          // Create session step
+          updateProgressStep(sessionStepIndex, 'loading');
+          console.log('Creating quiz session with rewards...');
+          
+          try {
+            // Call the create-session API to create a session immediately
+            const sessionResponse = await fetch('/api/snarkel/create-session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                snarkelId: result.snarkelId,
+                adminAddress: address,
+                rewards: snarkelData.rewards
+              }),
+            });
+            
+            if (sessionResponse.ok) {
+              const sessionData = await sessionResponse.json();
+              console.log('Quiz session created:', sessionData);
+              updateProgressStep(sessionStepIndex, 'completed');
+            } else {
+              const errorData = await sessionResponse.json();
+              console.error('Failed to create session:', errorData);
+              updateProgressStep(sessionStepIndex, 'error', errorData.error || 'Failed to create session');
+            }
+          } catch (error: any) {
+            console.error('Error creating session:', error);
+            updateProgressStep(sessionStepIndex, 'error', error.message || 'Failed to create session');
+          }
+          
+          // Blockchain and token operations
           updateProgressStep(blockchainStepIndex, 'loading');
           console.log('Blockchain transaction step completed');
           updateProgressStep(blockchainStepIndex, 'completed');
@@ -717,6 +772,8 @@ export default function SnarkelCreationPage() {
           updateProgressStep(tokenStepIndex, 'completed');
         } else {
           // Skip blockchain and token steps if no rewards
+          const blockchainStepIndex = snarkelData.isFeatured ? 3 : 2;
+          const tokenStepIndex = snarkelData.isFeatured ? 4 : 3;
           updateProgressStep(blockchainStepIndex, 'completed');
           updateProgressStep(tokenStepIndex, 'completed');
         }

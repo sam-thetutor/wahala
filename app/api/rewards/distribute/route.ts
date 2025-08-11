@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const selectedChain = (() => {
       switch (chainId) {
         case 42220: return celo;
-        case 44787: return celoAlfajores;
+        case 8453: return base;
         case 8453: return base;
         case 84532:
         case 84531: return baseSepolia;

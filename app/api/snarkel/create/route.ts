@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client/edge';
+import { PrismaClient } from '@prisma/client';
 import { generateSnarkelCode, validateSnarkelSettings, validateRewardSettings } from '@/lib/snarkel-utils';
 
 const prisma = new PrismaClient();
@@ -233,12 +233,13 @@ export async function POST(request: NextRequest) {
           tokenName: 'Celo Native Token', // Default token name
           tokenDecimals: 18, // Default decimals
           network: rewards.chainId ? `Chain ${rewards.chainId}` : 'Celo', // Use chain ID if provided
-          chainId: rewards.chainId || 44787, // Default to Celo Alfajores
-          totalWinners: rewards.type === 'LINEAR' ? rewards.totalWinners : undefined,
-          rewardAmounts: rewards.type === 'LINEAR' ? rewards.rewardAmounts : undefined,
-          totalRewardPool: rewards.type === 'QUADRATIC' ? rewards.totalRewardPool : undefined,
-          minParticipants: rewards.type === 'QUADRATIC' ? rewards.minParticipants : undefined,
-          pointsWeight: rewards.type === 'QUADRATIC' ? rewards.pointsWeight : undefined,
+          chainId: rewards.chainId || 42220, // Default to Celo Mainnet
+          totalWinners: !rewards.rewardAllParticipants ? rewards.totalWinners : undefined,
+          rewardAmounts: !rewards.rewardAllParticipants ? rewards.rewardAmounts : undefined,
+          totalRewardPool: rewards.totalRewardPool,
+          minParticipants: rewards.minParticipants,
+          pointsWeight: rewards.pointsWeight,
+          rewardAllParticipants: rewards.rewardAllParticipants || false,
           snarkelId: snarkel.id
         }
       });

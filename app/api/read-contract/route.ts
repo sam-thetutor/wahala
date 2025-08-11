@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, type Address } from 'viem';
-import { celoAlfajores, celo } from 'viem/chains';
+import { base, celo } from 'viem/chains';
 
 // Supported chains mapping
 const SUPPORTED_CHAINS = {
-  44787: celoAlfajores, // Alfajores testnet
-  42220: celo, // Celo mainnet
+  8453: base, // Base mainnet
+  420: celo, // Celo mainnet
 };
 
 // Common ERC20 ABI for token operations

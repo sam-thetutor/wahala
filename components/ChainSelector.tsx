@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Network, Globe } from 'lucide-react';
+import { useSwitchChain, useAccount } from 'wagmi';
 
 interface ChainOption {
   id: number;
@@ -39,6 +40,9 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
   className = '',
   disabled = false,
 }) => {
+  const { switchChain, isPending } = useSwitchChain();
+  const { chain } = useAccount();
+  const [isSwitching, setIsSwitching] = useState(false);
   const selectedChain = CHAIN_OPTIONS.find(chain => chain.id === value);
 
   return (
@@ -48,36 +52,55 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
       </label>
       
       <div className="grid grid-cols-2 gap-3">
-        {CHAIN_OPTIONS.map((chain) => (
+        {CHAIN_OPTIONS.map((chainOption) => (
           <button
-            key={chain.id}
-            onClick={() => onChange(chain.id)}
-            disabled={disabled}
+            key={chainOption.id}
+            onClick={async () => {
+              // If the user's current chain doesn't match the selected chain, switch to it
+              if (chain?.id !== chainOption.id) {
+                setIsSwitching(true);
+                try {
+                  await switchChain({ chainId: chainOption.id });
+                } catch (error) {
+                  console.error('Failed to switch chain:', error);
+                  // Still update the UI even if chain switch fails
+                } finally {
+                  setIsSwitching(false);
+                }
+              }
+              onChange(chainOption.id);
+            }}
+            disabled={disabled || isSwitching || isPending}
             className={`relative p-4 rounded-lg border-2 transition-all duration-200 font-handwriting ${
-              value === chain.id
+              value === chainOption.id
                 ? 'border-purple-500 bg-purple-50 shadow-md scale-105'
                 : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
             } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             {/* Selection indicator */}
-            {value === chain.id && (
+            {value === chainOption.id && (
               <div className="absolute -top-1 -right-1 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs">✓</span>
               </div>
             )}
             
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full ${chain.color} flex items-center justify-center text-white text-lg`}>
-                {chain.icon}
+              <div className={`w-10 h-10 rounded-full ${chainOption.color} flex items-center justify-center text-white text-lg`}>
+                {chainOption.icon}
               </div>
               
               <div className="text-left">
                 <h4 className="font-handwriting font-bold text-gray-900">
-                  {chain.shortName}
+                  {chainOption.shortName}
                 </h4>
                 <p className="font-handwriting text-xs text-gray-500">
-                  {chain.name}
+                  {chainOption.name}
                 </p>
+                {(isSwitching || isPending) && chain?.id !== chainOption.id && (
+                  <p className="font-handwriting text-xs text-blue-600 mt-1">
+                    🔄 Switching...
+                  </p>
+                )}
               </div>
             </div>
           </button>
@@ -96,6 +119,11 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
               <p className="font-handwriting text-xs text-blue-600">
                 Chain ID: {selectedChain.id}
               </p>
+              {chain && chain.id !== selectedChain.id && (
+                <p className="font-handwriting text-xs text-orange-600 mt-1">
+                  ⚠️ Wallet is on {chain.name} (ID: {chain.id})
+                </p>
+              )}
             </div>
           </div>
         </div>

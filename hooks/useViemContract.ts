@@ -17,7 +17,7 @@ import {
 } from 'viem';
 import type { Hex } from 'viem'
 import { getReferralDataSuffix, submitDivviReferral } from '@/lib/divvi'
-import { celoAlfajores } from 'viem/chains';
+import { celoAlfajores, base } from 'viem/chains';
 import { SNARKEL_ABI } from '../contracts/abi';
 import { ERC20_ABI } from '../contracts/erc20-abi';
 import { readContract } from 'viem/actions';
@@ -141,9 +141,10 @@ interface UseQuizContractReturn {
   getUserClaimable: (sessionId: number, user: Address) => Promise<string>;
   getUserWins: (sessionId: number, user: Address) => Promise<string>;
   resetState: () => void;
+  switchToChain: (chainId: number) => Promise<boolean>;
 }
 
-export function useQuizContract(): UseQuizContractReturn {
+export function useQuizContract(selectedChainId?: number): UseQuizContractReturn {
   const { address: userAddress, isConnected, chainId } = useAccount();
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
@@ -158,6 +159,7 @@ export function useQuizContract(): UseQuizContractReturn {
 
   console.log('User address:', userAddress);
   console.log('Current chain ID:', chainId);
+  console.log('Selected chain ID:', selectedChainId);
   console.log('Fallback chain ID:', fallbackChainId);
 
   useEffect(() => {
@@ -179,21 +181,35 @@ export function useQuizContract(): UseQuizContractReturn {
     });
   }, []);
 
-  const ensureCorrectChain = useCallback(async (): Promise<void> => {
+  const ensureCorrectChain = useCallback(async (targetChainId?: number): Promise<void> => {
     try {
       const currentChainId = chainId || fallbackChainId;
+      const desiredChainId = targetChainId || selectedChainId || celoAlfajores.id;
       
-      if (!currentChainId || currentChainId !== celoAlfajores.id) {
-        console.log(`Switching to Alfajores (${celoAlfajores.id}). Current chain: ${currentChainId || 'undefined'}`);
-        await switchChain({ chainId: celoAlfajores.id });
+      if (!currentChainId || currentChainId !== desiredChainId) {
+        console.log(`Switching to chain ${desiredChainId}. Current chain: ${currentChainId || 'undefined'}`);
+        await switchChain({ chainId: desiredChainId });
         await new Promise(resolve => setTimeout(resolve, 1000));
-        setFallbackChainId(celoAlfajores.id);
+        setFallbackChainId(desiredChainId);
       }
     } catch (error) {
       console.error('Chain switching failed:', error);
-      console.warn('Chain switching failed, but continuing with operation. Please ensure you are on Alfajores testnet.');
+      console.warn('Chain switching failed, but continuing with operation. Please ensure you are on the correct network.');
     }
-  }, [chainId, fallbackChainId, switchChain]);
+  }, [chainId, fallbackChainId, switchChain, selectedChainId]);
+
+  // Function to manually switch to a specific chain
+  const switchToChain = useCallback(async (targetChainId: number): Promise<boolean> => {
+    try {
+      await switchChain({ chainId: targetChainId });
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setFallbackChainId(targetChainId);
+      return true;
+    } catch (error) {
+      console.error('Chain switching failed:', error);
+      return false;
+    }
+  }, [switchChain]);
 
   // Create quiz session (updated function signature)
   const createSnarkelSession = useCallback(async (params: {
@@ -211,6 +227,10 @@ export function useQuizContract(): UseQuizContractReturn {
       if (!isConnected || !userAddress) {
         throw new Error('Wallet not connected - please connect your wallet first');
       }
+
+      // Ensure we're on the correct chain for the operation
+      await ensureCorrectChain();
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       console.log('Wallet connected:', { userAddress, chainId });
       console.log('Creating quiz session with params:', params);
@@ -268,7 +288,7 @@ export function useQuizContract(): UseQuizContractReturn {
       updateState({ isLoading: false, error: errorMessage });
       return { success: false, error: errorMessage };
     }
-  }, [updateState, resetState, isConnected, userAddress, writeContractAsync]);
+  }, [updateState, resetState, isConnected, userAddress, writeContractAsync, ensureCorrectChain]);
 
   // Add reward to session
   const addReward = useCallback(async (params: {
@@ -912,6 +932,7 @@ export function useQuizContract(): UseQuizContractReturn {
     canStartNewSession,
     getUserClaimable,
     getUserWins,
-    resetState
+    resetState,
+    switchToChain
   };
 }

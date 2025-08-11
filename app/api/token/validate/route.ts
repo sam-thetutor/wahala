@@ -26,7 +26,7 @@ const ERC20_ABI = parseAbi([
 // Chain configuration
 const CHAINS = {
   42220: celo,
-  44787: celoAlfajores,
+  8453: base,
 };
 
 export async function POST(request: NextRequest) {

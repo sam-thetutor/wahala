@@ -35,50 +35,6 @@ export const SUPPORTED_NETWORKS: Record<string, NetworkConfig> = {
       decimals: 18,
     },
   },
-  celoAlfajores: {
-    name: 'Base',
-    chainId: 8453,
-    rpcUrl: 'https://mainnet.base.org',
-    blockExplorer: 'https://basescan.org',
-    nativeCurrency: {
-      name: 'Ether',
-      symbol: 'ETH',
-      decimals: 18,
-    },
-  },
-  ethereum: {
-    name: 'Ethereum',
-    chainId: 1,
-    rpcUrl: 'https://eth-mainnet.alchemyapi.io/v2/your-api-key',
-    blockExplorer: 'https://etherscan.io',
-    nativeCurrency: {
-      name: 'Ether',
-      symbol: 'ETH',
-      decimals: 18,
-    },
-  },
-  polygon: {
-    name: 'Polygon',
-    chainId: 137,
-    rpcUrl: 'https://polygon-rpc.com',
-    blockExplorer: 'https://polygonscan.com',
-    nativeCurrency: {
-      name: 'Matic',
-      symbol: 'MATIC',
-      decimals: 18,
-    },
-  },
-  arbitrum: {
-    name: 'Arbitrum One',
-    chainId: 42161,
-    rpcUrl: 'https://arb1.arbitrum.io/rpc',
-    blockExplorer: 'https://arbiscan.io',
-    nativeCurrency: {
-      name: 'Ether',
-      symbol: 'ETH',
-      decimals: 18,
-    },
-  },
   base: {
     name: 'Base',
     chainId: 8453,
@@ -89,7 +45,7 @@ export const SUPPORTED_NETWORKS: Record<string, NetworkConfig> = {
       symbol: 'ETH',
       decimals: 18,
     },
-  },
+  }
 };
 
 // Entry fee tokens (spam control)
@@ -190,6 +146,23 @@ export const ENTRY_FEE_TOKENS: TokenConfig[] = [
     chainId: 8453,
     isStablecoin: true,
   },
+  // SNARKEL tokens for entry fees
+  {
+    address: '0xf18e87167db07da9160d790d87dc9d39e8147e4d',
+    symbol: 'SNARKEL',
+    name: 'Snarkel Token (Celo)',
+    decimals: 18,
+    network: 'Celo',
+    chainId: 42220,
+  },
+  {
+    address: '0xe75a890ad702b14b7935bc1ba81067f2b93f35d0',
+    symbol: 'SNARKEL',
+    name: 'Snarkel Token (Base)',
+    decimals: 18,
+    network: 'Base',
+    chainId: 8453,
+  },
 ];
 
 // Reward tokens (more comprehensive list including native tokens and popular tokens)
@@ -270,6 +243,24 @@ export const REWARD_TOKENS: TokenConfig[] = [
     chainId: 42220,
   },
   
+  // SNARKEL tokens
+  {
+    address: '0xf18e87167db07da9160d790d87dc9d39e8147e4d',
+    symbol: 'SNARKEL',
+    name: 'Snarkel Token (Celo)',
+    decimals: 18,
+    network: 'Celo',
+    chainId: 42220,
+  },
+  {
+    address: '0xe75a890ad702b14b7935bc1ba81067f2b93f35d0',
+    symbol: 'SNARKEL',
+    name: 'Snarkel Token (Base)',
+    decimals: 18,
+    network: 'Base',
+    chainId: 8453,
+  },
+  
   // Custom token option
   {
     address: 'custom',
@@ -327,5 +318,23 @@ export const DEFAULT_ENTRY_FEES = {
   'Base': {
     amount: '0.5',
     token: ENTRY_FEE_TOKENS.find(t => t.symbol === 'USDC' && t.network === 'Base')!
+  },
+};
+
+// SNARKEL token configurations for each network
+export const SNARKEL_TOKENS = {
+  'Celo': {
+    address: '0xf18e87167db07da9160d790d87dc9d39e8147e4d',
+    symbol: 'SNARKEL',
+    name: 'Snarkel Token (Celo)',
+    decimals: 18,
+    chainId: 42220,
+  },
+  'Base': {
+    address: '0xe75a890ad702b14b7935bc1ba81067f2b93f35d0',
+    symbol: 'SNARKEL',
+    name: 'Snarkel Token (Base)',
+    decimals: 18,
+    chainId: 8453,
   },
 }; 

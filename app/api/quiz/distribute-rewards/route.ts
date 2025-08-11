@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     const chain = (() => {
       switch (chainId) {
         case 42220: return celo;
-        case 44787: return celoAlfajores;
+        case 8453: return base;
         case 8453: return base;
         case 84532:
         case 84531: return baseSepolia;
@@ -130,7 +130,6 @@ export async function POST(request: NextRequest) {
     // Resolve contract address per chain
     const CONTRACTS: Record<number, string> = {
       42220: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO || '0x8b8fb708758dc8185ef31e685305c1aa0827ea65',
-      44787: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO || '0x8b8fb708758dc8185ef31e685305c1aa0827ea65',
       8453: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40',
       84532: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40',
       84531: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40'
@@ -243,22 +242,72 @@ export async function POST(request: NextRequest) {
           submitDivviReferral(hash as Hex, chain.id).catch(() => {});
           console.log(`Transaction confirmed: ${hash}`);
           
-          // Create reward distribution records in database for all participants
-          for (const participant of validLeaderboard) {
-            const amountPerParticipant = parseFloat(reward.totalRewardPool || '0') / validLeaderboard.length;
-            await prisma.rewardDistribution.create({
-              data: {
-                position: participant.position,
-                amount: amountPerParticipant.toString(),
-                txHash: hash,
-                isProcessed: true,
-                processedAt: new Date(),
-                rewardId: reward.id,
+                  // Calculate reward distribution based on configuration
+        let distributionAmounts: Array<{ userId: string; amount: number; position: number }> = [];
+        
+        if (reward.rewardAllParticipants) {
+          // Reward all participants using quadratic formula
+          const totalPool = parseFloat(reward.totalRewardPool || '0');
+          const totalParticipants = validLeaderboard.length;
+          
+          // Use quadratic funding formula: amount = (score^2 / total_score^2) * total_pool
+          const totalScoreSquared = validLeaderboard.reduce((sum, p) => sum + Math.pow(p.score, 2), 0);
+          
+          distributionAmounts = validLeaderboard.map(participant => {
+            const scoreSquared = Math.pow(participant.score, 2);
+            const amount = totalScoreSquared > 0 ? (scoreSquared / totalScoreSquared) * totalPool : 0;
+            return {
+              userId: participant.userId,
+              amount: Math.max(0, amount),
+              position: participant.position
+            };
+          });
+        } else {
+          // Reward only top winners
+          const totalWinners = reward.totalWinners || 5;
+          const topWinners = validLeaderboard.slice(0, totalWinners);
+          const totalPool = parseFloat(reward.totalRewardPool || '0');
+          
+          // Use predefined reward amounts if available, otherwise distribute proportionally
+          if (reward.rewardAmounts && reward.rewardAmounts.length > 0) {
+            distributionAmounts = topWinners.map((participant, index) => {
+              const rewardAmount = reward.rewardAmounts![index] || 0;
+              const amount = (rewardAmount / 100) * totalPool; // Convert percentage to amount
+              return {
                 userId: participant.userId,
-                submissionId: submissionRecords[participant.position - 1].id
-              }
+                amount: Math.max(0, amount),
+                position: participant.position
+              };
+            });
+          } else {
+            // Proportional distribution among top winners
+            const totalScore = topWinners.reduce((sum, p) => sum + p.score, 0);
+            distributionAmounts = topWinners.map(participant => {
+              const amount = totalScore > 0 ? (participant.score / totalScore) * totalPool : 0;
+              return {
+                userId: participant.userId,
+                amount: Math.max(0, amount),
+                position: participant.position
+              };
             });
           }
+        }
+        
+        // Create reward distribution records in database
+        for (const distribution of distributionAmounts) {
+          await prisma.rewardDistribution.create({
+            data: {
+              position: distribution.position,
+              amount: distribution.amount.toString(),
+              txHash: hash,
+              isProcessed: true,
+              processedAt: new Date(),
+              rewardId: reward.id,
+              userId: distribution.userId,
+              submissionId: submissionRecords.find(s => s.userId === distribution.userId)?.id || ''
+            }
+          });
+        }
 
           // Update reward as distributed
           await prisma.snarkelReward.update({

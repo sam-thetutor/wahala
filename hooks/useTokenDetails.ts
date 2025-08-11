@@ -55,7 +55,7 @@ export const useTokenDetails = (): UseTokenDetailsReturn => {
         },
         body: JSON.stringify({
           tokenAddress: address,
-          chainId: chainId || 44787, // Default to Celo Alfajores (changed from 42220)
+          chainId: chainId || 42220, // Default to Celo Mainnet
         }),
       });
 

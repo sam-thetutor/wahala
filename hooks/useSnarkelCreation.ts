@@ -54,7 +54,7 @@ interface UseSnarkelCreationReturn {
   error: string | null;
   validationErrors: ValidationErrors;
   setValidationErrors: (errors: ValidationErrors | ((prev: ValidationErrors) => ValidationErrors)) => void;
-  createSnarkel: (data: SnarkelData) => Promise<{ success: boolean; snarkelCode?: string; error?: string }>;
+  createSnarkel: (data: SnarkelData) => Promise<{ success: boolean; snarkelCode?: string; snarkelId?: string; error?: string }>;
   clearErrors: () => void;
 }
 
@@ -62,16 +62,6 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-
-  // Get smart contract functions - Updated to use Wagmi
-  const { 
-    createSnarkelSession, 
-    approveToken, 
-    transferToken, 
-    getTokenBalance, 
-    getTokenAllowance,
-    contractState 
-  } = useQuizContract();
 
   const validateForm = (data: SnarkelData): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -154,7 +144,7 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
     return errors;
   };
 
-  const createSnarkel = async (data: SnarkelData): Promise<{ success: boolean; snarkelCode?: string; error?: string }> => {
+  const createSnarkel = async (data: SnarkelData): Promise<{ success: boolean; snarkelCode?: string; snarkelId?: string; error?: string }> => {
     // Clear previous errors
     setError(null);
     setValidationErrors({});
@@ -259,6 +249,16 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
                 : '0';
             }
           }
+
+          // Get smart contract functions - Updated to use Wagmi
+          const { 
+            createSnarkelSession, 
+            approveToken, 
+            transferToken, 
+            getTokenBalance, 
+            getTokenAllowance,
+            contractState 
+          } = useQuizContract(data.rewards?.enabled ? data.rewards.chainId : undefined);
 
           // Create smart contract session with the actual quiz code - Using Wagmi
           const sessionResult = await createSnarkelSession({
@@ -383,6 +383,7 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
           return { 
             success: true, 
             snarkelCode,
+            snarkelId: responseData.snarkel.id,
             error: `Quiz created successfully, but reward setup failed: ${blockchainError.message}. You can try setting up rewards later.`
           };
         }
@@ -392,7 +393,8 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
       console.log('Snarkel creation completed successfully');
       return { 
         success: true, 
-        snarkelCode 
+        snarkelCode,
+        snarkelId: responseData.snarkel.id
       };
 
     } catch (error: any) {

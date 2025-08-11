@@ -147,12 +147,13 @@ model SnarkelReward {
   tokenName       String
   tokenDecimals   Int                  @default(18)
   network         String
-  chainId         Int                  @default(44787)
+  chainId         Int                  @default(42220)
   totalWinners    Int?
   rewardAmounts   Json?
   totalRewardPool String?
   minParticipants Int?
   pointsWeight    Float?
+  rewardAllParticipants Boolean         @default(false)  // NEW: Whether to reward all participants or just top winners
   isDistributed   Boolean              @default(false)
   distributedAt   DateTime?
   onchainSessionId String?
