@@ -192,7 +192,12 @@ export async function POST(
           isWaiting: room.isWaiting,
           isStarted: room.isStarted,
           isFinished: room.isFinished,
-          countdownDuration: room.countdownDuration
+          countdownDuration: room.countdownDuration,
+          scheduledStartTime: room.scheduledStartTime?.toISOString() || null,
+          actualStartTime: room.actualStartTime?.toISOString() || null,
+          endTime: room.endTime?.toISOString() || null,
+          sessionNumber: room.sessionNumber || 1,
+          autoStartEnabled: room.autoStartEnabled || false
         },
         snarkel: {
           id: room.snarkel.id,
@@ -201,7 +206,9 @@ export async function POST(
           totalQuestions: room.snarkel.questions.length,
           basePointsPerQuestion: room.snarkel.basePointsPerQuestion,
           speedBonusEnabled: room.snarkel.speedBonusEnabled,
-          maxSpeedBonus: room.snarkel.maxSpeedBonus
+          maxSpeedBonus: room.snarkel.maxSpeedBonus,
+          startTime: room.snarkel.startTime?.toISOString() || null,
+          autoStartEnabled: room.snarkel.autoStartEnabled || false
         },
         participants: room.participants.map(p => ({
           id: p.id,
@@ -226,8 +233,8 @@ export async function POST(
         isAdmin: isAdmin || isSnarkelCreator,
         adminAddress: room?.admin?.address,
         snarkelCreatorAddress: room?.snarkel?.creator?.address,
-        finalAdminStatus: isAdmin || isSnarkelCreator,
-        existingParticipantFinalStatus: existingParticipant?.isAdmin || isAdmin || isSnarkelCreator
+        roomScheduledStartTime: room?.scheduledStartTime,
+        snarkelStartTime: room?.snarkel?.startTime
       });
     }
 
@@ -289,7 +296,12 @@ export async function POST(
         isWaiting: room.isWaiting,
         isStarted: room.isStarted,
         isFinished: room.isFinished,
-        countdownDuration: room.countdownDuration
+        countdownDuration: room.countdownDuration,
+        scheduledStartTime: room.scheduledStartTime?.toISOString() || null,
+        actualStartTime: room.actualStartTime?.toISOString() || null,
+        endTime: room.endTime?.toISOString() || null,
+        sessionNumber: room.sessionNumber || 1,
+        autoStartEnabled: room.autoStartEnabled || false
       },
       snarkel: {
         id: room.snarkel.id,
@@ -298,7 +310,9 @@ export async function POST(
         totalQuestions: room.snarkel.questions.length,
         basePointsPerQuestion: room.snarkel.basePointsPerQuestion,
         speedBonusEnabled: room.snarkel.speedBonusEnabled,
-        maxSpeedBonus: room.snarkel.maxSpeedBonus
+        maxSpeedBonus: room.snarkel.maxSpeedBonus,
+        startTime: room.snarkel.startTime?.toISOString() || null,
+        autoStartEnabled: room.snarkel.autoStartEnabled || false
       },
       participants: updatedParticipants.map(p => ({
         id: p.id,

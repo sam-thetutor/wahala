@@ -20,11 +20,14 @@ import {
   Award,
   Zap,
   Shield,
-  Link as LinkIcon
+  Link as LinkIcon,
+  User
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { FarcasterUI, FarcasterShareButton, FarcasterAddButton, FarcasterComposeButton } from '@/components/FarcasterUI';
 import { FarcasterContextDisplay, FarcasterUserInfo } from '@/components/FarcasterContextDisplay';
+import MiniAppHeader from '@/components/MiniAppHeader';
+import MiniAppContextDisplay from '@/components/MiniAppContextDisplay';
 import { useAccount } from 'wagmi';
 
 // Quiz type definition
@@ -144,7 +147,7 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
               <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 text-xs sm:text-sm">
                 <Play className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                 <span className="truncate">
-                  {isConnected ? 'Join Now' : 'Connect Wallet to Join'}
+                {isConnected ? 'Join Now' : 'Connect Wallet to Join'}
                 </span>
               </button>
             </Link>
@@ -187,7 +190,7 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
                 <span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base">
                   <Users className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
                   <span className="truncate">
-                    {isConnected ? 'JOIN A SNARKEL' : 'CONNECT WALLET'}
+                  {isConnected ? 'JOIN A SNARKEL' : 'CONNECT WALLET'}
                   </span>
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -204,6 +207,20 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
                   <Plus className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
                   <span className="hidden sm:inline">Host a Snarkel</span>
                   <span className="sm:hidden">Host</span>
+                </span>
+              </div>
+            </Link>
+          </div>
+          
+          {/* Profile */}
+          <div className="relative flex-1 min-w-0">
+            <Link href="/profile">
+              <div className="bg-white shadow-lg rounded-2xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-purple-400 relative overflow-hidden">
+                <span className="font-handwriting text-xs sm:text-sm md:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate" 
+                      style={{ color: '#476520' }}>
+                  <User className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
+                  <span className="hidden sm:inline">Profile</span>
+                  <span className="sm:hidden">Profile</span>
                 </span>
               </div>
             </Link>
@@ -339,6 +356,12 @@ export default function HomePage() {
         {/* Farcaster Context Display */}
         <FarcasterContextDisplay />
         
+        {/* Mini App Context Display - Shows Mini App info when running as Mini App */}
+        <MiniAppContextDisplay />
+        
+        {/* Mini App Header - Shows social context when running as Mini App */}
+        <MiniAppHeader />
+        
         {/* Enhanced textured background */}
         <div className="fixed inset-0 opacity-40 pointer-events-none">
           <div 
@@ -451,54 +474,54 @@ export default function HomePage() {
                 </div>
               </div>
               
-              {/* Quiz Cards */}
+                        {/* Quiz Cards */}
               <div className="space-y-4 sm:space-y-6 px-2">
-                {loadingQuizzes ? (
-                  // Loading state
+            {loadingQuizzes ? (
+              // Loading state
                   <div className="space-y-4 sm:space-y-6">
-                    {[1, 2].map((i) => (
+                {[1, 2].map((i) => (
                       <div key={i} className="bg-white shadow-2xl rounded-2xl p-4 sm:p-6 animate-pulse">
                         <div className="h-4 bg-gray-200 rounded mb-3 sm:mb-4"></div>
-                        <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded mb-2"></div>
                         <div className="h-3 bg-gray-200 rounded mb-3 sm:mb-4 w-3/4"></div>
-                        <div className="h-8 bg-gray-200 rounded"></div>
-                      </div>
-                    ))}
+                    <div className="h-8 bg-gray-200 rounded"></div>
                   </div>
-                ) : quizError ? (
-                  // Error state
+                ))}
+              </div>
+            ) : quizError ? (
+              // Error state
                   <div className="text-center py-6 sm:py-8 px-2">
                     <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 sm:p-6">
                       <p className="font-handwriting text-base sm:text-lg" style={{ color: '#655947' }}>
-                        {quizError}
-                      </p>
-                      <button 
-                        onClick={fetchFeaturedQuizzes}
+                    {quizError}
+                  </p>
+                  <button 
+                    onClick={fetchFeaturedQuizzes}
                         className="mt-3 sm:mt-4 px-4 sm:px-6 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors text-sm sm:text-base"
-                      >
-                        Try Again
-                      </button>
-                    </div>
-                  </div>
-                ) : featuredQuizzes.length === 0 ? (
-                  // Empty state
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            ) : featuredQuizzes.length === 0 ? (
+              // Empty state
                   <div className="text-center py-6 sm:py-8 px-2">
                     <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-6">
                       <p className="font-handwriting text-base sm:text-lg" style={{ color: '#655947' }}>
-                        No featured quizzes available yet
-                      </p>
+                    No featured quizzes available yet
+                  </p>
                       <p className="text-xs sm:text-sm mt-2" style={{ color: '#655947' }}>
-                        Check back soon for new challenges!
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  // Quiz cards
-                  featuredQuizzes.slice(0, 2).map((quiz, index) => (
-                    <FeaturedQuizCard key={quiz.id} quiz={quiz} index={index} />
-                  ))
-                )}
+                    Check back soon for new challenges!
+                  </p>
+                </div>
               </div>
+            ) : (
+              // Quiz cards
+              featuredQuizzes.slice(0, 2).map((quiz, index) => (
+                <FeaturedQuizCard key={quiz.id} quiz={quiz} index={index} />
+              ))
+            )}
+          </div>
             </div>
 
             {/* Mobile Status */}

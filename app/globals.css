@@ -83,6 +83,16 @@ body {
     max-width: 100%;
     width: 100%;
   }
+  
+  /* TV Countdown positioning for mobile */
+  .bottom-20 {
+    bottom: 5rem; /* 80px - above ActionBar */
+  }
+  
+  /* Ensure countdown doesn't overlap with ActionBar */
+  .z-40 {
+    z-index: 40;
+  }
 }
 
 /* Ensure smooth font loading */

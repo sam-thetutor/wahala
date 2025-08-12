@@ -7,6 +7,9 @@ import { useSnarkelCreation } from '@/hooks/useSnarkelCreation';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { RewardConfigurationSection } from '@/components/RewardConfigurationSection';
 import AIGenerateSnarkelModal from '@/components/AIGenerateSnarkelModal';
+import MiniAppHeader from '@/components/MiniAppHeader';
+import MiniAppContextDisplay from '@/components/MiniAppContextDisplay';
+import SocialShareButton from '@/components/SocialShareButton';
 import { useAccount } from 'wagmi';
 
 // Progress Modal Component
@@ -210,6 +213,11 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, snarkelCod
           <button onClick={onClose} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium">
             Close
           </button>
+          <SocialShareButton 
+            snarkelCode={snarkelCode}
+            title="I just created a quiz on Snarkels!"
+            className="flex-1"
+          />
           <button onClick={() => { onClose(); }} className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-colors font-handwriting font-bold">
             Done
           </button>
@@ -308,7 +316,7 @@ export default function SnarkelCreationPage() {
       enabled: false,
       type: 'QUADRATIC',
       tokenAddress: '',
-      chainId: 42220, // Celo Mainnet (default)
+      chainId: 8453, // Base Mainnet (default)
       totalWinners: 5,
       rewardAmounts: [35, 25, 20, 15, 5],
       totalRewardPool: '1000',
@@ -977,6 +985,12 @@ export default function SnarkelCreationPage() {
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 py-6">
+        {/* Mini App Context Display - Shows Mini App info when running as Mini App */}
+        <MiniAppContextDisplay />
+        
+        {/* Mini App Header - Shows social context when running as Mini App */}
+        <MiniAppHeader />
+        
         {/* Main content card */}
         <div className={`transition-all duration-1000 delay-300 ${
           isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'

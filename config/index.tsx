@@ -12,7 +12,7 @@ if (!projectId) {
   throw new Error('Project ID is not defined in config')
 }
 
-export const networks = [celo, base]
+export const networks = [base, celo] // Base first, then Celo
 
 // Base connectors that work in both server and client
 const baseConnectors = [

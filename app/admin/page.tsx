@@ -33,6 +33,7 @@ import {
   Crown
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
+import QuizRewardsModal from '@/components/QuizRewardsModal';
 
 interface Snarkel {
   id: string;
@@ -145,6 +146,7 @@ export default function AdminPage() {
   const [selectedSnarkel, setSelectedSnarkel] = useState<Snarkel | null>(null);
   const [selectedSession, setSelectedSession] = useState<QuizSession | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showQuizRewardsModal, setShowQuizRewardsModal] = useState(false);
 
   // Extract onClick handlers into separate functions
   const handleCreateNew = () => {
@@ -359,6 +361,13 @@ export default function AdminPage() {
             </div>
             <div className="flex items-center gap-4">
               <WalletConnectButton />
+              <button
+                onClick={() => setShowQuizRewardsModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all font-handwriting font-medium"
+              >
+                <Trophy size={16} />
+                Add Quiz Rewards
+              </button>
               <button
                 onClick={handleCreateNew}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all font-handwriting font-medium"
@@ -1150,6 +1159,12 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* Quiz Rewards Modal */}
+      <QuizRewardsModal
+        isOpen={showQuizRewardsModal}
+        onClose={() => setShowQuizRewardsModal(false)}
+      />
     </div>
   );
 } 

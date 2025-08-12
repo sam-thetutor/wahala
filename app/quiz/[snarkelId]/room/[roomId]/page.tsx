@@ -185,11 +185,25 @@ export default function QuizRoomPage() {
 
   // Add useEffect for future start time countdown
   useEffect(() => {
+    console.log('=== Future Start Countdown useEffect triggered ===');
+    console.log('Room data:', room);
+    console.log('Room scheduledStartTime:', room?.scheduledStartTime);
+    console.log('Room isStarted:', room?.isStarted);
+    console.log('Game state:', gameState);
+    console.log('Show future start countdown:', showFutureStartCountdown);
+    console.log('Future start countdown value:', futureStartCountdown);
+    
     if (room?.scheduledStartTime && !room.isStarted && gameState === 'waiting') {
+      console.log('✅ Conditions met - showing future start countdown');
       const startTime = new Date(room.scheduledStartTime);
       const now = new Date();
       
+      console.log('Start time (parsed):', startTime);
+      console.log('Current time:', now);
+      console.log('Time difference (ms):', startTime.getTime() - now.getTime());
+      
       if (startTime > now) {
+        console.log('✅ Start time is in the future - setting up countdown');
         // Quiz has a future start time
         setShowFutureStartCountdown(true);
         
@@ -197,10 +211,14 @@ export default function QuizRoomPage() {
           const currentTime = new Date();
           const timeDiff = startTime.getTime() - currentTime.getTime();
           
+          console.log('Countdown update - time diff (ms):', timeDiff);
+          
           if (timeDiff > 0) {
             const secondsLeft = Math.floor(timeDiff / 1000);
+            console.log('Setting countdown to:', secondsLeft, 'seconds');
             setFutureStartCountdown(secondsLeft);
           } else {
+            console.log('❌ Start time has passed - hiding countdown');
             // Start time has passed, hide countdown
             setShowFutureStartCountdown(false);
             setFutureStartCountdown(null);
@@ -213,16 +231,33 @@ export default function QuizRoomPage() {
         // Update every second
         const interval = setInterval(updateCountdown, 1000);
         
-        return () => clearInterval(interval);
+        return () => {
+          console.log('Clearing future start countdown interval');
+          clearInterval(interval);
+        };
       } else {
+        console.log('❌ Start time is in the past - hiding countdown');
         setShowFutureStartCountdown(false);
         setFutureStartCountdown(null);
       }
     } else {
+      console.log('❌ Conditions not met for future start countdown:');
+      console.log('- Has scheduledStartTime:', !!room?.scheduledStartTime);
+      console.log('- Is not started:', !room?.isStarted);
+      console.log('- Game state is waiting:', gameState === 'waiting');
       setShowFutureStartCountdown(false);
       setFutureStartCountdown(null);
     }
   }, [room?.scheduledStartTime, room?.isStarted, gameState]);
+
+  // Add logging for room state changes
+  useEffect(() => {
+    console.log('=== Room State Changed ===');
+    console.log('Room updated:', room);
+    console.log('Room scheduledStartTime:', room?.scheduledStartTime);
+    console.log('Room isStarted:', room?.isStarted);
+    console.log('Game state:', gameState);
+  }, [room, gameState]);
 
   const joinExistingRoom = async () => {
     try {
@@ -243,11 +278,18 @@ export default function QuizRoomPage() {
       const data = await response.json();
 
       if (response.ok) {
-        console.log('API Response:', data);
+        console.log('=== Room Join API Response ===');
+        console.log('Full API Response:', data);
+        console.log('Room data:', data.room);
+        console.log('Room scheduledStartTime:', data.room?.scheduledStartTime);
+        console.log('Room isStarted:', data.room?.isStarted);
+        console.log('Snarkel data:', data.snarkel);
+        console.log('Snarkel startTime:', data.snarkel?.startTime);
         console.log('Admin Address:', data.adminAddress);
         console.log('Snarkel Creator Address:', data.snarkelCreatorAddress);
         console.log('Current User Address:', address);
         console.log('Is Admin:', data.isAdmin);
+        
         setRoom(data.room);
         setSnarkel(data.snarkel);
         setParticipants(data.participants);
@@ -416,6 +458,10 @@ export default function QuizRoomPage() {
       setCountdownDisplay(countdownTime);
       setShowCountdownDisplay(true);
       setQuizStartTime(new Date());
+      
+      // Close the future start countdown when admin starts the countdown
+      setShowFutureStartCountdown(false);
+      setFutureStartCountdown(null);
       
       console.log('New gameState set to:', 'countdown');
       console.log('Countdown set to:', countdownTime);
@@ -1125,6 +1171,35 @@ export default function QuizRoomPage() {
                   </div>
                 )}
 
+                {/* TV Countdown Display - Lower TV Area */}
+                {showFutureStartCountdown && futureStartCountdown !== null && (
+                  <div className="fixed bottom-20 sm:bottom-24 left-1/2 transform -translate-x-1/2 z-40 bg-gradient-to-r from-purple-900 to-indigo-900 rounded-t-2xl p-3 sm:p-4 text-white text-center border-2 border-purple-400 shadow-2xl animate-pulse max-w-xs sm:max-w-sm">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400 animate-bounce" />
+                        <span className="font-handwriting font-bold text-xs sm:text-sm text-yellow-300">Quiz Starts In</span>
+                      </div>
+                      <div className="text-2xl sm:text-3xl font-bold text-white font-mono">
+                        {formatTime(futureStartCountdown)}
+                      </div>
+                      <div className="text-xs text-purple-200 hidden sm:block">
+                        {room?.scheduledStartTime ? new Date(room.scheduledStartTime).toLocaleString() : ''}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Debug Info for Countdown */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="fixed bottom-32 left-4 z-50 bg-black bg-opacity-75 text-white p-2 rounded text-xs font-mono">
+                    <div>showFutureStartCountdown: {showFutureStartCountdown.toString()}</div>
+                    <div>futureStartCountdown: {futureStartCountdown}</div>
+                    <div>room.scheduledStartTime: {room?.scheduledStartTime || 'null'}</div>
+                    <div>room.isStarted: {room?.isStarted?.toString()}</div>
+                    <div>gameState: {gameState}</div>
+                  </div>
+                )}
+
                 {/* Join Notification */}
                 {participantJoinNotification && (
                   <div className="mb-4">
@@ -1622,10 +1697,36 @@ export default function QuizRoomPage() {
                 </div>
                 {room?.scheduledStartTime && !room.isStarted && (
                   <div className="flex justify-between">
+                    <span className="text-gray-600">Start Date:</span>
+                    <span className="font-medium text-purple-600">
+                      {new Date(room.scheduledStartTime).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+                {room?.scheduledStartTime && !room.isStarted && (
+                  <div className="flex justify-between">
                     <span className="text-gray-600">Start Time:</span>
                     <span className="font-medium text-purple-600">
                       {new Date(room.scheduledStartTime).toLocaleTimeString()}
                     </span>
+                  </div>
+                )}
+                {room?.scheduledStartTime && !room.isStarted && (
+                  <div className="pt-2 border-t border-gray-200">
+                    <div className="bg-purple-50 rounded-lg p-2 text-center">
+                      <div className="text-xs text-purple-600 font-medium mb-1">⏰ Scheduled Start</div>
+                      <div className="text-sm font-bold text-purple-700">
+                        {new Date(room.scheduledStartTime).toLocaleString()}
+                      </div>
+                      {showFutureStartCountdown && futureStartCountdown !== null && (
+                        <div className="mt-2 pt-2 border-t border-purple-200">
+                          <div className="text-xs text-purple-600">Time Remaining:</div>
+                          <div className="text-lg font-bold text-purple-800 font-mono">
+                            {formatTime(futureStartCountdown)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
                 {/* Admin Wallet Info */}

@@ -28,8 +28,8 @@ const metadata = {
 const modal = createAppKit({
   adapters: [wagmiAdapter],
   projectId,
-  networks: [celo, base],
-  defaultNetwork: celo,
+  networks: [base, celo], // Base first, then Celo
+  defaultNetwork: base, // Set Base as default network
   metadata: metadata,
   features: {
     analytics: true // Optional - defaults to your Cloud configuration
