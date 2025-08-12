@@ -37,8 +37,10 @@ const nextConfig: NextConfig = {
   
   // Additional optimizations for development and production
   experimental: {
-    // Enable React compiler for better performance
-    reactCompiler: true,
+    // Enable React compiler for better performance (disable in dev for faster builds)
+    reactCompiler: process.env.NODE_ENV === 'production',
+    
+
     
     // Optimize package imports for better tree-shaking
     optimizePackageImports: [
@@ -55,6 +57,9 @@ const nextConfig: NextConfig = {
   
   // Performance optimizations
   compress: true,
+  
+  // Build optimizations
+  swcMinify: true,
   
   // Enable production source maps for debugging
   productionBrowserSourceMaps: false,

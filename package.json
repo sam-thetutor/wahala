@@ -6,6 +6,8 @@
     "dev": "concurrently \"next dev --turbopack -p 4000\" \"node socket-server.js\" \"node auto-start-worker.js\"",
     "dev:next": "next dev --turbopack -p 4000",
     "build": "prisma generate --no-engine  && next build",
+    "build:fast": "NODE_ENV=development prisma generate --no-engine && next build",
+    "build:prod": "NODE_ENV=production prisma generate --no-engine && next build",
     "start": "next start -p 4000",
     "lint": "next lint",
     "socket": "node socket-server.js",

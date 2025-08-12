@@ -65,11 +65,11 @@ export async function POST(request: NextRequest) {
       const reward = snarkel.rewards[0];
       rewardConfig = {
         enabled: true,
-        type: reward.distributionType || 'QUADRATIC',
+        type: reward.rewardType || 'QUADRATIC',
         tokenAddress: reward.tokenAddress || '',
         chainId: reward.chainId || currentChain,
         totalWinners: reward.totalWinners || 5,
-        totalRewardPool: reward.totalAmount || '0',
+        totalRewardPool: reward.totalRewardPool || '0',
         minParticipants: reward.minParticipants || 3,
         pointsWeight: reward.pointsWeight || 0.7,
         rewardAllParticipants: reward.rewardAllParticipants || false
