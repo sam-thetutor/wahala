@@ -32,7 +32,8 @@ import {
   ChevronDown,
   MapPin,
   Link,
-  User
+  User,
+  X
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { MiniAppHeader } from '@/components/MiniAppHeader';
