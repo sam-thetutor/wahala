@@ -70,12 +70,12 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Pin effects */}
-      <div className="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full shadow-lg border-2 border-white z-20"></div>
-      <div className="absolute -top-1 -left-1 w-2 h-2 bg-red-600 rounded-full z-20"></div>
-      <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-500 rounded-full shadow-lg border-2 border-white z-20"></div>
-      <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-600 rounded-full z-20"></div>
+      <div className="absolute -top-2 -left-2 w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded-full shadow-lg border-2 border-white z-20"></div>
+      <div className="absolute -top-1 -left-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-600 rounded-full z-20"></div>
+      <div className="absolute -top-2 -right-2 w-3 h-3 sm:w-4 sm:h-4 bg-blue-500 rounded-full shadow-lg border-2 border-white z-20"></div>
+      <div className="absolute -top-1 -right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full z-20"></div>
       
-      <div className="bg-white shadow-2xl rounded-2xl p-6 relative overflow-hidden border-2 border-gray-200 hover:border-yellow-400 transition-all duration-300"
+      <div className="bg-white shadow-2xl rounded-2xl p-4 sm:p-6 relative overflow-hidden border-2 border-gray-200 hover:border-yellow-400 transition-all duration-300"
            style={{
              backgroundImage: `
                radial-gradient(circle at top right, rgba(252, 255, 82, 0.1) 0%, transparent 50%),
@@ -91,49 +91,49 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
         
         <div className="relative z-10">
           {/* Category tag */}
-          <div className="inline-block bg-yellow-100 text-yellow-800 text-xs font-handwriting px-3 py-1 rounded-full mb-3 border border-yellow-300">
+          <div className="inline-block bg-yellow-100 text-yellow-800 text-xs font-handwriting px-2 sm:px-3 py-1 rounded-full mb-3 border border-yellow-300">
             {quiz.category}
           </div>
           
           {/* Title */}
-          <h3 className="font-handwriting text-xl mb-2" style={{ color: '#476520' }}>
+          <h3 className="font-handwriting text-lg sm:text-xl mb-2 break-words" style={{ color: '#476520' }}>
             {quiz.title}
           </h3>
           
           {/* Description */}
-          <p className="text-sm mb-4" style={{ color: '#655947' }}>
+          <p className="text-xs sm:text-sm mb-4 break-words" style={{ color: '#655947' }}>
             {quiz.description}
           </p>
           
           {/* Stats row */}
-          <div className="flex items-center justify-between mb-4 text-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-4 text-xs sm:text-sm">
             <div className="flex items-center gap-1">
-              <Users className="w-4 h-4" style={{ color: '#476520' }} />
+              <Users className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" style={{ color: '#476520' }} />
               <span style={{ color: '#655947' }}>{quiz.participants}</span>
             </div>
             <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" style={{ color: '#476520' }} />
+              <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" style={{ color: '#476520' }} />
               <span style={{ color: '#655947' }}>{quiz.duration}</span>
             </div>
             <div className="flex items-center gap-1">
-              <Award className="w-4 h-4" style={{ color: '#FCFF52' }} />
-              <span className="font-bold" style={{ color: '#476520' }}>{quiz.reward} CELO</span>
+              <Award className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" style={{ color: '#FCFF52' }} />
+              <span className="font-bold text-xs sm:text-sm" style={{ color: '#476520' }}>{quiz.reward} CELO</span>
             </div>
           </div>
 
           {/* Network badge if available */}
           {quiz.network && (
             <div className="mb-3">
-              <span className="inline-flex items-center gap-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-300">
-                <Sparkles className="w-3 h-3" /> Live on {quiz.network}
+              <span className="inline-flex items-center gap-1 sm:gap-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-300">
+                <Sparkles className="w-3 h-3 flex-shrink-0" /> Live on {quiz.network}
               </span>
             </div>
           )}
           
           {/* Difficulty */}
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-lg">{difficultyIcons[quiz.difficulty]}</span>
-            <span className={`text-sm font-medium ${difficultyColors[quiz.difficulty]}`}>
+            <span className="text-base sm:text-lg">{difficultyIcons[quiz.difficulty]}</span>
+            <span className={`text-xs sm:text-sm font-medium ${difficultyColors[quiz.difficulty]}`}>
               {quiz.difficulty}
             </span>
           </div>
@@ -141,14 +141,16 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
           {/* Join button */}
           {quiz.snarkelCode ? (
             <Link href={`/join?code=${quiz.snarkelCode}`}>
-              <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
-                <Play className="w-4 h-4" />
-                {isConnected ? 'Join Now' : 'Connect Wallet to Join'}
+              <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 text-xs sm:text-sm">
+                <Play className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="truncate">
+                  {isConnected ? 'Join Now' : 'Connect Wallet to Join'}
+                </span>
               </button>
             </Link>
           ) : (
-            <button className="w-full bg-gray-400 text-white font-bold py-3 px-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-2">
-              <Play className="w-4 h-4" />
+            <button className="w-full bg-gray-400 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-2 text-xs sm:text-sm">
+              <Play className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
               Coming Soon
             </button>
           )}
@@ -175,16 +177,18 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
              backgroundSize: '8px 8px'
            }}></div>
       
-      <div className="relative z-10 p-4">
-        <div className="flex items-center justify-center gap-4">
+      <div className="relative z-10 p-3 sm:p-4">
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
           {/* Join a Snarkel */}
-          <div className="relative flex-1 max-w-xs">
+          <div className="relative flex-1 min-w-0">
             <div className="absolute inset-0 bg-green-300 rounded-2xl blur-xl opacity-40 animate-pulse"></div>
             <Link href="/join" className="relative block">
-              <button className="w-full px-6 py-3 rounded-2xl font-bold text-white transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden group bg-gradient-to-r from-green-500 to-emerald-600 shadow-xl">
-                <span className="relative z-10 flex items-center justify-center gap-2 text-sm md:text-base">
-                  <Users className="w-4 h-4 md:w-5 md:h-5" />
-                  {isConnected ? 'JOIN A SNARKEL' : 'CONNECT WALLET'}
+              <button className="w-full px-3 sm:px-6 py-2 sm:py-3 rounded-2xl font-bold text-white transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden group bg-gradient-to-r from-green-500 to-emerald-600 shadow-xl">
+                <span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base">
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
+                  <span className="truncate">
+                    {isConnected ? 'JOIN A SNARKEL' : 'CONNECT WALLET'}
+                  </span>
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
@@ -192,12 +196,12 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
           </div>
           
           {/* Host a Snarkel */}
-          <div className="relative flex-1 max-w-xs">
+          <div className="relative flex-1 min-w-0">
             <Link href="/create">
-              <div className="bg-white shadow-lg rounded-2xl p-3 transform hover:scale-105 transition-all duration-300 border-2 border-yellow-400 relative overflow-hidden">
-                <span className="font-handwriting text-sm md:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 relative z-10" 
+              <div className="bg-white shadow-lg rounded-2xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-yellow-400 relative overflow-hidden">
+                <span className="font-handwriting text-xs sm:text-sm md:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate" 
                       style={{ color: '#476520' }}>
-                  <Plus className="w-4 h-4 md:w-5 md:h-5" />
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
                   <span className="hidden sm:inline">Host a Snarkel</span>
                   <span className="sm:hidden">Host</span>
                 </span>
@@ -394,17 +398,17 @@ export default function HomePage() {
 
         {/* Mobile Layout */}
         {isMobile ? (
-          <div className="relative z-10 min-h-screen p-6 pb-24 flex flex-col">
+          <div className="relative z-10 min-h-screen p-4 sm:p-6 pb-28 flex flex-col overflow-x-hidden">
             {/* Mobile Wallet Connect Button - Top Right */}
             <div className="absolute top-4 right-4 z-50">
               <WalletConnectButton />
             </div>
             
             {/* Mobile Header */}
-            <div className={`text-center mb-8 transition-all duration-1500 ${
+            <div className={`text-center mb-6 sm:mb-8 transition-all duration-1500 ${
               isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}>
-              <div className="bg-white shadow-2xl rounded-3xl p-6 relative overflow-hidden" 
+              <div className="bg-white shadow-2xl rounded-3xl p-4 sm:p-6 relative overflow-hidden mx-auto max-w-sm" 
                    style={{
                      backgroundImage: `
                        radial-gradient(circle at top right, rgba(252, 255, 82, 0.1) 0%, transparent 50%),
@@ -419,13 +423,13 @@ export default function HomePage() {
                      }}></div>
                 
                 <div className="relative z-10">
-                  <div className="flex items-center justify-center gap-4 mb-4">
-                    <Gamepad2 className="w-12 h-12 animate-bounce-slow" style={{ color: '#476520' }} />
-                    <h1 className="font-handwriting text-4xl" style={{ color: '#476520' }}>
+                  <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                    <Gamepad2 className="w-10 h-10 sm:w-12 sm:h-12 animate-bounce-slow flex-shrink-0" style={{ color: '#476520' }} />
+                    <h1 className="font-handwriting text-3xl sm:text-4xl truncate" style={{ color: '#476520' }}>
                       Snarkels
                     </h1>
                   </div>
-                  <p className="font-handwriting text-lg" style={{ color: '#655947' }}>
+                  <p className="font-handwriting text-base sm:text-lg px-2" style={{ color: '#655947' }}>
                     Knowledge meets web3 rewards
                   </p>
                 </div>
@@ -437,94 +441,94 @@ export default function HomePage() {
               isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
             }`}>
               {/* Section Header */}
-              <div className="text-center mb-6">
-                <h2 className="font-handwriting text-3xl mb-2" style={{ color: '#476520' }}>
+              <div className="text-center mb-4 sm:mb-6 px-2">
+                <h2 className="font-handwriting text-2xl sm:text-3xl mb-2" style={{ color: '#476520' }}>
                   Featured Quizzes
                 </h2>
-                <div className="flex justify-center items-center gap-2 text-sm" style={{ color: '#655947' }}>
+                <div className="flex justify-center items-center gap-2 text-xs sm:text-sm" style={{ color: '#655947' }}>
                   <span>Scroll to explore</span>
-                  <ArrowDown className="w-4 h-4 animate-bounce" />
+                  <ArrowDown className="w-3 h-3 sm:w-4 sm:h-4 animate-bounce" />
                 </div>
               </div>
               
-                        {/* Quiz Cards */}
-          <div className="space-y-6">
-            {loadingQuizzes ? (
-              // Loading state
-              <div className="space-y-6">
-                {[1, 2].map((i) => (
-                  <div key={i} className="bg-white shadow-2xl rounded-2xl p-6 animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                    <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded mb-4 w-3/4"></div>
-                    <div className="h-8 bg-gray-200 rounded"></div>
+              {/* Quiz Cards */}
+              <div className="space-y-4 sm:space-y-6 px-2">
+                {loadingQuizzes ? (
+                  // Loading state
+                  <div className="space-y-4 sm:space-y-6">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="bg-white shadow-2xl rounded-2xl p-4 sm:p-6 animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded mb-3 sm:mb-4"></div>
+                        <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded mb-3 sm:mb-4 w-3/4"></div>
+                        <div className="h-8 bg-gray-200 rounded"></div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : quizError ? (
+                  // Error state
+                  <div className="text-center py-6 sm:py-8 px-2">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 sm:p-6">
+                      <p className="font-handwriting text-base sm:text-lg" style={{ color: '#655947' }}>
+                        {quizError}
+                      </p>
+                      <button 
+                        onClick={fetchFeaturedQuizzes}
+                        className="mt-3 sm:mt-4 px-4 sm:px-6 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors text-sm sm:text-base"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  </div>
+                ) : featuredQuizzes.length === 0 ? (
+                  // Empty state
+                  <div className="text-center py-6 sm:py-8 px-2">
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-6">
+                      <p className="font-handwriting text-base sm:text-lg" style={{ color: '#655947' }}>
+                        No featured quizzes available yet
+                      </p>
+                      <p className="text-xs sm:text-sm mt-2" style={{ color: '#655947' }}>
+                        Check back soon for new challenges!
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  // Quiz cards
+                  featuredQuizzes.slice(0, 2).map((quiz, index) => (
+                    <FeaturedQuizCard key={quiz.id} quiz={quiz} index={index} />
+                  ))
+                )}
               </div>
-            ) : quizError ? (
-              // Error state
-              <div className="text-center py-8">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6">
-                  <p className="font-handwriting text-lg" style={{ color: '#655947' }}>
-                    {quizError}
-                  </p>
-                  <button 
-                    onClick={fetchFeaturedQuizzes}
-                    className="mt-4 px-6 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              </div>
-            ) : featuredQuizzes.length === 0 ? (
-              // Empty state
-              <div className="text-center py-8">
-                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
-                  <p className="font-handwriting text-lg" style={{ color: '#655947' }}>
-                    No featured quizzes available yet
-                  </p>
-                  <p className="text-sm mt-2" style={{ color: '#655947' }}>
-                    Check back soon for new challenges!
-                  </p>
-                </div>
-              </div>
-            ) : (
-              // Quiz cards
-              featuredQuizzes.slice(0, 2).map((quiz, index) => (
-                <FeaturedQuizCard key={quiz.id} quiz={quiz} index={index} />
-              ))
-            )}
-          </div>
             </div>
 
             {/* Mobile Status */}
-            <div className={`text-center mt-8 transition-all duration-1500 delay-500 ${
+            <div className={`text-center mt-6 sm:mt-8 transition-all duration-1500 delay-500 px-2 ${
               isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}>
-              <div className="bg-gradient-to-r from-green-50 to-emerald-100 shadow-lg rounded-2xl p-4 relative overflow-hidden border border-green-200"
+              <div className="bg-gradient-to-r from-green-50 to-emerald-100 shadow-lg rounded-2xl p-3 sm:p-4 relative overflow-hidden border border-green-200 mx-auto max-w-sm"
                    style={{
                      backgroundImage: `radial-gradient(circle at center, rgba(86, 223, 124, 0.1) 0%, transparent 50%)`
                    }}>
-                <div className="flex flex-col items-center gap-3 font-handwriting text-lg" style={{ color: '#476520' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full animate-pulse bg-green-400 shadow-lg"></div>
+                <div className="flex flex-col items-center gap-2 sm:gap-3 font-handwriting text-base sm:text-lg" style={{ color: '#476520' }}>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-3 h-3 rounded-full animate-pulse bg-green-400 shadow-lg flex-shrink-0"></div>
                     <span className="font-bold">LIVE</span>
-                    <Sparkles className="w-6 h-6 text-yellow-500 animate-bounce" />
+                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 animate-bounce flex-shrink-0" />
                   </div>
-                  <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
-                    <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-300">
+                  <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                    <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-300 whitespace-nowrap">
                       Celo
                     </span>
-                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full border border-blue-300">
+                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full border border-blue-300 whitespace-nowrap">
                       Base
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center justify-center gap-3 text-xs mt-1">
-                    <a href={`https://celoscan.io/address/${CELO_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-green-700 underline">
-                      <LinkIcon className="w-3 h-3" /> {formatAddr(CELO_CONTRACT)}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 text-xs mt-1">
+                    <a href={`https://celoscan.io/address/${CELO_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-green-700 underline truncate">
+                      <LinkIcon className="w-3 h-3 flex-shrink-0" /> {formatAddr(CELO_CONTRACT)}
                     </a>
-                    <a href={`https://basescan.org/address/${BASE_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-700 underline">
-                      <LinkIcon className="w-3 h-3" /> {formatAddr(BASE_CONTRACT)}
+                    <a href={`https://basescan.org/address/${BASE_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-700 underline truncate">
+                      <LinkIcon className="w-3 h-3 flex-shrink-0" /> {formatAddr(BASE_CONTRACT)}
                     </a>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -27,8 +27,75 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Mobile-first font approach */
 .font-handwriting {
-  font-family: 'Kalam', cursive;
+  /* On mobile, use a clean, readable font */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+/* On larger screens, use the handwriting font */
+@media (min-width: 768px) {
+  .font-handwriting {
+    font-family: 'Kalam', cursive;
+    font-weight: 400;
+    letter-spacing: normal;
+  }
+}
+
+/* On very large screens, enhance the handwriting experience */
+@media (min-width: 1024px) {
+  .font-handwriting {
+    font-family: 'Kalam', cursive;
+    font-weight: 400;
+    letter-spacing: normal;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 767px) {
+  .font-handwriting {
+    /* Ensure good readability on mobile */
+    line-height: 1.4;
+    /* Slightly increase font weight for better mobile readability */
+    font-weight: 600;
+    /* Optimize text rendering for mobile */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Ensure consistent font size on mobile */
+    font-size-adjust: 0.5;
+  }
+  
+  /* Ensure ActionBar doesn't overlap content on mobile */
+  .pb-28 {
+    padding-bottom: 7rem; /* 112px - enough space for ActionBar */
+  }
+  
+  /* Prevent horizontal overflow on mobile */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Ensure cards don't exceed viewport width */
+  .max-w-sm {
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
+/* Ensure smooth font loading */
+.font-handwriting {
+  font-display: swap;
+}
+
+/* Optimize for high-DPI mobile displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .font-handwriting {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
 @keyframes float {

@@ -920,10 +920,8 @@ function JoinSnarkelContent() {
       )}
 
       <style jsx>{`
-        @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap');
-        
         .font-handwriting {
-          font-family: 'Kalam', cursive;
+          /* Font is now handled globally with mobile optimization */
         }
         
         @keyframes float {

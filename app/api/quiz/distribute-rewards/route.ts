@@ -269,9 +269,9 @@ export async function POST(request: NextRequest) {
           const totalPool = parseFloat(reward.totalRewardPool || '0');
           
           // Use predefined reward amounts if available, otherwise distribute proportionally
-          if (reward.rewardAmounts && reward.rewardAmounts.length > 0) {
+          if (reward.rewardAmounts && Array.isArray(reward.rewardAmounts) && reward.rewardAmounts.length > 0) {
             distributionAmounts = topWinners.map((participant, index) => {
-              const rewardAmount = reward.rewardAmounts![index] || 0;
+              const rewardAmount = (reward.rewardAmounts as number[])[index] || 0;
               const amount = (rewardAmount / 100) * totalPool; // Convert percentage to amount
               return {
                 userId: participant.userId,
