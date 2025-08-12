@@ -4,7 +4,7 @@ const { privateKeyToAccount } = require('viem/accounts');
 
 // Required environment variables:
 // ADMIN_WALLET - Private key for admin wallet (used for socket authentication)
-// SOCKET_URL - Socket server URL (optional, defaults to localhost:3001)
+// SOCKET_URL - Socket server URL (optional, defaults to localhost:4001)
 
 
 const prisma = new PrismaClient();
@@ -20,7 +20,7 @@ const adminAddress = adminWallet.address;
 console.log('Admin address:', adminAddress);
 
 // Connect to socket server with admin address
-const socket = io(process.env.SOCKET_URL || 'http://localhost:3001', {
+const socket = io(process.env.SOCKET_URL || 'http://localhost:4001', {
   query: {
     roomId: 'admin',
     walletAddress: adminAddress

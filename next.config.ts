@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Set the port for the Next.js app
+  env: {
+    PORT: '4000'
+  },
+  
   // Enable Turbopack for faster development builds
   turbopack: {
     // Configure module resolution for better performance

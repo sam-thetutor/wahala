@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 const httpServer = createServer();
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:4000",
     methods: ["GET", "POST"]
   }
 });
@@ -676,7 +676,7 @@ async function endQuiz(roomId) {
         console.log(`Attempting automatic reward distribution for room ${roomId}, session ${room.sessionNumber}`);
         
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/quiz/distribute-rewards`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'}/api/quiz/distribute-rewards`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -757,7 +757,7 @@ async function endQuiz(roomId) {
   }
 }
 
-const PORT = process.env.SOCKET_PORT || 3001;
+const PORT = process.env.SOCKET_PORT || 4001;
 
 httpServer.listen(PORT, () => {
   console.log(`Socket server running on port ${PORT}`);

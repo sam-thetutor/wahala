@@ -332,7 +332,7 @@ export default function QuizRoomPage() {
   const initializeSocket = () => {
     if (!roomId) return;
 
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001', {
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4001', {
       query: {
         roomId,
         walletAddress: address
