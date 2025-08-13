@@ -25,6 +25,7 @@ import {
   Settings
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
+import { getSocketUrl } from '@/config/environment';
 
 
 
@@ -207,7 +208,7 @@ function JoinSnarkelContent() {
   };
 
   const initializeSocket = (roomId: string) => {
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4001', {
+    const newSocket = io(getSocketUrl(), {
       query: {
         roomId,
         walletAddress: address

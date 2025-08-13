@@ -20,7 +20,9 @@ const adminAddress = adminWallet.address;
 console.log('Admin address:', adminAddress);
 
 // Connect to socket server with admin address
-const socket = io(process.env.SOCKET_URL || 'http://localhost:4001', {
+const socketUrl = process.env.SOCKET_URL || 'http://localhost:4001';
+
+const socket = io(socketUrl, {
   query: {
     roomId: 'admin',
     walletAddress: adminAddress

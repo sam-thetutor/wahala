@@ -32,6 +32,7 @@ import {
 import WalletConnectButton from '@/components/WalletConnectButton';
 import AdminControls from '@/components/AdminControls';
 import ParticipantRoom from '@/components/ParticipantRoom';
+import { getSocketUrl } from '@/config/environment';
 
 interface Participant {
   id: string;
@@ -332,7 +333,7 @@ export default function QuizRoomPage() {
   const initializeSocket = () => {
     if (!roomId) return;
 
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4001', {
+    const newSocket = io(getSocketUrl(), {
       query: {
         roomId,
         walletAddress: address
