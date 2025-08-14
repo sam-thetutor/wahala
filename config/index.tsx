@@ -42,11 +42,11 @@ export const wagmiAdapter = new WagmiAdapter({
 export const appKit = createAppKit({
   adapters: [wagmiAdapter],
   networks,
-        projectId,
+  projectId,
   defaultNetwork: base,
-        metadata: {
-          name: 'Snarkels',
-          description: 'Snarkels - Create and host interactive quizzes',
+  metadata: {
+    name: 'Snarkels',
+    description: 'Snarkels - Create and host interactive quizzes',
     url: 'https://snarkels.lol',
     icons: ['https://snarkels.lol/logo.png']
   },

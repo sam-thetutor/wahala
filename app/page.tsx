@@ -29,8 +29,6 @@ import { FarcasterContextDisplay, FarcasterUserInfo } from '@/components/Farcast
 import MiniAppHeader from '@/components/MiniAppHeader';
 import MiniAppContextDisplay from '@/components/MiniAppContextDisplay';
 import { useAccount } from 'wagmi';
-import { useSession0Rewards } from '@/hooks/useSession0Rewards';
-import { REWARD_TOKENS } from '@/lib/tokens-config';
 
 // Quiz type definition
 interface Quiz {
@@ -78,9 +76,9 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
       <div className="absolute -top-2 -left-2 w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded-full shadow-lg border-2 border-white z-20"></div>
       <div className="absolute -top-1 -left-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-600 rounded-full z-20"></div>
       <div className="absolute -top-2 -right-2 w-3 h-3 sm:w-4 sm:h-4 bg-blue-500 rounded-full shadow-lg border-2 border-white z-20"></div>
-      <div className="absolute -top-1 -right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-600 rounded-full z-20"></div>
+      <div className="absolute -top-1 -right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full z-20"></div>
       
-      <div className="bg-white shadow-2xl rounded-2xl p-3 sm:p-4 relative overflow-hidden border-2 border-gray-200 hover:border-yellow-400 transition-all duration-300"
+      <div className="bg-white shadow-2xl rounded-2xl p-4 sm:p-6 relative overflow-hidden border-2 border-gray-200 hover:border-yellow-400 transition-all duration-300"
            style={{
              backgroundImage: `
                radial-gradient(circle at top right, rgba(252, 255, 82, 0.1) 0%, transparent 50%),
@@ -96,171 +94,71 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
         
         <div className="relative z-10">
           {/* Category tag */}
-          <div className="inline-block bg-yellow-100 text-yellow-800 text-xs font-handwriting px-2 sm:px-3 py-1 rounded-full mb-2 border border-yellow-300">
+          <div className="inline-block bg-yellow-100 text-yellow-800 text-xs font-handwriting px-2 sm:px-3 py-1 rounded-full mb-3 border border-yellow-300">
             {quiz.category}
           </div>
           
           {/* Title */}
-          <h3 className="font-handwriting text-base sm:text-lg mb-2 break-words" style={{ color: '#476520' }}>
+          <h3 className="font-handwriting text-lg sm:text-xl mb-2 break-words" style={{ color: '#476520' }}>
             {quiz.title}
           </h3>
           
           {/* Description */}
-          <p className="text-xs sm:text-sm mb-3 break-words" style={{ color: '#655947' }}>
+          <p className="text-xs sm:text-sm mb-4 break-words" style={{ color: '#655947' }}>
             {quiz.description}
           </p>
           
           {/* Stats row */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-3 text-xs sm:text-sm">
-            <div className="flex items-center gap-2">
-              <Users className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-4 text-xs sm:text-sm">
+            <div className="flex items-center gap-1">
+              <Users className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" style={{ color: '#476520' }} />
               <span style={{ color: '#655947' }}>{quiz.participants}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
+            <div className="flex items-center gap-1">
+              <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" style={{ color: '#476520' }} />
               <span style={{ color: '#655947' }}>{quiz.duration}</span>
             </div>
+            <div className="flex items-center gap-1">
+              <Award className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" style={{ color: '#FCFF52' }} />
+              <span className="font-bold text-xs sm:text-sm" style={{ color: '#476520' }}>{quiz.reward} ETH</span>
+            </div>
           </div>
 
-          {/* Difficulty and Reward */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className={`text-xs sm:text-sm font-semibold ${difficultyColors[quiz.difficulty]}`}>
-                {difficultyIcons[quiz.difficulty]} {quiz.difficulty}
+          {/* Network badge if available */}
+          {quiz.network && (
+            <div className="mb-3">
+              <span className="inline-flex items-center gap-1 sm:gap-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-300">
+                <Sparkles className="w-3 h-3 flex-shrink-0" /> Live on {quiz.network}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <Gift className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
-              <span className="text-xs sm:text-sm font-semibold" style={{ color: '#655947' }}>
-                {quiz.reward}
+          )}
+          
+          {/* Difficulty */}
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-base sm:text-lg">{difficultyIcons[quiz.difficulty]}</span>
+            <span className={`text-xs sm:text-sm font-medium ${difficultyColors[quiz.difficulty]}`}>
+              {quiz.difficulty}
             </span>
-            </div>
           </div>
           
-          {/* Action Button */}
-          <div className="flex gap-2">
-            {isConnected ? (
-              <Link
-                href={`/quiz/${quiz.snarkelCode || quiz.id}`}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-center py-1.5 px-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all transform hover:scale-105"
-              >
-                <Play className="w-4 h-4 inline mr-2" />
-                Play Now
+          {/* Join button */}
+          {quiz.snarkelCode ? (
+            <Link href={`/join?code=${quiz.snarkelCode}`}>
+              <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 text-xs sm:text-sm">
+                <Play className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="truncate">
+                {isConnected ? 'Join Now' : 'Connect Wallet to Join'}
+                </span>
+              </button>
             </Link>
           ) : (
-              <div className="flex-1 bg-gray-300 text-gray-500 text-center py-1.5 px-3 rounded-lg font-semibold cursor-not-allowed">
-                <User className="w-4 h-4 inline mr-2" />
-                Connect to Play
-              </div>
-            )}
-          </div>
+            <button className="w-full bg-gray-400 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-2 text-xs sm:text-sm">
+              <Play className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              Coming Soon
+            </button>
+          )}
         </div>
       </div>
-    </div>
-  );
-};
-
-// Session 0 Rewards Display Component
-const Session0RewardsDisplay = () => {
-  const { rewards, isLoading, error } = useSession0Rewards(process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE);
-  
-  if (isLoading) {
-    return (
-      <div className="space-y-3">
-        <div className="h-4 bg-yellow-200 rounded animate-pulse"></div>
-        <div className="h-4 bg-yellow-200 rounded animate-pulse w-3/4"></div>
-      </div>
-    );
-  }
-  
-  if (error) {
-    return (
-      <div className="text-red-600 text-sm font-handwriting">
-        Error loading rewards: {error}
-      </div>
-    );
-  }
-  
-  if (rewards.length === 0) {
-    return (
-      <div className="space-y-3 font-handwriting text-base" style={{ color: '#655947' }}>
-        <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg">
-          <Star className="w-5 h-5 text-yellow-500 animate-pulse" />
-          <span>No rewards configured yet</span>
-        </div>
-        <div className="text-sm text-gray-500">
-          Rewards will appear here once configured
-        </div>
-      </div>
-    );
-  }
-  
-  return (
-    <div className="space-y-3">
-      {rewards.map((reward, index) => {
-        const tokenInfo = REWARD_TOKENS.find(t => t.address.toLowerCase() === reward.tokenAddress.toLowerCase());
-        const amount = Number(reward.amount) / Math.pow(10, tokenInfo?.decimals || 18);
-        
-        return (
-          <div key={index} className="flex items-center justify-between bg-white bg-opacity-70 p-3 rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 rounded-full bg-yellow-200 flex items-center justify-center">
-                <span className="text-xs font-bold text-yellow-700">
-                  {tokenInfo?.symbol?.charAt(0) || 'T'}
-                </span>
-              </div>
-              <div>
-                <div className="font-semibold text-sm" style={{ color: '#476520' }}>
-                  {tokenInfo?.symbol || 'Unknown'}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {tokenInfo?.network || 'Unknown Network'}
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="font-bold text-sm" style={{ color: '#476520' }}>
-                {amount.toFixed(2)}
-              </div>
-              <div className="text-xs text-gray-500">
-                {reward.isDistributed ? 'Distributed' : 'Available'}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-// Supported Tokens Display Component
-const SupportedTokensDisplay = () => {
-  const { supportedTokens } = useSession0Rewards();
-  
-  return (
-    <div className="space-y-2">
-      {supportedTokens.slice(0, 6).map((token, index) => (
-        <div key={index} className="flex items-center gap-2 bg-white bg-opacity-60 p-2 rounded-lg">
-          <div className="w-4 h-4 rounded-full bg-blue-200 flex items-center justify-center">
-            <span className="text-xs font-bold text-blue-700">
-              {token.symbol.charAt(0)}
-            </span>
-          </div>
-          <span className="text-sm font-medium" style={{ color: '#476520' }}>
-            {token.symbol}
-          </span>
-          <span className="text-xs text-gray-500 ml-auto">
-            {token.network}
-          </span>
-        </div>
-      ))}
-      {supportedTokens.length > 6 && (
-        <div className="text-center">
-          <span className="text-xs text-gray-500 font-handwriting">
-            +{supportedTokens.length - 6} more tokens supported
-          </span>
-        </div>
-      )}
     </div>
   );
 };
@@ -603,51 +501,51 @@ export default function HomePage() {
               
               {/* Quiz Cards with Horizontal Scrolling */}
               <div className="px-2">
-            {loadingQuizzes ? (
-              // Loading state
+                {loadingQuizzes ? (
+                  // Loading state
                   <div className="space-y-4 sm:space-y-6">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="bg-white shadow-2xl rounded-2xl p-4 sm:p-6 animate-pulse">
                         <div className="h-4 bg-gray-200 rounded mb-3 sm:mb-4"></div>
-                    <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded mb-2"></div>
                         <div className="h-3 bg-gray-200 rounded mb-3 sm:mb-4 w-3/4"></div>
-                    <div className="h-8 bg-gray-200 rounded"></div>
+                        <div className="h-8 bg-gray-200 rounded"></div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : quizError ? (
-              // Error state
+                ) : quizError ? (
+                  // Error state
                   <div className="text-center py-6 sm:py-8 px-2">
                     <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 sm:p-6">
                       <p className="font-handwriting text-base sm:text-lg" style={{ color: '#655947' }}>
-                    {quizError}
-                  </p>
-                  <button 
-                    onClick={fetchFeaturedQuizzes}
+                        {quizError}
+                      </p>
+                      <button 
+                        onClick={fetchFeaturedQuizzes}
                         className="mt-3 sm:mt-4 px-4 sm:px-6 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors text-sm sm:text-base"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              </div>
-            ) : featuredQuizzes.length === 0 ? (
-              // Empty state
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  </div>
+                ) : featuredQuizzes.length === 0 ? (
+                  // Empty state
                   <div className="text-center py-6 sm:py-8 px-2">
                     <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-6">
                       <p className="font-handwriting text-base sm:text-lg" style={{ color: '#655947' }}>
-                    No featured quizzes available yet
-                  </p>
+                        No featured quizzes available yet
+                      </p>
                       <p className="text-xs sm:text-sm mt-2" style={{ color: '#655947' }}>
-                    Check back soon for new challenges!
-                  </p>
-                </div>
-              </div>
-            ) : (
+                        Check back soon for new challenges!
+                      </p>
+                    </div>
+                  </div>
+                ) : (
                   // Quiz cards with horizontal scrolling
                   <div className="relative">
                     {/* Scrollable container */}
                     <div 
-                      className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-hide quiz-carousel snap-x snap-mandatory"
+                      className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 scrollbar-hide quiz-carousel snap-x snap-mandatory"
                       style={{
                         scrollSnapType: 'x mandatory',
                         WebkitOverflowScrolling: 'touch'
@@ -658,7 +556,7 @@ export default function HomePage() {
                       {featuredQuizzes.map((quiz, index) => (
                         <div 
                           key={quiz.id} 
-                          className="flex-shrink-0 w-52 sm:w-58 md:w-70 snap-start"
+                          className="flex-shrink-0 w-72 sm:w-80 md:w-96 snap-start"
                         >
                           <FeaturedQuizCard quiz={quiz} index={index} />
                         </div>
@@ -695,8 +593,8 @@ export default function HomePage() {
                       </div>
                     )}
                   </div>
-            )}
-          </div>
+                )}
+              </div>
             </div>
 
             {/* Mobile Status */}
@@ -729,29 +627,6 @@ export default function HomePage() {
                       <LinkIcon className="w-3 h-3 flex-shrink-0" /> {formatAddr(CELO_CONTRACT)}
                     </a>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Session 0 Rewards */}
-            <div className={`text-center mt-4 sm:mt-6 transition-all duration-1500 delay-600 px-2 ${
-              isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-            }`}>
-              <div className="bg-gradient-to-r from-yellow-50 to-amber-100 shadow-lg rounded-2xl p-3 sm:p-4 relative overflow-hidden border border-yellow-200 mx-auto max-w-sm"
-                   style={{
-                     backgroundImage: `radial-gradient(circle at center, rgba(252, 255, 82, 0.1) 0%, transparent 50%)`
-                   }}>
-                <div className="text-center mb-3">
-                  <h4 className="font-handwriting text-lg font-bold" style={{ color: '#476520' }}>Session 0 Rewards</h4>
-                </div>
-                
-                {/* Session 0 Rewards Display */}
-                <Session0RewardsDisplay />
-                
-                {/* Supported Tokens */}
-                <div className="mt-4">
-                  <h5 className="font-handwriting text-sm mb-2" style={{ color: '#476520' }}>Supported Tokens</h5>
-                  <SupportedTokensDisplay />
                 </div>
               </div>
             </div>
@@ -827,7 +702,7 @@ export default function HomePage() {
                   <div className="flex items-center gap-4 mb-6">
                     <Trophy className="w-8 lg:w-10 h-8 lg:h-10 text-blue-600 animate-spin-slow" />
                     <h3 className="font-handwriting text-2xl lg:text-3xl" style={{ color: '#476520' }}>Featured Quizzes</h3>
-                    </div>
+                  </div>
                   <div className="space-y-3 font-handwriting text-base lg:text-lg" style={{ color: '#655947' }}>
                     <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg hover:scale-105 transition-transform">
                       <Zap className="w-5 lg:w-6 h-5 lg:h-6 text-blue-500 animate-pulse" />
@@ -861,17 +736,22 @@ export default function HomePage() {
                 <div className="relative z-10">
                   <div className="flex items-center gap-4 mb-6">
                     <Trophy className="w-8 lg:w-10 h-8 lg:h-10 text-yellow-600 animate-spin-slow" />
-                    <h3 className="font-handwriting text-2xl lg:text-3xl" style={{ color: '#476520' }}>Session 0 Rewards</h3>
+                    <h3 className="font-handwriting text-2xl lg:text-3xl" style={{ color: '#476520' }}>Earn Rewards!</h3>
                   </div>
-                  
-                  {/* Session 0 Rewards Display */}
-                  <Session0RewardsDisplay />
-                  
-                  {/* Supported Tokens */}
-                  <div className="mt-6">
-                    <h4 className="font-handwriting text-lg mb-3" style={{ color: '#476520' }}>Supported Tokens</h4>
-                    <SupportedTokensDisplay />
+                  <div className="space-y-3 font-handwriting text-base lg:text-lg" style={{ color: '#655947' }}>
+                    <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg hover:scale-105 transition-transform">
+                      <Zap className="w-5 lg:w-6 h-5 lg:h-6 text-yellow-500 animate-pulse" />
+                      <span>ERC20 tokens</span>
                     </div>
+                    <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg hover:scale-105 transition-transform">
+                      <Star className="w-5 lg:w-6 h-5 lg:h-6 text-green-500 animate-pulse" />
+                      <span>Speed bonuses</span>
+                    </div>
+                    <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg hover:scale-105 transition-transform">
+                      <Shield className="w-5 lg:w-6 h-5 lg:h-6 text-blue-500 animate-pulse" />
+                      <span>Leaderboards</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -339,7 +339,7 @@ export default function SnarkelCreationPage() {
       totalWinners: 5,
       rewardAmounts: [35, 25, 20, 15, 5],
       totalRewardPool: '10', // Default to 10 tokens instead of 1000
-      minParticipants: 1, // Changed from 3 to 1 as requested
+      minParticipants: 3,
       pointsWeight: 0.7,
       rewardAllParticipants: false
     },
