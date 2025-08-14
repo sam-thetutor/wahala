@@ -2,7 +2,6 @@ import { cookieStorage, createStorage, http } from '@wagmi/core'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { celo, base } from '@reown/appkit/networks'
 import { farcasterFrame } from "@farcaster/miniapp-wagmi-connector"
-import { metaMask, injected } from 'wagmi/connectors'
 import type { Config } from 'wagmi'
 
 // Get projectId from https://dashboard.reown.com
@@ -16,14 +15,7 @@ export const networks = [base, celo] // Base first, then Celo
 
 // Base connectors that work in both server and client
 const baseConnectors = [
-  injected(),
-  farcasterFrame(),
-  metaMask({
-    dappMetadata: {
-      name: "Snarkels",
-      url: "https://snarkels.vercel.app",
-    }
-  })
+  farcasterFrame()
 ]
 
 // Create the base wagmi adapter
