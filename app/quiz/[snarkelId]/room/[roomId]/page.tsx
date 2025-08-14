@@ -127,6 +127,8 @@ export default function QuizRoomPage() {
   const [participantTabs, setParticipantTabs] = useState<Array<{id: string, name: string, address: string, isReady: boolean, isAdmin: boolean}>>([]);
   const [showAnswerReveal, setShowAnswerReveal] = useState(false);
   const [currentAnswer, setCurrentAnswer] = useState<{questionId: string, correctAnswer: string, userAnswers: Array<{userId: string, answerId: string, isCorrect: boolean, points: number}>} | null>(null);
+  const [showQuestionComplete, setShowQuestionComplete] = useState(false);
+  const [showNextQuestion, setShowNextQuestion] = useState(false);
   const [participantLeaveNotification, setParticipantLeaveNotification] = useState<string>('');
   const [participantJoinNotification, setParticipantJoinNotification] = useState<string>('');
   const [adminMessage, setAdminMessage] = useState<string>('');
@@ -563,6 +565,8 @@ export default function QuizRoomPage() {
       setSelectedAnswers([]);
       setShowAnswerReveal(false);
       setCurrentAnswer(null);
+      setShowQuestionComplete(false);
+      setShowNextQuestion(false);
     });
 
     newSocket.on('questionEnd', () => {
@@ -578,10 +582,22 @@ export default function QuizRoomPage() {
       setShowAnswerReveal(true);
       setCurrentAnswer(data);
       
-      // Hide answer reveal after 10 seconds and show leaderboard
+      // Hide answer reveal after 10 seconds and show question complete state
       setTimeout(() => {
         setShowAnswerReveal(false);
         setCurrentAnswer(null);
+        setShowQuestionComplete(true);
+        
+        // Hide question complete state after 3 seconds and show next question indicator
+        setTimeout(() => {
+          setShowQuestionComplete(false);
+          setShowNextQuestion(true);
+          
+          // Hide next question indicator after 2 seconds
+          setTimeout(() => {
+            setShowNextQuestion(false);
+          }, 2000);
+        }, 3000);
       }, 10000);
     });
 
@@ -1044,57 +1060,229 @@ export default function QuizRoomPage() {
                     {/* User Answers with Better Layout */}
                     <div className="space-y-3 mb-4">
                       <h4 className="text-xl font-handwriting font-bold text-white text-center mb-4">Player Results</h4>
-                      {currentAnswer.userAnswers.map((userAnswer, index) => (
-                        <div key={index} className="flex items-center justify-between bg-gray-800 rounded-lg p-4 border border-gray-600">
-                          <span className="text-white font-medium text-lg">
-                            {(() => {
-                              const participant = participants.find(p => p.userId === userAnswer.userId);
-                              return participant && participant.user && participant.user.address 
-                                ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` 
-                                : 'Unknown';
-                            })()}
-                          </span>
-                          <div className="flex items-center gap-3">
-                            <span className={`px-3 py-1 rounded-lg text-lg font-bold ${
-                              userAnswer.isCorrect ? 'bg-green-600 text-white border-2 border-green-400' : 'bg-red-600 text-white border-2 border-red-400'
-                            }`}>
-                              {userAnswer.isCorrect ? '✓ Correct' : '✗ Wrong'}
+                      {currentAnswer.userAnswers.map((userAnswer, index) => {
+                        const participant = participants.find(p => p.userId === userAnswer.userId);
+                        const displayName = participant?.user?.name || 
+                                          (participant?.user?.address ? 
+                                            `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 
+                                            'Unknown Player');
+                        
+                        return (
+                          <div key={index} className="flex items-center justify-between bg-gray-800 rounded-lg p-4 border border-gray-600">
+                            <span className="text-white font-medium text-lg">
+                              {displayName}
                             </span>
-                            <span className="text-yellow-400 font-bold text-xl">
-                              +{userAnswer.points} pts
-                            </span>
+                            <div className="flex items-center gap-3">
+                              <span className={`px-3 py-1 rounded-lg text-lg font-bold ${
+                                userAnswer.isCorrect ? 'bg-green-600 text-white border-2 border-green-400' : 'bg-red-600 text-white border-2 border-red-400'
+                              }`}>
+                                {userAnswer.isCorrect ? '✓ Correct' : '✗ Wrong'}
+                              </span>
+                              <span className="text-yellow-400 font-bold text-xl">
+                                +{userAnswer.points} pts
+                              </span>
+                            </div>
                           </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Mini Leaderboard after answer reveal */}
+                    {leaderboard.length > 0 && (
+                      <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-600">
+                        <h4 className="text-lg font-handwriting font-bold text-white text-center mb-3">📊 Current Standings</h4>
+                        <div className="space-y-2">
+                          {leaderboard.slice(0, 3).map((entry, index) => {
+                            const participant = participants.find(p => p.userId === entry.userId);
+                            const displayName = participant?.user?.name || 
+                                              (participant?.user?.address ? 
+                                                `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 
+                                                'Unknown Player');
+                            
+                            return (
+                              <div key={entry.userId} className="flex items-center justify-between bg-gray-700 rounded-lg p-2">
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                                    index === 0 ? 'bg-yellow-500' : 
+                                    index === 1 ? 'bg-gray-400' : 
+                                    index === 2 ? 'bg-orange-500' : 'bg-gray-600'
+                                  }`}>
+                                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🥉'}
+                                  </div>
+                                  <span className="text-white font-medium text-sm">{displayName}</span>
+                                </div>
+                                <span className="text-yellow-400 font-bold text-lg">{entry.score} pts</span>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
+                      </div>
+                    )}
+                    
+                    {/* Next Question Indicator */}
+                    <div className="mt-4 text-center">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-800 text-blue-200 rounded-lg border border-blue-600">
+                        <Clock className="w-4 h-4 animate-pulse" />
+                        <span className="font-handwriting text-sm">Next question coming soon...</span>
+                      </div>
                     </div>
                   </div>
                 )}
-
-                {/* Leaderboard Display - Prominent when available */}
-                {leaderboard.length > 0 && (
-                  <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-8 mb-6 border-4 border-blue-400 shadow-2xl">
-                    <h3 className="text-4xl font-handwriting font-bold text-white mb-6 text-center">🏆 Leaderboard</h3>
-                    <div className="space-y-3">
-                      {leaderboard.slice(0, 5).map((entry, index) => (
-                        <div key={entry.userId} className={`flex items-center justify-between rounded-lg p-4 transition-all duration-300 ${
-                          index === 0 ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 border-2 border-yellow-400' :
-                          index === 1 ? 'bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-400' :
-                          index === 2 ? 'bg-gradient-to-r from-orange-600 to-orange-700 border-2 border-orange-400' :
-                          'bg-gray-800 border-2 border-gray-600'
-                        }`}>
-                          <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg ${
-                              index === 0 ? 'bg-yellow-500 shadow-lg' : 
-                              index === 1 ? 'bg-gray-400 shadow-lg' : 
-                              index === 2 ? 'bg-orange-500 shadow-lg' : 'bg-gray-600'
-                            }`}>
-                              {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                
+                {/* Question Complete Indicator - Show briefly between questions */}
+                {showQuestionComplete && gameState === 'playing' && leaderboard.length > 0 && (
+                  <div className="bg-gradient-to-r from-green-900 to-emerald-900 rounded-lg p-6 mb-6 border-4 border-green-400 shadow-2xl text-center">
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <CheckCircle className="w-8 h-8 text-green-300" />
+                      <h3 className="text-3xl font-handwriting font-bold text-white">✅ Question Complete!</h3>
+                    </div>
+                    <p className="text-xl text-green-200 font-handwriting mb-4">
+                      Great job everyone! Here's how you're doing so far:
+                    </p>
+                    
+                    {/* Compact Leaderboard */}
+                    <div className="max-w-md mx-auto space-y-2">
+                      {leaderboard.slice(0, 3).map((entry, index) => {
+                        const participant = participants.find(p => p.userId === entry.userId);
+                        const displayName = participant?.user?.name || 
+                                          (participant?.user?.address ? 
+                                            `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 
+                                            'Unknown Player');
+                        
+                        return (
+                          <div key={entry.userId} className="flex items-center justify-between bg-green-800 rounded-lg p-3 border border-green-600">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
+                                index === 0 ? 'bg-yellow-500' : 
+                                index === 1 ? 'bg-gray-400' : 
+                                index === 2 ? 'bg-orange-500' : 'bg-gray-600'
+                              }`}>
+                                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                              </div>
+                              <span className="text-white font-medium">{displayName}</span>
                             </div>
-                            <span className="text-white font-medium text-lg">{entry.name}</span>
+                            <span className="text-yellow-300 font-bold text-xl">{entry.score} pts</span>
                           </div>
-                          <span className="text-yellow-400 font-bold text-2xl">{entry.score} pts</span>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="mt-4">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-800 text-blue-200 rounded-lg border border-blue-600">
+                        <Clock className="w-4 h-4 animate-pulse" />
+                        <span className="font-handwriting text-sm">Preparing next question...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Quiz Complete Indicator - Show when game ends */}
+                {gameState === 'finished' && leaderboard.length > 0 && (
+                  <div className="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-lg p-8 mb-6 border-4 border-purple-400 shadow-2xl text-center">
+                    <div className="flex items-center justify-center gap-3 mb-6">
+                      <Trophy className="w-10 h-10 text-yellow-400" />
+                      <h3 className="text-4xl font-handwriting font-bold text-white">🎉 Quiz Complete!</h3>
+                      <Trophy className="w-10 h-10 text-yellow-400" />
+                    </div>
+                    <p className="text-xl text-purple-200 font-handwriting mb-6">
+                      Congratulations to all participants! Here are the final results:
+                    </p>
+                    
+                    {/* Final Results Leaderboard */}
+                    <div className="max-w-2xl mx-auto space-y-3">
+                      {leaderboard.slice(0, 5).map((entry, index) => {
+                        const participant = participants.find(p => p.userId === entry.userId);
+                        const displayName = participant?.user?.name || 
+                                          (participant?.user?.address ? 
+                                            `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 
+                                            'Unknown Player');
+                        
+                        return (
+                          <div key={entry.userId} className={`flex items-center justify-between rounded-lg p-4 transition-all duration-300 ${
+                            index === 0 ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 border-2 border-yellow-400' :
+                            index === 1 ? 'bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-400' :
+                            index === 2 ? 'bg-gradient-to-r from-orange-600 to-orange-700 border-2 border-orange-400' :
+                            'bg-gray-800 border-2 border-gray-600'
+                          }`}>
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                                index === 0 ? 'bg-yellow-500 shadow-lg' : 
+                                index === 1 ? 'bg-gray-400 shadow-lg' : 
+                                index === 2 ? 'bg-orange-500 shadow-lg' : 'bg-gray-600'
+                              }`}>
+                                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                              </div>
+                              <span className="text-white font-medium text-lg">{displayName}</span>
+                            </div>
+                            <span className="text-yellow-400 font-bold text-2xl">{entry.score} pts</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Rewards Status */}
+                    {room?.snarkel?.rewardsEnabled && (
+                      <div className="mt-6">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-800 text-yellow-200 rounded-lg border border-yellow-600">
+                          <Coins className="w-4 h-4" />
+                          <span className="text-sm">
+                            {rewardsDistributed ? '🎉 Rewards have been distributed!' : '⏳ Rewards are being processed...'}
+                          </span>
                         </div>
-                      ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              
+              {/* Next Question Indicator - Show briefly before next question */}
+              {showNextQuestion && gameState === 'playing' && (
+                <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-lg p-6 mb-6 border-4 border-blue-400 shadow-2xl text-center animate-pulse">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <Target className="w-8 h-8 text-blue-300" />
+                    <h3 className="text-3xl font-handwriting font-bold text-white">🎯 Next Question Coming!</h3>
+                  </div>
+                  <p className="text-xl text-blue-200 font-handwriting">
+                    Get ready for the next challenge...
+                  </p>
+                </div>
+              )}
+
+                {/* Leaderboard Display - Show after each question, but hide during active questions and when quiz ends */}
+                {leaderboard.length > 0 && gameState !== 'playing' && gameState !== 'finished' && (
+                  <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-8 mb-6 border-4 border-blue-400 shadow-2xl">
+                    <h3 className="text-4xl font-handwriting font-bold text-white mb-6 text-center">
+                      📊 Question Results
+                    </h3>
+                    <div className="space-y-3">
+                      {leaderboard.slice(0, 5).map((entry, index) => {
+                        // Find participant to get their name
+                        const participant = participants.find(p => p.userId === entry.userId);
+                        const displayName = participant?.user?.name || 
+                                          (participant?.user?.address ? 
+                                            `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 
+                                            'Unknown Player');
+                        
+                        return (
+                          <div key={entry.userId} className={`flex items-center justify-between rounded-lg p-4 transition-all duration-300 ${
+                            index === 0 ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 border-2 border-yellow-400' :
+                            index === 1 ? 'bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-400' :
+                            index === 2 ? 'bg-gradient-to-r from-orange-600 to-orange-700 border-2 border-orange-400' :
+                            'bg-gray-800 border-2 border-gray-600'
+                          }`}>
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                                index === 0 ? 'bg-yellow-500 shadow-lg' : 
+                                index === 1 ? 'bg-gray-400 shadow-lg' : 
+                                index === 2 ? 'bg-orange-500 shadow-lg' : 'bg-gray-600'
+                              }`}>
+                                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                              </div>
+                              <span className="text-white font-medium text-lg">{displayName}</span>
+                            </div>
+                            <span className="text-yellow-400 font-bold text-2xl">{entry.score} pts</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

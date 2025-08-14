@@ -336,7 +336,7 @@ export default function ParticipantRoom({
                     Waiting for the admin to start the quiz...
                   </p>
                 </div>
-
+                
                 {/* Ready Status */}
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-l-4 border-green-400">
                   <div className="flex items-center justify-center gap-3 mb-4">
@@ -349,77 +349,17 @@ export default function ParticipantRoom({
                       {isReady ? 'You are Ready!' : 'Are you Ready?'}
                     </h3>
                   </div>
-                  
-                  <div className="text-center mb-6">
-                    <p className="text-gray-600">
-                      {isReady 
-                        ? 'Great! You\'re ready to play. Waiting for others...'
-                        : 'Use the Ready button at the top to signal you\'re ready.'
-                      }
-                    </p>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm text-gray-600 mb-2">
-                      <span>Ready: {readyParticipants}</span>
-                      <span>Total: {totalParticipants}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-gradient-to-r from-green-400 to-emerald-500 h-3 rounded-full transition-all duration-500"
-                        style={{ width: `${(readyParticipants / totalParticipants) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-gray-500">
-                    Need {room?.minParticipants || 1} ready to start
+                  <p className="text-gray-600 text-center">
+                    {isReady 
+                      ? 'You will be able to participate when the quiz starts!'
+                      : 'Click the button above to join as a player when ready.'
+                    }
                   </p>
-                </div>
-
-                {/* Animated Participant Tabs */}
-                <div className="mt-6">
-                  <h3 className="text-lg font-handwriting font-bold text-gray-700 mb-4 text-center">
-                    Participants Joining...
-                  </h3>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {participants.map((participant, index) => (
-                      <div
-                        key={participant.id}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-500 transform hover:scale-105 ${
-                          participant.isAdmin 
-                            ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg' 
-                            : participant.isReady
-                            ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg'
-                            : 'bg-gradient-to-r from-blue-400 to-purple-500 text-white shadow-lg'
-                        }`}
-                        style={{
-                          animationDelay: `${index * 200}ms`,
-                          animation: 'fadeInUp 0.5s ease-out forwards'
-                        }}
-                      >
-                        <div className="w-6 h-6 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
-                          {participant.isAdmin ? (
-                            <Crown className="w-3 h-3" />
-                          ) : participant.isReady ? (
-                            <CheckCircle className="w-3 h-3" />
-                          ) : (
-                            <Users className="w-3 h-3" />
-                          )}
-                        </div>
-                        <span className="text-sm font-medium">
-                          {participant.user.name || `User ${participant.user.address.slice(0, 8)}...`}
-                        </span>
-                        {participant.isAdmin && (
-                          <Crown className="w-3 h-3" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </div>
             )}
+            
+
 
             {/* Countdown State */}
             {gameState === 'countdown' && countdown && (
@@ -513,12 +453,12 @@ export default function ParticipantRoom({
               </div>
             </div>
 
-            {/* Leaderboard */}
-            {leaderboard.length > 0 && (
+            {/* Leaderboard - Hide during active questions */}
+            {leaderboard.length > 0 && gameState !== 'playing' && (
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-handwriting font-bold text-gray-800 mb-4 flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-yellow-600" />
-                  Leaderboard
+                  {gameState === 'finished' ? 'Final Results' : 'Current Standings'}
                 </h3>
                 <div className="space-y-3">
                   {leaderboard.slice(0, 5).map((player, index) => (
@@ -533,7 +473,7 @@ export default function ParticipantRoom({
                           {index + 1}
                         </div>
                         <span className="font-medium text-gray-800">
-                          {player.name || `Player ${player.userId.slice(0, 8)}...`}
+                          {player.name || 'Unknown Player'}
                         </span>
                       </div>
                       <div className="flex items-center gap-1">

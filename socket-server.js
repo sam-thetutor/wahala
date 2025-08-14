@@ -559,21 +559,32 @@ async function revealAnswers(roomId, question) {
     const correctOption = question.options.find(opt => opt.isCorrect);
     const correctAnswer = correctOption ? correctOption.text : 'Unknown';
 
-    // Get user names for the answers
-            const userAnswers = await Promise.all(
-          questionData.answers.map(async (answer) => {
-            const user = await prisma.user.findUnique({
-              where: { id: answer.userId }
-            });
-            return {
-              userId: answer.userId,
-              answerId: answer.answerId,
-              isCorrect: answer.isCorrect,
-              points: answer.points,
-              userName: user ? `${user.address.slice(0, 6)}...${user.address.slice(-4)}` : 'Unknown'
-            };
-          })
-        );
+    // Get user names for the answers - prefer actual names over wallet addresses
+    const userAnswers = await Promise.all(
+      questionData.answers.map(async (answer) => {
+        const user = await prisma.user.findUnique({
+          where: { id: answer.userId }
+        });
+        
+        let displayName = 'Unknown Player';
+        if (user) {
+          // Use actual name if available, otherwise use shortened wallet address
+          if (user.name && user.name.trim() !== '') {
+            displayName = user.name;
+          } else if (user.address) {
+            displayName = `${user.address.slice(0, 6)}...${user.address.slice(-4)}`;
+          }
+        }
+        
+        return {
+          userId: answer.userId,
+          answerId: answer.answerId,
+          isCorrect: answer.isCorrect,
+          points: answer.points,
+          userName: displayName
+        };
+      })
+    );
 
     // Emit answer reveal to all clients
     io.to(roomId).emit('answerReveal', {
@@ -597,15 +608,26 @@ async function updateLeaderboard(roomId) {
       return;
     }
 
-    // Get user names for the scores
+    // Get user names for the scores - prefer actual names over wallet addresses
     const leaderboard = await Promise.all(
       Array.from(scores.entries()).map(async ([userId, score]) => {
         const user = await prisma.user.findUnique({
           where: { id: userId }
         });
+        
+        let displayName = 'Unknown Player';
+        if (user) {
+          // Use actual name if available, otherwise use shortened wallet address
+          if (user.name && user.name.trim() !== '') {
+            displayName = user.name;
+          } else if (user.address) {
+            displayName = `${user.address.slice(0, 6)}...${user.address.slice(-4)}`;
+          }
+        }
+        
         return {
           userId,
-          name: user ? `${user.address.slice(0, 6)}...${user.address.slice(-4)}` : 'Unknown',
+          name: displayName,
           score
         };
       })
@@ -658,9 +680,20 @@ async function endQuiz(roomId) {
           const user = await prisma.user.findUnique({
             where: { id: userId }
           });
+          
+          let displayName = 'Unknown Player';
+          if (user) {
+            // Use actual name if available, otherwise use shortened wallet address
+            if (user.name && user.name.trim() !== '') {
+              displayName = user.name;
+            } else if (user.address) {
+              displayName = `${user.address.slice(0, 6)}...${user.address.slice(-4)}`;
+            }
+          }
+          
           return {
             userId,
-            name: user ? `${user.address.slice(0, 6)}...${user.address.slice(-4)}` : 'Unknown',
+            name: displayName,
             score
           };
         })
