@@ -120,7 +120,7 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
             </div>
             <div className="flex items-center gap-1">
               <Award className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" style={{ color: '#FCFF52' }} />
-              <span className="font-bold text-xs sm:text-sm" style={{ color: '#476520' }}>{quiz.reward} CELO</span>
+              <span className="font-bold text-xs sm:text-sm" style={{ color: '#476520' }}>{quiz.reward} ETH</span>
             </div>
           </div>
 
@@ -256,8 +256,8 @@ export default function HomePage() {
   const { isConnected } = useAccount();
 
   // Contract addresses - Base and Celo mainnet
-  const CELO_CONTRACT = '0x8b8fb708758dc8185ef31e685305c1aa0827ea65';
-  const BASE_CONTRACT = '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40';
+  const CELO_CONTRACT = process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO||'';
+  const BASE_CONTRACT = process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE||'';
 
   const formatAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
@@ -536,18 +536,18 @@ export default function HomePage() {
                   </div>
                   <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
                     <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-300 whitespace-nowrap">
-                      Celo
+                      Base
                     </span>
                     <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full border border-blue-300 whitespace-nowrap">
-                      Base
+                      Celo
                     </span>
                   </div>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 text-xs mt-1">
-                    <a href={`https://celoscan.io/address/${CELO_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-green-700 underline truncate">
-                      <LinkIcon className="w-3 h-3 flex-shrink-0" /> {formatAddr(CELO_CONTRACT)}
-                    </a>
                     <a href={`https://basescan.org/address/${BASE_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-700 underline truncate">
                       <LinkIcon className="w-3 h-3 flex-shrink-0" /> {formatAddr(BASE_CONTRACT)}
+                    </a>
+                    <a href={`https://celoscan.io/address/${CELO_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-green-700 underline truncate">
+                      <LinkIcon className="w-3 h-3 flex-shrink-0" /> {formatAddr(CELO_CONTRACT)}
                     </a>
                   </div>
                 </div>
@@ -731,7 +731,7 @@ export default function HomePage() {
                   <div className="space-y-3 font-handwriting text-base lg:text-lg" style={{ color: '#655947' }}>
                     <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg hover:scale-105 transition-transform">
                       <Zap className="w-5 lg:w-6 h-5 lg:h-6 text-yellow-500 animate-pulse" />
-                      <span>CELO tokens</span>
+                      <span>ERC20 tokens</span>
                     </div>
                     <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg hover:scale-105 transition-transform">
                       <Star className="w-5 lg:w-6 h-5 lg:h-6 text-green-500 animate-pulse" />
@@ -770,15 +770,15 @@ export default function HomePage() {
                       <Sparkles className="w-6 lg:w-8 h-6 lg:h-8 text-yellow-500 animate-bounce" />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-300 text-sm">Celo</span>
                       <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full border border-blue-300 text-sm">Base</span>
+                      <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-300 text-sm">Celo</span>
                     </div>
                     <div className="flex flex-col gap-1 text-xs">
-                      <a href={`https://celoscan.io/address/${CELO_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-green-700 underline">
-                        <LinkIcon className="w-3 h-3" /> {formatAddr(CELO_CONTRACT)}
-                      </a>
                       <a href={`https://basescan.org/address/${BASE_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-700 underline">
                         <LinkIcon className="w-3 h-3" /> {formatAddr(BASE_CONTRACT)}
+                      </a>
+                      <a href={`https://celoscan.io/address/${CELO_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-green-700 underline">
+                        <LinkIcon className="w-3 h-3" /> {formatAddr(CELO_CONTRACT)}
                       </a>
                     </div>
                   </div>
