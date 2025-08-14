@@ -4,6 +4,7 @@ import ContextProvider from '@/context'
 import AccountModalProvider from '@/components/AccountModalProvider'
 import { FarcasterProvider } from '@/components/FarcasterProvider'
 import MiniAppWrapper from '@/components/MiniAppWrapper'
+import AppKitProvider from '@/components/AppKitProvider'
 import { cookies } from 'next/headers'
 import ClientLayout from '@/components/ClientLayout'
 
@@ -51,26 +52,28 @@ export default async function RootLayout({
         <meta property="og:title" content="Snarkels - Interactive Quiz Rewards" />
         <meta property="og:description" content="Create and participate in interactive quizzes with crypto rewards on Base and Celo networks" />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://snarkels.vercel.app" />
-        <meta property="og:image" content="https://snarkels.vercel.app/api/og" />
+        <meta property="og:url" content="https://snarkels.lol" />
+        <meta property="og:image" content="https://snarkels.lol/api/og" />
         
         {/* Twitter Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Snarkels - Interactive Quiz Rewards" />
         <meta name="twitter:description" content="Create and participate in interactive quizzes with crypto rewards on Base and Celo networks" />
-        <meta name="twitter:image" content="https://snarkels.vercel.app/api/og" />
+        <meta name="twitter:image" content="https://snarkels.lol/api/og" />
       </head>
       <body className={inter.className}>
         <ContextProvider cookies={cookieString}>
-          <FarcasterProvider>
-            <MiniAppWrapper>
-              <ClientLayout>
-                <AccountModalProvider>
-                  {children}
-                </AccountModalProvider>
-              </ClientLayout>
-            </MiniAppWrapper>
-          </FarcasterProvider>
+          <MiniAppWrapper>
+            <FarcasterProvider>
+              <AppKitProvider>
+                <ClientLayout>
+                  <AccountModalProvider>
+                    {children}
+                  </AccountModalProvider>
+                </ClientLayout>
+              </AppKitProvider>
+            </FarcasterProvider>
+          </MiniAppWrapper>
         </ContextProvider>
       </body>
     </html>
