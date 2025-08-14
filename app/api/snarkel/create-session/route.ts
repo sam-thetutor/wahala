@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if rewards are enabled
-    if (!snarkel.rewardsEnabled || snarkel.rewards.length === 0) {
+    // Check if rewards are enabled - check both the flag and the actual rewards
+    if (!snarkel.rewardsEnabled && snarkel.rewards.length === 0) {
       return NextResponse.json(
         { error: 'No rewards configured for this snarkel' },
         { status: 400 }

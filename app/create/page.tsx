@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Settings, Users, Trophy, Shield, Home, Gamepad2, Star, Sparkles, ArrowLeft, ArrowRight, Clock, Edit3, CheckCircle, XCircle, Loader, Info, Link as LinkIcon } from 'lucide-react';
 import { useSnarkelCreation } from '@/hooks/useSnarkelCreation';
+import { useQuizContract } from '@/hooks/useViemContract';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { RewardConfigurationSection } from '@/components/RewardConfigurationSection';
 import AIGenerateSnarkelModal from '@/components/AIGenerateSnarkelModal';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import MiniAppHeader from '@/components/MiniAppHeader';
 import MiniAppContextDisplay from '@/components/MiniAppContextDisplay';
 import SocialShareButton from '@/components/SocialShareButton';
@@ -259,6 +261,10 @@ interface SnarkelData {
     type: 'LINEAR' | 'QUADRATIC';
     tokenAddress: string;
     chainId: number;
+    tokenSymbol?: string;
+    tokenName?: string;
+    tokenDecimals?: number;
+    network?: string;
     totalWinners?: number;
     rewardAmounts?: number[];
     totalRewardPool?: string;
@@ -296,6 +302,7 @@ export default function SnarkelCreationPage() {
   // Use the custom hook for snarkel creation
   const { isSubmitting, error, validationErrors, setValidationErrors, createSnarkel, clearErrors } = useSnarkelCreation();
   const { address, isConnected } = useAccount();
+  
   const [snarkel, setSnarkel] = useState<SnarkelData>({
     title: '',
     description: '',
@@ -317,15 +324,29 @@ export default function SnarkelCreationPage() {
       type: 'QUADRATIC',
       tokenAddress: '',
       chainId: 8453, // Base Mainnet (default)
+      tokenSymbol: 'USDC',
+      tokenName: 'USD Coin',
+      tokenDecimals: 6,
+      network: 'Base',
       totalWinners: 5,
       rewardAmounts: [35, 25, 20, 15, 5],
-      totalRewardPool: '1000',
+      totalRewardPool: '10', // Default to 10 tokens instead of 1000
       minParticipants: 3,
       pointsWeight: 0.7,
       rewardAllParticipants: false
     },
     questions: []
   });
+
+  // Get contract functions for blockchain operations - only when rewards are enabled
+  const { 
+    createSnarkelSession, 
+    approveToken, 
+    transferToken, 
+    getTokenBalance, 
+    getTokenAllowance,
+    contractState 
+  } = useQuizContract(snarkel.rewards.enabled ? snarkel.rewards.chainId : undefined);
 
   const [newAllowlistAddress, setNewAllowlistAddress] = useState('');
 
@@ -615,6 +636,24 @@ export default function SnarkelCreationPage() {
     }));
   }, []);
 
+  // Check token balance for debugging
+  const checkTokenBalance = useCallback(async (tokenAddress: string, chainId: number) => {
+    try {
+      console.log('=== CHECKING TOKEN BALANCE ===');
+      console.log('Token address:', tokenAddress);
+      console.log('Chain ID:', chainId);
+      
+      // Use the contract reader to check balance
+      const { readTokenBalance } = await import('@/utils/contract-reader');
+      const balance = await readTokenBalance(tokenAddress as `0x${string}`, address!, chainId);
+      console.log('Token balance:', balance);
+      return balance;
+    } catch (error) {
+      console.error('Error checking token balance:', error);
+      return '0';
+    }
+  }, [address]);
+
   const handleSubmit = useCallback(async () => {
     // Check if wallet is connected first
     if (!isConnected || !address) {
@@ -632,6 +671,21 @@ export default function SnarkelCreationPage() {
         delete newErrors.wallet;
         return newErrors;
       });
+    }
+
+    // Add wallet debugging
+    console.log('=== WALLET DEBUG ===');
+    console.log('Wallet connected:', isConnected);
+    console.log('Wallet address:', address);
+    console.log('Current chain ID:', snarkel.rewards.chainId);
+    console.log('Rewards enabled:', snarkel.rewards.enabled);
+    if (snarkel.rewards.enabled) {
+      console.log('Token address:', snarkel.rewards.tokenAddress);
+      console.log('Reward type:', snarkel.rewards.type);
+      console.log('Reward configuration:', snarkel.rewards);
+      
+      // Check token balance for debugging
+      await checkTokenBalance(snarkel.rewards.tokenAddress, snarkel.rewards.chainId);
     }
 
     // Validate all tabs before proceeding
@@ -706,8 +760,38 @@ export default function SnarkelCreationPage() {
 
       // Step 2: Create quiz (database + blockchain if rewards enabled)
       updateProgressStep(1, 'loading');
+      console.log('=== CREATE PAGE DEBUG ===');
+      console.log('Snarkel data being sent:', JSON.stringify(snarkelData, null, 2));
+      console.log('Rewards configuration:', snarkelData.rewards);
+      console.log('Chain ID:', snarkelData.rewards.chainId);
+      console.log('Token address:', snarkelData.rewards.tokenAddress);
+      console.log('Token symbol:', snarkelData.rewards.tokenSymbol);
+      console.log('Token name:', snarkelData.rewards.tokenName);
+      console.log('Token decimals:', snarkelData.rewards.tokenDecimals);
+      console.log('Network:', snarkelData.rewards.network);
+      console.log('Total reward pool (raw):', snarkelData.rewards.totalRewardPool);
+      console.log('Total reward pool type:', typeof snarkelData.rewards.totalRewardPool);
+      console.log('Total reward pool (parsed):', parseFloat(snarkelData.rewards.totalRewardPool || '0'));
+      console.log('Current snarkel state rewards:', snarkel.rewards);
+      console.log('Contract functions available:', {
+        createSnarkelSession: !!createSnarkelSession,
+        approveToken: !!approveToken,
+        transferToken: !!transferToken,
+        getTokenBalance: !!getTokenBalance,
+        getTokenAllowance: !!getTokenAllowance
+      });
       console.log('Starting createSnarkel...');
-      const result = await createSnarkel(snarkelData);
+      // Only pass contract functions if rewards are enabled
+      const contractFunctions = snarkelData.rewards.enabled ? {
+        createSnarkelSession,
+        approveToken,
+        transferToken,
+        getTokenBalance,
+        getTokenAllowance,
+        contractState
+      } : null;
+      
+      const result = await createSnarkel(snarkelData, contractFunctions);
       console.log('createSnarkel result:', result);
       
       if (result.success && result.snarkelCode) {
@@ -732,8 +816,8 @@ export default function SnarkelCreationPage() {
           console.log('Featured quiz setup completed');
         }
         
-        // If rewards are enabled, create session and handle blockchain operations
-        if (snarkelData.rewards.enabled) {
+        // If rewards are enabled and blockchain operations succeeded, create session
+        if (snarkelData.rewards.enabled && !result.error) {
           const sessionStepIndex = snarkelData.isFeatured ? 3 : 2;
           const blockchainStepIndex = snarkelData.isFeatured ? 4 : 3;
           const tokenStepIndex = snarkelData.isFeatured ? 5 : 4;
@@ -778,6 +862,31 @@ export default function SnarkelCreationPage() {
           updateProgressStep(tokenStepIndex, 'loading');
           console.log('Token operations step completed');
           updateProgressStep(tokenStepIndex, 'completed');
+        } else if (snarkelData.rewards.enabled && result.error) {
+          // Rewards were enabled but blockchain operations failed
+          const sessionStepIndex = snarkelData.isFeatured ? 3 : 2;
+          const blockchainStepIndex = snarkelData.isFeatured ? 4 : 3;
+          const tokenStepIndex = snarkelData.isFeatured ? 5 : 4;
+          
+          // Extract specific error message for better user experience
+          let blockchainError = 'Blockchain operations failed';
+          if (result.error.includes('RPC rate limit exceeded')) {
+            blockchainError = 'Network congestion - please try again later';
+          } else if (result.error.includes('Insufficient token balance')) {
+            blockchainError = 'Insufficient token balance - check your rewards configuration';
+          } else if (result.error.includes('Token approval failed')) {
+            blockchainError = 'Token approval failed - please try again';
+          } else if (result.error.includes('Token transfer failed')) {
+            blockchainError = 'Token transfer failed - please try again';
+          } else if (result.error.includes('Failed to create session')) {
+            blockchainError = 'Smart contract session creation failed';
+          }
+          
+          // Mark blockchain step as failed with specific error
+          updateProgressStep(blockchainStepIndex, 'error', blockchainError);
+          updateProgressStep(tokenStepIndex, 'error', 'Token operations skipped due to blockchain failure');
+          
+          console.log('Quiz created but blockchain operations failed:', result.error);
         } else {
           // Skip blockchain and token steps if no rewards
           const blockchainStepIndex = snarkelData.isFeatured ? 3 : 2;
@@ -877,7 +986,8 @@ export default function SnarkelCreationPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#FCF6F1' }}>
+    <ErrorBoundary>
+      <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#FCF6F1' }}>
       {/* Enhanced notebook background */}
       <div className="fixed inset-0 opacity-40 pointer-events-none">
         <div 
@@ -1800,6 +1910,42 @@ export default function SnarkelCreationPage() {
                  <p className="font-handwriting text-gray-700 mb-4 leading-relaxed">
                    {error}
                  </p>
+                 
+                 {/* Enhanced error details for blockchain operations */}
+                 {error.includes('Insufficient token balance') && (
+                   <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                     <div className="flex items-start gap-2">
+                       <span className="text-yellow-600 text-sm">⚠️</span>
+                       <div className="text-sm text-yellow-800">
+                         <p className="font-medium mb-1">Token Balance Issue:</p>
+                         <ul className="text-xs space-y-1">
+                           <li>• Check your token balance on the correct network</li>
+                           <li>• Ensure you have enough tokens for the reward pool</li>
+                           <li>• Verify the token amount in the rewards configuration</li>
+                           <li>• Make sure you're on the right network (Base: 8453)</li>
+                         </ul>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+                 
+                 {error.includes('RPC rate limit exceeded') && (
+                   <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                     <div className="flex items-start gap-2">
+                       <span className="text-blue-600 text-sm">🔄</span>
+                       <div className="text-sm text-blue-800">
+                         <p className="font-medium mb-1">Network Congestion:</p>
+                         <ul className="text-xs space-y-1">
+                           <li>• The Base network is experiencing high traffic</li>
+                           <li>• Please wait a few minutes and try again</li>
+                           <li>• Your quiz was created successfully</li>
+                           <li>• You can set up rewards later when traffic is lower</li>
+                         </ul>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+                 
                  <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
                    <p className="font-handwriting">💡 Tips:</p>
                    <ul className="mt-1 space-y-1">
@@ -1864,8 +2010,9 @@ export default function SnarkelCreationPage() {
        .animate-bounce-slow {
          animation: bounce-slow 3s ease-in-out infinite;
        }
-     `}</style>
+     `}     </style>
    </div>
+     </ErrorBoundary>
  );
 }
 

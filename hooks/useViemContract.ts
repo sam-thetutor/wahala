@@ -23,8 +23,17 @@ import { ERC20_ABI } from '../contracts/erc20-abi';
 import { readContract } from 'viem/actions';
 import { readTokenBalance, readTokenAllowance } from '../utils/contract-reader';
 
-// Contract addresses
-const QUIZ_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS as Address || '0x...';
+// Contract addresses for different networks
+const getContractAddress = (chainId?: number): Address => {
+  if (chainId === 8453) { // Base Mainnet
+    return (process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40') as Address;
+  } else if (chainId === 42220) { // Celo Mainnet
+    return (process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO || '0x8b8fb708758dc8185ef31e685305c1aa0827ea65') as Address;
+  } else {
+    // Default to Base if no chainId specified
+    return (process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40') as Address;
+  }
+};
 
 interface ContractState {
   isLoading: boolean;
@@ -250,7 +259,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const hash = await writeContractAsync({
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'createSnarkelSession',
         args: [
@@ -288,7 +297,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, error: errorMessage });
       return { success: false, error: errorMessage };
     }
-  }, [updateState, resetState, isConnected, userAddress, writeContractAsync, ensureCorrectChain]);
+  }, [updateState, resetState, isConnected, userAddress, writeContractAsync, ensureCorrectChain, chainId, fallbackChainId]);
 
   // Add reward to session
   const addReward = useCallback(async (params: {
@@ -310,7 +319,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       console.log('Adding reward to session:', params);
 
       const hash = await writeContractAsync({
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'addReward',
         args: [
@@ -343,7 +352,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, error: errorMessage });
       return { success: false, error: errorMessage };
     }
-  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync, chainId, fallbackChainId]);
 
   // Finalize session rewards (set per-user claimables)
   const finalizeSessionRewards = useCallback(async (params: {
@@ -367,7 +376,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       }
 
       const hash = await writeContractAsync({
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'finalizeSessionRewards',
         args: [BigInt(params.sessionId), params.winners, params.amounts.map(a => BigInt(a))],
@@ -387,7 +396,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, error: error.message || 'Failed to finalize rewards' });
       return { success: false, error: error.message || 'Failed to finalize rewards' };
     }
-  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync, chainId, fallbackChainId]);
 
   // Claim user's reward for a session
   const claimUserReward = useCallback(async (params: { sessionId: number; tokenAddress: Address }): Promise<{ success: boolean; transactionHash?: string; error?: string }> => {
@@ -403,7 +412,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const hash = await writeContractAsync({
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'claimUserReward',
         args: [BigInt(params.sessionId), params.tokenAddress],
@@ -423,7 +432,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, error: error.message || 'Failed to claim reward' });
       return { success: false, error: error.message || 'Failed to claim reward' };
     }
-  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync, chainId, fallbackChainId]);
 
   // Distribute rewards for a session
   const distributeRewards = useCallback(async (params: {
@@ -444,7 +453,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       console.log('Distributing rewards for session:', params.sessionId);
 
       const hash = await writeContractAsync({
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'distributeRewards',
         args: [
@@ -477,7 +486,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, error: errorMessage });
       return { success: false, error: errorMessage };
     }
-  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync, chainId, fallbackChainId]);
 
   // Admin distribute remaining reward
   const adminDistributeReward = useCallback(async (params: {
@@ -499,7 +508,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       console.log('Admin distributing remaining reward for session:', params.sessionId);
 
       const hash = await writeContractAsync({
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'adminDistributeReward',
         args: [
@@ -524,7 +533,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, error: error.message || 'Failed to distribute remaining reward' });
       return { success: false, error: error.message || 'Failed to distribute remaining reward' };
     }
-  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync, chainId, fallbackChainId]);
 
   // Add participant (admin function)
   const addParticipant = useCallback(async (params: {
@@ -543,7 +552,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const hash = await writeContractAsync({
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'addParticipant',
         args: [BigInt(params.sessionId), params.participant],
@@ -563,7 +572,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, error: error.message || 'Failed to add participant' });
       return { success: false, error: error.message || 'Failed to add participant' };
     }
-  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync, chainId, fallbackChainId]);
 
   // Batch add participants (admin function)
   const batchAddParticipants = useCallback(async (params: {
@@ -582,7 +591,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const hash = await writeContractAsync({
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'batchAddParticipants',
         args: [BigInt(params.sessionId), params.participants],
@@ -602,7 +611,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, error: error.message || 'Failed to add participants' });
       return { success: false, error: error.message || 'Failed to add participants' };
     }
-  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync, chainId, fallbackChainId]);
 
   // Remove participant (admin function)
   const removeParticipant = useCallback(async (params: {
@@ -621,7 +630,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const hash = await writeContractAsync({
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'removeParticipant',
         args: [BigInt(params.sessionId), params.participant],
@@ -641,7 +650,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, error: error.message || 'Failed to remove participant' });
       return { success: false, error: error.message || 'Failed to remove participant' };
     }
-  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync, chainId, fallbackChainId]);
 
   // Token operations (keeping existing implementations)
   const approveToken = useCallback(async (params: {
@@ -691,7 +700,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, error: errorMessage });
       return { success: false, error: errorMessage };
     }
-  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync, chainId, fallbackChainId]);
 
   const transferToken = useCallback(async (params: {
     tokenAddress: Address;
@@ -740,7 +749,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, error: errorMessage });
       return { success: false, error: errorMessage };
     }
-  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync]);
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync, chainId, fallbackChainId]);
 
   // Read functions using createPublicClient
   const getTokenBalance = useCallback(async (tokenAddress: Address, userAddress: Address, tokenChainId?: number): Promise<string> => {
@@ -787,7 +796,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       });
 
       const result = await readContract(client, {
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'areRewardsDistributed',
         args: [snarkelCode]
@@ -798,7 +807,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       console.error('Are rewards distributed error:', error);
       return false;
     }
-  }, []);
+  }, [chainId]);
 
   const getExpectedRewardToken = useCallback(async (sessionId: number): Promise<Address> => {
     try {
@@ -808,7 +817,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       });
 
       const result = await readContract(client, {
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'getRewardTokenAddress',
         args: [BigInt(sessionId)]
@@ -819,7 +828,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       console.error('Get expected reward token error:', error);
       return '0x0000000000000000000000000000000000000000' as Address;
     }
-  }, []);
+  }, [chainId]);
 
   const getExpectedRewardAmount = useCallback(async (sessionId: number): Promise<string> => {
     try {
@@ -829,7 +838,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       });
 
       const result = await readContract(client, {
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'getExpectedRewardAmount',
         args: [BigInt(sessionId)]
@@ -840,7 +849,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       console.error('Get expected reward amount error:', error);
       return '0';
     }
-  }, []);
+  }, [chainId]);
 
   const canStartNewSession = useCallback(async (snarkelCode: string): Promise<{ canStart: boolean; lastSessionId: string; lastIsActive: boolean }> => {
     try {
@@ -850,7 +859,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       });
 
       const result = await readContract(client, {
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'canStartNewSession',
         args: [snarkelCode]
@@ -862,7 +871,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       console.error('canStartNewSession error:', error);
       return { canStart: true, lastSessionId: '0', lastIsActive: false };
     }
-  }, []);
+  }, [chainId]);
 
   const getUserClaimable = useCallback(async (sessionId: number, user: Address): Promise<string> => {
     try {
@@ -872,7 +881,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       });
 
       const result = await readContract(client, {
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'getUserClaimable',
         args: [BigInt(sessionId), user]
@@ -883,7 +892,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       console.error('getUserClaimable error:', error);
       return '0';
     }
-  }, []);
+  }, [chainId]);
 
   const getUserWins = useCallback(async (sessionId: number, user: Address): Promise<string> => {
     try {
@@ -893,7 +902,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       });
 
       const result = await readContract(client, {
-        address: QUIZ_CONTRACT_ADDRESS,
+        address: getContractAddress(chainId),
         abi: SNARKEL_ABI,
         functionName: 'getUserWins',
         args: [BigInt(sessionId), user]
@@ -904,7 +913,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       console.error('getUserWins error:', error);
       return '0';
     }
-  }, []);
+  }, [chainId]);
 
   return {
     contractState,

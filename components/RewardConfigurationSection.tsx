@@ -10,6 +10,10 @@ interface RewardConfig {
   type: 'LINEAR' | 'QUADRATIC';
   tokenAddress: string;
   chainId: number;
+  tokenSymbol?: string;
+  tokenName?: string;
+  tokenDecimals?: number;
+  network?: string;
   totalWinners?: number;
   rewardAmounts?: number[];
   totalRewardPool?: string;
@@ -25,16 +29,41 @@ interface RewardConfigurationSectionProps {
   className?: string;
 }
 
-// Popular token presets
+// Popular token presets with full token information
 const TOKEN_PRESETS = {
   42220: { // Celo Mainnet
-    'USDC': '0x765DE816845861e75A25fCA122bb6898B8B1282a',
-    'cUSD': '0x765DE816845861e75A25fCA122bb6898B8B1282a',
-    'CELO': '0x471EcE3750Da237f93B8E339c536989b8978a438',
+    'USDC': {
+      address: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6
+    },
+    'cUSD': {
+      address: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
+      symbol: 'cUSD',
+      name: 'Celo Dollar',
+      decimals: 6
+    },
+    'CELO': {
+      address: '0x471EcE3750Da237f93B8E339c536989b8978a438',
+      symbol: 'CELO',
+      name: 'Celo Native Token',
+      decimals: 18
+    },
   },
   8453: { // Base
-    'USDC': '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-    'ETH': '0x0000000000000000000000000000000000000000',
+    'USDC': {
+      address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6
+    },
+    'ETH': {
+      address: '0x0000000000000000000000000000000000000000',
+      symbol: 'ETH',
+      name: 'Ethereum',
+      decimals: 18
+    },
   }
 };
 
@@ -67,7 +96,7 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
         enabled,
         type: 'QUADRATIC',
         totalWinners: 5,
-        totalRewardPool: '1000',
+        totalRewardPool: rewardConfig.totalRewardPool || '10', // Use existing value or default to 10
         minParticipants: 3,
         pointsWeight: 0.7,
         rewardAllParticipants: false
@@ -78,11 +107,29 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
   };
 
   const handleChainChange = (chainId: number) => {
-    updateRewardConfig({ chainId });
+    const networkNames = {
+      42220: 'Celo',
+      8453: 'Base',
+      1: 'Ethereum',
+      137: 'Polygon'
+    };
+    updateRewardConfig({ 
+      chainId,
+      network: networkNames[chainId as keyof typeof networkNames] || `Chain ${chainId}`
+    });
   };
 
-  const handleTokenAddressChange = (tokenAddress: string) => {
-    updateRewardConfig({ tokenAddress });
+  const handleTokenAddressChange = (tokenAddress: string, tokenInfo?: { symbol: string; name: string; decimals: number }) => {
+    if (tokenInfo) {
+      updateRewardConfig({ 
+        tokenAddress,
+        tokenSymbol: tokenInfo.symbol,
+        tokenName: tokenInfo.name,
+        tokenDecimals: tokenInfo.decimals
+      });
+    } else {
+      updateRewardConfig({ tokenAddress });
+    }
   };
 
   const handleRewardTypeChange = (type: 'LINEAR' | 'QUADRATIC') => {
@@ -92,7 +139,14 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
   const handlePresetToken = (tokenName: string) => {
     const presets = TOKEN_PRESETS[rewardConfig.chainId as keyof typeof TOKEN_PRESETS];
     if (presets && presets[tokenName as keyof typeof presets]) {
-      updateRewardConfig({ tokenAddress: presets[tokenName as keyof typeof presets] });
+      const tokenInfo = presets[tokenName as keyof typeof presets];
+      updateRewardConfig({ 
+        tokenAddress: tokenInfo.address,
+        tokenSymbol: tokenInfo.symbol,
+        tokenName: tokenInfo.name,
+        tokenDecimals: tokenInfo.decimals,
+        network: `Chain ${rewardConfig.chainId}`
+      });
     }
   };
 
@@ -361,9 +415,14 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
                   💰 Total Reward Pool
                 </label>
                 <input
-                  type="text"
+                  type="number"
+                  step="0.01"
+                  min="0"
                   value={rewardConfig.totalRewardPool || ''}
-                  onChange={(e) => updateRewardConfig({ totalRewardPool: e.target.value })}
+                  onChange={(e) => {
+                    console.log('Total reward pool changed to:', e.target.value);
+                    updateRewardConfig({ totalRewardPool: e.target.value });
+                  }}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting ${
                     validationErrors.rewardsPool ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}

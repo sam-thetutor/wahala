@@ -16,6 +16,10 @@ interface RewardConfig {
   type: 'LINEAR' | 'QUADRATIC' | 'CUSTOM';
   tokenAddress: string;
   chainId: number;
+  tokenSymbol?: string;
+  tokenName?: string;
+  tokenDecimals?: number;
+  network?: string;
   totalWinners?: number;
   rewardAmounts?: number[];
   totalRewardPool?: string;
@@ -44,6 +48,10 @@ export const QuizRewardsModal: React.FC<QuizRewardsModalProps> = ({
     type: 'QUADRATIC',
     tokenAddress: '',
     chainId: 8453, // Default to Base
+    tokenSymbol: 'USDC',
+    tokenName: 'USD Coin',
+    tokenDecimals: 6,
+    network: 'Base',
     totalWinners: 5,
     rewardAmounts: [35, 25, 20, 15, 5],
     totalRewardPool: '1000',
@@ -363,7 +371,18 @@ export const QuizRewardsModal: React.FC<QuizRewardsModalProps> = ({
                     
                     <TokenSelector
                       value={rewardConfig.tokenAddress}
-                      onChange={(address) => updateRewardConfig({ tokenAddress: address })}
+                      onChange={(address, tokenInfo) => {
+                        if (tokenInfo) {
+                          updateRewardConfig({ 
+                            tokenAddress: address,
+                            tokenSymbol: tokenInfo.symbol,
+                            tokenName: tokenInfo.name,
+                            tokenDecimals: tokenInfo.decimals
+                          });
+                        } else {
+                          updateRewardConfig({ tokenAddress: address });
+                        }
+                      }}
                       chainId={rewardConfig.chainId}
                       disabled={isSubmitting}
                     />

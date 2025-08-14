@@ -5,7 +5,7 @@ import { REWARD_TOKENS } from '@/lib/tokens-config';
 
 interface TokenSelectorProps {
   value: string;
-  onChange: (address: string) => void;
+  onChange: (address: string, tokenInfo?: { symbol: string; name: string; decimals: number }) => void;
   chainId?: number;
   placeholder?: string;
   className?: string;
@@ -131,7 +131,11 @@ export const TokenSelector: React.FC<TokenSelectorProps> = ({
   }, []);
 
   const handleTokenSelect = (token: TokenOption) => {
-    onChange(token.address);
+    onChange(token.address, {
+      symbol: token.symbol,
+      name: token.name,
+      decimals: token.decimals
+    });
     setSelectedToken(token);
     setIsOpen(false);
     setSearchTerm('');

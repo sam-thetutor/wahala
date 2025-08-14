@@ -2,8 +2,17 @@ import { useState } from 'react';
 import { useQuizContract } from './useViemContract';
 import { parseEther, formatEther, type Address } from 'viem';
 
-// Contract address
-const SNARKEL_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS || '0x...';
+// Contract addresses for different networks
+const getContractAddress = (chainId?: number): string => {
+  if (chainId === 8453) { // Base Mainnet
+    return process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40';
+  } else if (chainId === 42220) { // Celo Mainnet
+    return process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO || '0x8b8fb708758dc8185ef31e685305c1aa0827ea65';
+  } else {
+    // Default to Base if no chainId specified
+    return process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40';
+  }
+};
 
 interface SnarkelData {
   title: string;
@@ -27,11 +36,16 @@ interface SnarkelData {
     type: 'LINEAR' | 'QUADRATIC';
     tokenAddress: string;
     chainId: number;
+    tokenSymbol?: string;
+    tokenName?: string;
+    tokenDecimals?: number;
+    network?: string;
     totalWinners?: number;
     rewardAmounts?: number[];
     totalRewardPool?: string;
     minParticipants?: number;
     pointsWeight?: number;
+    rewardAllParticipants?: boolean;
   };
   questions: Array<{
     id: string;
@@ -54,7 +68,7 @@ interface UseSnarkelCreationReturn {
   error: string | null;
   validationErrors: ValidationErrors;
   setValidationErrors: (errors: ValidationErrors | ((prev: ValidationErrors) => ValidationErrors)) => void;
-  createSnarkel: (data: SnarkelData) => Promise<{ success: boolean; snarkelCode?: string; snarkelId?: string; error?: string }>;
+  createSnarkel: (data: SnarkelData, contractFunctions?: any) => Promise<{ success: boolean; snarkelCode?: string; snarkelId?: string; error?: string }>;
   clearErrors: () => void;
 }
 
@@ -62,6 +76,8 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+
+  // Contract functions will be passed as parameters to createSnarkel
 
   const validateForm = (data: SnarkelData): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -144,14 +160,24 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
     return errors;
   };
 
-  const createSnarkel = async (data: SnarkelData): Promise<{ success: boolean; snarkelCode?: string; snarkelId?: string; error?: string }> => {
+  const createSnarkel = async (data: SnarkelData, contractFunctions?: any): Promise<{ success: boolean; snarkelCode?: string; snarkelId?: string; error?: string }> => {
     // Clear previous errors
     setError(null);
     setValidationErrors({});
     
+    // Add comprehensive debugging
+    console.log('=== CREATE SNARKEL DEBUG START ===');
+    console.log('Input data:', JSON.stringify(data, null, 2));
+    console.log('Rewards enabled:', data.rewards.enabled);
+    console.log('Chain ID:', data.rewards.chainId);
+    console.log('Token address:', data.rewards.tokenAddress);
+    console.log('Reward type:', data.rewards.type);
+    console.log('Creator address:', data.creatorAddress);
+    
     // Validate form first
     const errors = validateForm(data);
     if (Object.keys(errors).length > 0) {
+      console.log('Validation errors:', errors);
       setError('Please fix the validation errors before creating your snarkel.');
       setValidationErrors(errors);
       return { success: false, error: 'Validation failed' };
@@ -170,7 +196,7 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
       let onchainSessionId: string | undefined;
 
       // Step 1: Create quiz in database first to get the quiz code
-      console.log('Creating quiz in database...');
+      console.log('=== STEP 1: Creating quiz in database ===');
       const response = await fetch('/api/snarkel/create', {
         method: 'POST',
         headers: {
@@ -186,10 +212,12 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
       });
 
       const responseData = await response.json();
-      console.log('Database response:', responseData);
+      console.log('Database response status:', response.status);
+      console.log('Database response data:', responseData);
 
       if (!response.ok) {
         const errorMessage = responseData.error || 'Failed to create snarkel';
+        console.error('Database creation failed:', errorMessage);
         setError(errorMessage);
         return { success: false, error: errorMessage };
       }
@@ -199,10 +227,12 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
 
       // Step 2: If rewards are enabled, create smart contract session with the actual quiz code
       if (data.rewards.enabled && snarkelCode) {
-        console.log('Rewards enabled, starting blockchain operations...');
+        console.log('=== STEP 2: Rewards enabled, starting blockchain operations ===');
+        console.log('Network: Base (Chain ID:', data.rewards.chainId, ')');
+        
         try {
           // Validate token first
-          console.log('Validating token...');
+          console.log('=== Token validation ===');
           const tokenResponse = await fetch('/api/token/validate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -212,8 +242,11 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
             }),
           });
 
+          console.log('Token validation response status:', tokenResponse.status);
           if (!tokenResponse.ok) {
-            throw new Error('Token validation failed');
+            const tokenError = await tokenResponse.json();
+            console.error('Token validation failed:', tokenError);
+            throw new Error(`Token validation failed: ${tokenError.error || 'Unknown error'}`);
           }
 
           const tokenData = await tokenResponse.json();
@@ -230,37 +263,53 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
             entryFeeWei = (data.entryFee * 1e18).toString();
           }
 
-          console.log('Creating session with params:', {
-            snarkelCode,
-            entryFeeWei,
-            platformFeePercentage: 5,
-            maxParticipants: 100
-          });
+          console.log('=== Session creation parameters ===');
+          console.log('Entry fee wei:', entryFeeWei);
+          console.log('Platform fee percentage: 5%');
+          console.log('Max participants: 100');
 
           // Calculate required amount for rewards if enabled
           let requiredAmount = '0';
           if (data.rewards.enabled) {
+            console.log('=== REWARD CALCULATION DEBUG ===');
+            console.log('Reward type:', data.rewards.type);
+            console.log('Total reward pool (raw):', data.rewards.totalRewardPool);
+            console.log('Total reward pool type:', typeof data.rewards.totalRewardPool);
+            
             if (data.rewards.type === 'LINEAR') {
               const totalReward = data.rewards.rewardAmounts?.reduce((sum, amount) => sum + amount, 0) || 0;
               requiredAmount = parseEther(totalReward.toString()).toString();
+              console.log('LINEAR rewards - Total reward:', totalReward, 'Required amount (wei):', requiredAmount);
             } else if (data.rewards.type === 'QUADRATIC') {
               requiredAmount = data.rewards.totalRewardPool 
                 ? parseEther(data.rewards.totalRewardPool).toString()
                 : '0';
+              console.log('QUADRATIC rewards - Total reward pool:', data.rewards.totalRewardPool, 'Required amount (wei):', requiredAmount);
             }
+            
+            console.log('Final required amount (wei):', requiredAmount);
+            console.log('Final required amount (tokens):', formatEther(BigInt(requiredAmount)));
           }
 
-          // Get smart contract functions - Updated to use Wagmi
-          const { 
-            createSnarkelSession, 
-            approveToken, 
-            transferToken, 
-            getTokenBalance, 
-            getTokenAllowance,
-            contractState 
-          } = useQuizContract(data.rewards?.enabled ? data.rewards.chainId : undefined);
+          console.log('=== Contract interaction setup ===');
+          // Contract functions should be passed as parameters to this function
+          if (!contractFunctions) {
+            throw new Error('Contract functions are required for blockchain operations');
+          }
+          
+          const { createSnarkelSession, approveToken, transferToken, getTokenBalance, getTokenAllowance, contractState } = contractFunctions;
+          
+          console.log('Contract state:', contractState);
+          console.log('Contract functions available:', {
+            createSnarkelSession: !!createSnarkelSession,
+            approveToken: !!approveToken,
+            transferToken: !!transferToken,
+            getTokenBalance: !!getTokenBalance,
+            getTokenAllowance: !!getTokenAllowance
+          });
 
           // Create smart contract session with the actual quiz code - Using Wagmi
+          console.log('=== Creating smart contract session ===');
           const sessionResult = await createSnarkelSession({
             snarkelCode, // Use the actual quiz code from database
             entryFeeWei, // entryFee in wei
@@ -270,72 +319,54 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
             expectedRewardAmount: requiredAmount // NEW: Required reward amount
           });
 
+          console.log('Session creation result:', sessionResult);
           if (!sessionResult.success) {
             throw new Error(sessionResult.error || 'Failed to create session');
           }
 
-          console.log('Session created successfully:', sessionResult.transactionHash);
+          console.log('Session created successfully, transaction hash:', sessionResult.transactionHash);
 
           // Step 3: Handle ERC20 token operations if rewards are enabled
           if (data.rewards.enabled && sessionResult.transactionHash) {
-            console.log('Handling ERC20 token operations...');
+            console.log('=== STEP 3: Handling ERC20 token operations ===');
             
-            // Check token balance on the correct chain
-            console.log('Checking token balance...');
-            const tokenBalance = await getTokenBalance(
-              data.rewards.tokenAddress as any,
-              data.creatorAddress as any
-            );
-            console.log('Token balance:', tokenBalance);
-
+            // Skip token balance check - let the blockchain handle it
+            console.log('Skipping token balance check - proceeding with approval and transfer');
             console.log('Required amount:', requiredAmount);
 
-            // Verify user has enough tokens
-            if (parseFloat(tokenBalance) < parseFloat(formatEther(BigInt(requiredAmount)))) {
-              throw new Error(`Insufficient token balance. Required: ${formatEther(BigInt(requiredAmount))}, Available: ${tokenBalance}`);
-            }
-
-            // Check current allowance
-            console.log('Checking token allowance...');
-            const currentAllowance = await getTokenAllowance(
-              data.rewards.tokenAddress as any,
-              data.creatorAddress as any,
-              SNARKEL_CONTRACT_ADDRESS as any
-            );
-            console.log('Current allowance:', currentAllowance);
-
-            // Approve tokens if needed - Using Wagmi
-            if (parseFloat(currentAllowance) < parseFloat(formatEther(BigInt(requiredAmount)))) {
-              console.log('Approving tokens...');
-              const approveResult = await approveToken({
-                tokenAddress: data.rewards.tokenAddress as any,
-                spenderAddress: SNARKEL_CONTRACT_ADDRESS as any,
-                amount: requiredAmount
-              });
-
-              if (!approveResult.success) {
-                throw new Error(`Token approval failed: ${approveResult.error}`);
-              }
-
-              console.log('Token approval successful:', approveResult.transactionHash);
-
-              // Wait a bit for the approval to be processed
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-
-            // Transfer tokens to contract - Using Wagmi
-            console.log('Transferring tokens to contract...');
-            const transferResult = await transferToken({
+            // Skip allowance check - just proceed with approval
+            console.log('=== Approving tokens ===');
+            const approveResult = await approveToken({
               tokenAddress: data.rewards.tokenAddress as any,
-              toAddress: SNARKEL_CONTRACT_ADDRESS as any,
+              spenderAddress: getContractAddress(data.rewards.chainId) as any,
               amount: requiredAmount
             });
 
+            console.log('Approve result:', approveResult);
+            if (!approveResult.success) {
+              throw new Error(`Token approval failed: ${approveResult.error}`);
+            }
+
+            console.log('Token approval successful, transaction hash:', approveResult.transactionHash);
+
+            // Wait a bit for the approval to be processed
+            console.log('Waiting for approval to be processed...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Transfer tokens to contract - Using Wagmi
+            console.log('=== Transferring tokens to contract ===');
+            const transferResult = await transferToken({
+              tokenAddress: data.rewards.tokenAddress as any,
+              toAddress: getContractAddress(data.rewards.chainId) as any,
+              amount: requiredAmount
+            });
+
+            console.log('Transfer result:', transferResult);
             if (!transferResult.success) {
               throw new Error(`Token transfer failed: ${transferResult.error}`);
             }
 
-            console.log('Token transfer successful:', transferResult.transactionHash);
+            console.log('Token transfer successful, transaction hash:', transferResult.transactionHash);
           }
 
           // Get the actual session ID from the contract response
@@ -343,7 +374,7 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
           onchainSessionId = sessionResult.transactionHash; // Using transaction hash as session ID for now
 
           // Step 4: Update database with reward configuration and onchain session ID
-          console.log('Updating database with reward config...');
+          console.log('=== STEP 4: Updating database with reward config ===');
           const updateResponse = await fetch('/api/snarkel/update-rewards', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -355,26 +386,45 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
             }),
           });
 
+          console.log('Update rewards response status:', updateResponse.status);
           if (!updateResponse.ok) {
             const updateError = await updateResponse.json();
+            console.error('Failed to update reward configuration:', updateError);
             throw new Error(`Failed to update reward configuration: ${updateError.error || 'Unknown error'}`);
           }
 
           console.log('Database updated with reward configuration successfully');
 
         } catch (blockchainError: any) {
-          console.error('Blockchain operation failed:', blockchainError);
+          console.error('=== BLOCKCHAIN OPERATION FAILED ===');
+          console.error('Error details:', blockchainError);
+          console.error('Error message:', blockchainError.message);
+          console.error('Error stack:', blockchainError.stack);
+          
+          // Check if it's a rate limiting error
+          let userFriendlyError = blockchainError.message;
+          if (blockchainError.message?.includes('over rate limit') || blockchainError.message?.includes('429')) {
+            userFriendlyError = 'RPC rate limit exceeded - please try again in a few minutes';
+          } else if (blockchainError.message?.includes('Insufficient token balance')) {
+            userFriendlyError = 'Insufficient token balance - please check your wallet';
+          } else if (blockchainError.message?.includes('Token approval failed')) {
+            userFriendlyError = 'Token approval failed - please try again';
+          } else if (blockchainError.message?.includes('Token transfer failed')) {
+            userFriendlyError = 'Token transfer failed - please try again';
+          }
           
           // Try to update the database to mark the snarkel as having failed blockchain setup
           try {
+            console.log('Attempting to mark blockchain setup as failed in database...');
             await fetch('/api/snarkel/mark-blockchain-failed', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 snarkelId: responseData.snarkel.id,
-                error: blockchainError.message
+                error: userFriendlyError
               }),
             });
+            console.log('Database updated with blockchain failure status');
           } catch (updateError) {
             console.error('Failed to update database with blockchain error:', updateError);
           }
@@ -384,13 +434,13 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
             success: true, 
             snarkelCode,
             snarkelId: responseData.snarkel.id,
-            error: `Quiz created successfully, but reward setup failed: ${blockchainError.message}. You can try setting up rewards later.`
+            error: `Quiz created successfully, but reward setup failed: ${userFriendlyError}. You can try setting up rewards later.`
           };
         }
       }
 
       setError(null);
-      console.log('Snarkel creation completed successfully');
+      console.log('=== CREATE SNARKEL DEBUG END: SUCCESS ===');
       return { 
         success: true, 
         snarkelCode,
@@ -398,7 +448,10 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
       };
 
     } catch (error: any) {
+      console.error('=== CREATE SNARKEL DEBUG END: ERROR ===');
       console.error('Error creating snarkel:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       const errorMessage = error.message || 'Network error: Failed to create snarkel. Please check your connection and try again.';
       setError(errorMessage);
       return { success: false, error: errorMessage };

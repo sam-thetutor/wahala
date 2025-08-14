@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, type Address } from 'viem';
 import { base, celo } from 'viem/chains';
 
-// Supported chains mapping
+// Supported chains mapping with fallback RPC endpoints
 const SUPPORTED_CHAINS = {
-  8453: base, // Base mainnet
-  420: celo, // Celo mainnet
+  8453: { ...base, rpcUrls: { ...base.rpcUrls, default: { http: ['https://base.drpc.org'] } } }, // Base mainnet with fallback RPC
+  42220: celo, // Celo mainnet
 };
 
 // Common ERC20 ABI for token operations
@@ -87,15 +87,36 @@ export async function POST(request: NextRequest) {
       args: args || []
     });
 
-    // Read contract data
-    const result = await publicClient.readContract({
-      address: address as Address,
-      abi: contractABI,
-      functionName,
-      args: args || []
-    });
-
-    console.log(`Contract read successful on chain ${chainId}:`, result);
+    // Read contract data with retry mechanism for rate limiting
+    let result;
+    let lastError;
+    
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        result = await publicClient.readContract({
+          address: address as Address,
+          abi: contractABI,
+          functionName,
+          args: args || []
+        });
+        
+        console.log(`Contract read successful on chain ${chainId} (attempt ${attempt}):`, result);
+        break;
+      } catch (error: any) {
+        lastError = error;
+        console.log(`Contract read attempt ${attempt} failed:`, error.message);
+        
+        // If it's a rate limit error and we have more attempts, wait and retry
+        if ((error.message?.includes('over rate limit') || error.message?.includes('429')) && attempt < 3) {
+          console.log(`Rate limited, waiting ${attempt * 2} seconds before retry...`);
+          await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+          continue;
+        }
+        
+        // For other errors or final attempt, throw the error
+        throw error;
+      }
+    }
 
     return NextResponse.json({
       success: true,
