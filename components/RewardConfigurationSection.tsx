@@ -102,7 +102,7 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
         type: 'QUADRATIC',
         totalWinners: 5,
         totalRewardPool: rewardConfig.totalRewardPool || '10', // Use existing value or default to 10
-        minParticipants: 3,
+        minParticipants: 1, // Changed from 3 to 1 as requested
         pointsWeight: 0.7,
         rewardAllParticipants: false
       });
@@ -273,165 +273,45 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
             </div>
           </div>
 
-          {/* Reward All Participants Option */}
-          <div className="space-y-3">
-            <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
-              🎁 Reward Distribution Strategy
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <button
-                onClick={() => handleRewardAllParticipants(false)}
-                className={`p-4 rounded-lg border-2 transition-all duration-200 font-handwriting ${
-                  !rewardConfig.rewardAllParticipants
-                    ? 'border-purple-500 bg-purple-50 shadow-md scale-105'
-                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white">
-                    <Award className="w-5 h-5" />
+          {/* Reward Type Selection - Simplified to only Quadratic */}
+            <div className="space-y-4 p-4 bg-white rounded-lg border border-gray-200">
+              <h4 className="font-handwriting font-bold text-gray-900 flex items-center gap-2">
+              <Target className="w-4 h-4" />
+              Reward Distribution Type
+              </h4>
+              
+            <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                          <input
+                type="radio"
+                id="quadratic"
+                name="rewardType"
+                checked={rewardConfig.type === 'QUADRATIC'}
+                onChange={() => updateRewardConfig({ type: 'QUADRATIC' })}
+                className="w-4 h-4 text-purple-600 border-gray-300 focus:ring-purple-500"
+              />
+              <label htmlFor="quadratic" className="font-handwriting text-sm font-medium text-gray-700">
+                🎯 Quadratic Distribution (Recommended)
+              </label>
                   </div>
-                  <div className="text-left">
-                    <h4 className="font-handwriting font-bold text-gray-900">Top Winners</h4>
-                    <p className="font-handwriting text-xs text-gray-500">Reward top performers only</p>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleRewardAllParticipants(true)}
-                className={`p-4 rounded-lg border-2 transition-all duration-200 font-handwriting ${
-                  rewardConfig.rewardAllParticipants
-                    ? 'border-purple-500 bg-purple-50 shadow-md scale-105'
-                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white">
-                    <Users className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <h4 className="font-handwriting font-bold text-gray-900">All Participants</h4>
-                    <p className="font-handwriting text-xs text-gray-500">Everyone gets rewarded</p>
-                  </div>
-                </div>
-              </button>
+                  
+            <div className="text-xs text-gray-600 p-3 bg-gray-50 rounded-lg">
+              <p>• Rewards are distributed proportionally based on performance</p>
+              <p>• Higher scores and faster answers get more rewards</p>
+              <p>• Fair and dynamic distribution system</p>
             </div>
           </div>
 
-          {/* Top Winners Configuration */}
-          {!rewardConfig.rewardAllParticipants && (
-            <div className="space-y-4 p-4 bg-white rounded-lg border border-gray-200">
-              <h4 className="font-handwriting font-bold text-gray-900 flex items-center gap-2">
-                <Award className="w-4 h-4" />
-                Top Winners Configuration
-              </h4>
-              
-              <div className="space-y-4">
-                {/* Winner Count Selection */}
-                <div>
-                  <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
-                    🥇 Number of Winners (Top 5)
-                  </label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {[1, 2, 3, 4, 5].map((count) => (
-                      <button
-                        key={count}
-                        onClick={() => handleWinnersChange(count)}
-                        className={`p-3 rounded-lg border-2 transition-all duration-200 font-handwriting ${
-                          rewardConfig.totalWinners === count
-                            ? 'border-purple-500 bg-purple-500 text-white shadow-md'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className="text-lg font-bold">{count}</div>
-                          <div className="text-xs opacity-80">Winner{count > 1 ? 's' : ''}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Custom Reward Amounts */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="block font-handwriting text-sm font-medium text-gray-700">
-                      💎 Reward Amounts (in tokens)
-                    </label>
-                    <button
-                      onClick={addRewardAmount}
-                      className="text-sm font-handwriting text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2 py-1 rounded transition-colors flex items-center gap-1"
-                    >
-                      <Plus size={14} />
-                      Add Amount
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {(rewardConfig.rewardAmounts || []).map((amount, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className="text-sm font-handwriting text-gray-500 w-8">
-                            #{index + 1}
-                          </span>
-                          <input
-                            type="number"
-                            value={amount}
-                            onChange={(e) => updateRewardAmount(index, parseFloat(e.target.value) || 0)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting text-sm"
-                            placeholder="0"
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                        {rewardConfig.rewardAmounts && rewardConfig.rewardAmounts.length > 1 && (
-                          <button
-                            onClick={() => removeRewardAmount(index)}
-                            className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {validationErrors.rewardsAmounts && (
-                    <p className="mt-1 text-sm text-red-600 font-handwriting">
-                      {validationErrors.rewardsAmounts}
-                    </p>
-                  )}
-                </div>
-
-                {/* Total Rewards Display */}
-                {rewardConfig.rewardAmounts && rewardConfig.rewardAmounts.length > 0 && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="font-handwriting text-sm font-medium text-green-800">
-                        Total Reward Pool:
-                      </span>
-                      <span className="font-handwriting font-bold text-green-800">
-                        {rewardConfig.rewardAmounts.reduce((sum, amount) => sum + amount, 0)} tokens
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Quadratic Reward Configuration (Default) */}
+          {/* Simple Quadratic Reward Configuration */}
           <div className="space-y-4 p-4 bg-white rounded-lg border border-gray-200">
             <h4 className="font-handwriting font-bold text-gray-900 flex items-center gap-2">
               <Zap className="w-4 h-4" />
-              Quadratic Distribution Settings
+              Reward Settings
             </h4>
             
             <div className="space-y-4">
               <div>
                 <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                  💰 Total Reward Pool
+                  💰 Total Rewards to Distribute
                 </label>
                 <input
                   type="number"
@@ -452,17 +332,19 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
                     {validationErrors.rewardsPool}
                   </p>
                 )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Enter the total amount of tokens to be distributed among participants
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                    👥 Min Participants
+                  👥 Minimum Participants Required
                   </label>
                   <input
                     type="number"
-                    value={rewardConfig.minParticipants || ''}
-                    onChange={(e) => updateRewardConfig({ minParticipants: parseInt(e.target.value) || 0 })}
+                  value={rewardConfig.minParticipants || 1}
+                  onChange={(e) => updateRewardConfig({ minParticipants: parseInt(e.target.value) || 1 })}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting ${
                       validationErrors.rewardsParticipants ? 'border-red-500 bg-red-50' : 'border-gray-300'
                     }`}
@@ -473,22 +355,9 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
                       {validationErrors.rewardsParticipants}
                     </p>
                   )}
-                </div>
-
-                <div>
-                  <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                    ⚖️ Points Weight (0-1)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={rewardConfig.pointsWeight || 0.7}
-                    onChange={(e) => updateRewardConfig({ pointsWeight: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
-                    min="0"
-                    max="1"
-                  />
-                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Minimum number of participants needed for rewards to be distributed
+                </p>
               </div>
 
               {/* Distribution Preview */}
@@ -496,17 +365,14 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
                 <div className="flex items-center gap-2 mb-2">
                   <Info className="w-4 h-4 text-blue-600" />
                   <span className="font-handwriting text-sm font-medium text-blue-800">
-                    Distribution Preview
+                    How Rewards Work
                   </span>
                 </div>
                 <div className="text-xs text-blue-700 space-y-1">
-                  {rewardConfig.rewardAllParticipants ? (
-                    <p>• All participants will receive rewards based on their performance</p>
-                  ) : (
-                    <p>• Top {rewardConfig.totalWinners || 5} winners will receive rewards</p>
-                  )}
-                  <p>• Rewards are distributed using quadratic funding formula</p>
-                  <p>• Higher scores and faster answers get proportionally more rewards</p>
+                  <p>• {rewardConfig.totalRewardPool || 'X'} tokens will be distributed</p>
+                  <p>• Rewards use quadratic funding formula for fair distribution</p>
+                  <p>• Better performance = more rewards</p>
+                  <p>• Minimum {rewardConfig.minParticipants || 1} participant required</p>
                 </div>
               </div>
             </div>
