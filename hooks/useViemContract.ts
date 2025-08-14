@@ -26,12 +26,12 @@ import { readTokenBalance, readTokenAllowance } from '../utils/contract-reader';
 // Contract addresses for different networks
 const getContractAddress = (chainId?: number): Address => {
   if (chainId === 8453) { // Base Mainnet
-    return (process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40') as Address;
+    return (process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0x17170f6ea9b5bbb5c1c2426d864c872e6fa627b7') as Address;
   } else if (chainId === 42220) { // Celo Mainnet
-    return (process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO || '0x8b8fb708758dc8185ef31e685305c1aa0827ea65') as Address;
+    return (process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO || '0x1c89220ebf296804f1cafc51ff6ee3d5998f4e6f') as Address;
   } else {
     // Default to Base if no chainId specified
-    return (process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40') as Address;
+    return (process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0x17170f6ea9b5bbb5c1c2426d864c872e6fa627b7') as Address;
   }
 };
 

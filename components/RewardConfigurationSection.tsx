@@ -86,6 +86,11 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
   const { steps, currentStep, isCreating, error, createRewardSession, resetCreation } = useRewardCreation();
 
   const updateRewardConfig = (updates: Partial<RewardConfig>) => {
+    console.log('=== UPDATE REWARD CONFIG DEBUG ===');
+    console.log('Current config:', rewardConfig);
+    console.log('Updates:', updates);
+    console.log('New config will be:', { ...rewardConfig, ...updates });
+    
     onRewardConfigChange({ ...rewardConfig, ...updates });
   };
 
@@ -120,7 +125,12 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
   };
 
   const handleTokenAddressChange = (tokenAddress: string, tokenInfo?: { symbol: string; name: string; decimals: number }) => {
+    console.log('=== TOKEN ADDRESS CHANGE DEBUG ===');
+    console.log('Token address:', tokenAddress);
+    console.log('Token info:', tokenInfo);
+    
     if (tokenInfo) {
+      console.log('Updating with token info:', tokenInfo);
       updateRewardConfig({ 
         tokenAddress,
         tokenSymbol: tokenInfo.symbol,
@@ -128,6 +138,7 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
         tokenDecimals: tokenInfo.decimals
       });
     } else {
+      console.log('Updating without token info');
       updateRewardConfig({ tokenAddress });
     }
   };
@@ -137,9 +148,15 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
   };
 
   const handlePresetToken = (tokenName: string) => {
+    console.log('=== PRESET TOKEN DEBUG ===');
+    console.log('Token name:', tokenName);
+    console.log('Chain ID:', rewardConfig.chainId);
+    console.log('Available presets:', TOKEN_PRESETS[rewardConfig.chainId as keyof typeof TOKEN_PRESETS]);
+    
     const presets = TOKEN_PRESETS[rewardConfig.chainId as keyof typeof TOKEN_PRESETS];
     if (presets && presets[tokenName as keyof typeof presets]) {
       const tokenInfo = presets[tokenName as keyof typeof presets];
+      console.log('Selected token info:', tokenInfo);
       updateRewardConfig({ 
         tokenAddress: tokenInfo.address,
         tokenSymbol: tokenInfo.symbol,
@@ -147,6 +164,8 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
         tokenDecimals: tokenInfo.decimals,
         network: `Chain ${rewardConfig.chainId}`
       });
+    } else {
+      console.log('No presets found for chain ID:', rewardConfig.chainId);
     }
   };
 

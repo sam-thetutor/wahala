@@ -5,7 +5,24 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+/**
+ * @title SnarkelContract
+ * @dev A smart contract for managing quiz sessions with crypto rewards
+ * @dev Includes circuit breaker functionality for emergency stops
+ * @dev Circuit breaker can be opened by owner to prevent all critical operations
+ * @dev Circuit breaker can be closed by owner to resume normal operations
+ */
 contract SnarkelContract is Ownable, ReentrancyGuard {
+
+    /**
+     * @dev Circuit breaker state - when true, prevents all critical operations
+     * @dev Can only be controlled by the contract owner
+     */
+    bool public circuitBreakerOpen;
+
+    // Events for circuit breaker
+    event CircuitBreakerOpened(address indexed by);
+    event CircuitBreakerClosed(address indexed by);
 
     // Structs
     struct SnarkelSession {
@@ -54,6 +71,11 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
     mapping(string => uint256) public snarkelCodeToSessionId;
     mapping(string => bool) public snarkelCodeRewardsDistributed;
 
+    // Super admin functionality
+    mapping(address => bool) public superAdmins;
+    mapping(uint256 => address) public sessionCreator; // Track who created each session
+    mapping(uint256 => bool) public sessionBanned; // Track banned sessions
+
     // Events
     event SnarkelSessionCreated(uint256 indexed sessionId, string snarkelCode, uint256 entryFee);
     event ParticipantJoined(uint256 indexed sessionId, address indexed participant);
@@ -71,9 +93,23 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
     event AdminWalletRemoved(address indexed admin);
     event SnarkelRewardsAlreadyDistributed(string snarkelCode, address indexed admin);
 
+    // New events for super admin and fallback functionality
+    event SuperAdminAdded(address indexed superAdmin);
+    event SuperAdminRemoved(address indexed superAdmin);
+    event SessionBanned(uint256 indexed sessionId, address indexed by);
+    event SessionUnbanned(uint256 indexed sessionId, address indexed by);
+    event FallbackRewardsDistributed(uint256 indexed sessionId, address indexed token, uint256 totalAmount, uint256 recipientsCount);
+    event PartialDistributionFailureHandled(uint256 indexed sessionId, address indexed token, uint256 totalFailedAmount);
+    event EmergencyRewardsRecovered(uint256 indexed sessionId, address indexed token, uint256 amount, address indexed recipient);
+
     // Modifiers
     modifier onlyAdmin() {
         require(adminWallets[msg.sender] || msg.sender == owner(), "Not authorized");
+        _;
+    }
+
+    modifier onlySuperAdmin() {
+        require(superAdmins[msg.sender], "Not a super admin");
         _;
     }
 
@@ -87,11 +123,54 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
         _;
     }
 
+    /**
+     * @dev Circuit breaker modifier - prevents execution when circuit breaker is open
+     * @dev Applied to all critical functions that modify state or handle funds
+     */
+    modifier circuitBreakerClosed() {
+        require(!circuitBreakerOpen, "Execution prevented because the circuit breaker is open");
+        _;
+    }
+
     // Constructor - FIXED: Single constructor with optional parameter
     // If no address is provided or address(0) is passed, msg.sender becomes the owner
     constructor() Ownable(msg.sender) {
         adminWallets[msg.sender] = true;
+        superAdmins[msg.sender] = true; // Owner is also a super admin
         emit AdminWalletAdded(msg.sender);
+    }
+
+    /**
+     * @dev Circuit breaker control functions
+     * @dev These functions allow the owner to control the circuit breaker state
+     */
+
+    /**
+     * @dev Open the circuit breaker to prevent all critical operations
+     * @dev Only callable by the contract owner
+     * @dev Use this in emergency situations to stop all contract activity
+     */
+    function openCircuitBreaker() external onlyOwner {
+        circuitBreakerOpen = true;
+        emit CircuitBreakerOpened(msg.sender);
+    }
+
+    /**
+     * @dev Close the circuit breaker to resume normal operations
+     * @dev Only callable by the contract owner
+     * @dev Use this after resolving the emergency situation
+     */
+    function closeCircuitBreaker() external onlyOwner {
+        circuitBreakerOpen = false;
+        emit CircuitBreakerClosed(msg.sender);
+    }
+
+    /**
+     * @dev Check if the circuit breaker is open
+     * @return bool True if circuit breaker is open, false otherwise
+     */
+    function isCircuitBreakerOpen() external view returns (bool) {
+        return circuitBreakerOpen;
     }
 
     // Core functions
@@ -112,7 +191,7 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
         uint256 maxParticipants,
         address expectedRewardToken,
         uint256 expectedRewardAmount
-    ) external returns (uint256) {
+    ) external circuitBreakerClosed returns (uint256) {
         require(bytes(snarkelCode).length > 0, "Snarkel code cannot be empty");
         // Allow reusing the same snarkel code only after the previous session has ended
         uint256 previousSessionId = snarkelCodeToSessionId[snarkelCode];
@@ -138,6 +217,7 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
         session.expectedRewardAmount = expectedRewardAmount;
 
         snarkelCodeToSessionId[snarkelCode] = sessionId;
+        sessionCreator[sessionId] = msg.sender; // Track session creator
 
         emit SnarkelSessionCreated(sessionId, snarkelCode, entryFee);
         return sessionId;
@@ -151,6 +231,7 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
         external 
         payable 
         nonReentrant 
+        circuitBreakerClosed
         sessionExists(sessionId) 
         sessionActive(sessionId) 
     {
@@ -175,6 +256,7 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
     function addParticipant(uint256 sessionId, address participant) 
         external 
         onlyAdmin 
+        circuitBreakerClosed
         sessionExists(sessionId) 
         sessionActive(sessionId) 
     {
@@ -200,7 +282,9 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
     function addReward(uint256 sessionId, address tokenAddress, uint256 amount) 
         external 
         onlyAdmin 
+        circuitBreakerClosed
         sessionExists(sessionId) 
+        sessionActive(sessionId) 
     {
         SnarkelSession storage session = snarkelSessions[sessionId];
         
@@ -233,6 +317,7 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
     function claimReward(uint256 sessionId, address tokenAddress) 
         external 
         nonReentrant 
+        circuitBreakerClosed
         sessionExists(sessionId) 
     {
         require(!sessionRewardsFinalized[sessionId], "Finalized: use claims");
@@ -274,7 +359,9 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
     function distributeRewards(uint256 sessionId, address tokenAddress) 
         external 
         onlyAdmin 
+        circuitBreakerClosed
         sessionExists(sessionId) 
+        sessionActive(sessionId) 
     {
         require(!sessionRewardsFinalized[sessionId], "Finalized: use claims");
         SnarkelSession storage session = snarkelSessions[sessionId];
@@ -378,7 +465,7 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
         uint256 sessionId,
         address[] calldata winners,
         uint256[] calldata amounts
-    ) external onlyAdmin sessionExists(sessionId) {
+    ) external onlyAdmin circuitBreakerClosed sessionExists(sessionId) sessionActive(sessionId) {
         require(winners.length == amounts.length, "Length mismatch");
         require(!snarkelSessions[sessionId].isActive, "Session must be ended");
 
@@ -453,6 +540,166 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
     }
 
     /**
+     * @dev Fallback reward distribution for quiz admins
+     * @dev Allows session creator to distribute rewards if main distribution fails
+     * @param sessionId ID of the session
+     * @param tokenAddress Address of the reward token
+     * @param recipients Array of recipient addresses
+     * @param amounts Array of amounts to distribute
+     */
+    function fallbackDistributeRewards(
+        uint256 sessionId,
+        address tokenAddress,
+        address[] memory recipients,
+        uint256[] memory amounts
+    ) 
+        external 
+        circuitBreakerClosed
+        sessionExists(sessionId) 
+    {
+        require(recipients.length == amounts.length, "Length mismatch");
+        require(recipients.length > 0, "No recipients");
+        
+        // Only session creator or super admin can call this
+        require(
+            msg.sender == sessionCreator[sessionId] || 
+            superAdmins[msg.sender] || 
+            adminWallets[msg.sender],
+            "Not authorized"
+        );
+        
+        // Check if session is banned
+        require(!sessionBanned[sessionId], "Session is banned");
+        
+        // Check if rewards are already finalized
+        require(!sessionRewardsFinalized[sessionId], "Rewards already finalized");
+        
+        IERC20 token = IERC20(tokenAddress);
+        uint256 totalAmount = 0;
+        
+        // Calculate total amount and check balances
+        for (uint256 i = 0; i < amounts.length; i++) {
+            totalAmount += amounts[i];
+        }
+        
+        require(
+            token.balanceOf(address(this)) >= totalAmount,
+            "Insufficient token balance for fallback distribution"
+        );
+        
+        // Distribute rewards
+        for (uint256 i = 0; i < recipients.length; i++) {
+            if (amounts[i] > 0 && recipients[i] != address(0)) {
+                require(
+                    token.transfer(recipients[i], amounts[i]),
+                    "Token transfer failed"
+                );
+                
+                // Update claimable rewards
+                sessionClaimableRewards[sessionId][recipients[i]] = amounts[i];
+                
+                emit RewardClaimed(sessionId, recipients[i], tokenAddress, amounts[i]);
+            }
+        }
+        
+        // Mark rewards as finalized
+        sessionRewardsFinalized[sessionId] = true;
+        
+        emit SessionRewardsFinalized(sessionId, tokenAddress, totalAmount, recipients.length);
+        emit FallbackRewardsDistributed(sessionId, tokenAddress, totalAmount, recipients.length);
+    }
+
+    /**
+     * @dev Handle partial reward distribution failures
+     * @dev Allows recovery of undistributed rewards if distribution fails partially
+     * @param sessionId ID of the session
+     * @param tokenAddress Address of the reward token
+     * @param failedRecipients Array of addresses where distribution failed
+     * @param failedAmounts Array of amounts that failed to distribute
+     */
+    function handlePartialDistributionFailure(
+        uint256 sessionId,
+        address tokenAddress,
+        address[] memory failedRecipients,
+        uint256[] memory failedAmounts
+    ) 
+        external 
+        circuitBreakerClosed
+        sessionExists(sessionId) 
+    {
+        require(failedRecipients.length == failedAmounts.length, "Length mismatch");
+        require(failedRecipients.length > 0, "No failed recipients");
+        
+        // Only session creator, super admin, or admin can call this
+        require(
+            msg.sender == sessionCreator[sessionId] || 
+            superAdmins[msg.sender] || 
+            adminWallets[msg.sender],
+            "Not authorized"
+        );
+        
+        // Check if session is banned
+        require(!sessionBanned[sessionId], "Session is banned");
+        
+        // Calculate total failed amount
+        uint256 totalFailedAmount = 0;
+        for (uint256 i = 0; i < failedAmounts.length; i++) {
+            totalFailedAmount += failedAmounts[i];
+        }
+        
+        // Mark these amounts as available for redistribution
+        for (uint256 i = 0; i < failedRecipients.length; i++) {
+            if (failedAmounts[i] > 0) {
+                // Reset claimable rewards for failed recipients
+                sessionClaimableRewards[sessionId][failedRecipients[i]] = 0;
+            }
+        }
+        
+        emit RewardDistributed(sessionId, tokenAddress, totalFailedAmount);
+        emit PartialDistributionFailureHandled(sessionId, tokenAddress, totalFailedAmount);
+    }
+
+    /**
+     * @dev Emergency recovery of undistributed rewards
+     * @dev Allows super admin to recover rewards that couldn't be distributed
+     * @param sessionId ID of the session
+     * @param tokenAddress Address of the reward token
+     * @param recipient Address to receive the undistributed rewards
+     */
+    function emergencyRecoverUndistributedRewards(
+        uint256 sessionId,
+        address tokenAddress,
+        address recipient
+    ) 
+        external 
+        onlySuperAdmin 
+        circuitBreakerClosed
+        sessionExists(sessionId) 
+    {
+        require(recipient != address(0), "Invalid recipient address");
+        
+        // Check if session is banned or inactive
+        require(
+            sessionBanned[sessionId] || !snarkelSessions[sessionId].isActive,
+            "Session is active and not banned"
+        );
+        
+        IERC20 token = IERC20(tokenAddress);
+        uint256 contractBalance = token.balanceOf(address(this));
+        
+        require(contractBalance > 0, "No tokens to recover");
+        
+        // Transfer all undistributed tokens to recipient
+        require(
+            token.transfer(recipient, contractBalance),
+            "Token transfer failed"
+        );
+        
+        emit AdminRewardDistributed(sessionId, recipient, tokenAddress, contractBalance, msg.sender);
+        emit EmergencyRewardsRecovered(sessionId, tokenAddress, contractBalance, recipient);
+    }
+
+    /**
      * @dev Helper: Can a new session be started for this snarkel code?
      *      Returns (canStart, lastSessionId, lastIsActive)
      */
@@ -484,7 +731,11 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
      * @dev Add admin wallet
      * @param admin Address to add as admin
      */
-    function addAdminWallet(address admin) external onlyOwner {
+    function addAdminWallet(address admin) 
+        external 
+        onlyOwner 
+        circuitBreakerClosed 
+    {
         require(admin != address(0), "Invalid admin address");
         adminWallets[admin] = true;
         emit AdminWalletAdded(admin);
@@ -494,17 +745,53 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
      * @dev Remove admin wallet
      * @param admin Address to remove as admin
      */
-    function removeAdminWallet(address admin) external onlyOwner {
+    function removeAdminWallet(address admin) 
+        external 
+        onlyOwner 
+        circuitBreakerClosed 
+    {
         require(admin != address(0), "Invalid admin address");
         adminWallets[admin] = false;
         emit AdminWalletRemoved(admin);
     }
 
     /**
+     * @dev Add super admin
+     * @param superAdmin Address to add as super admin
+     */
+    function addSuperAdmin(address superAdmin) 
+        external 
+        onlyOwner 
+        circuitBreakerClosed 
+    {
+        require(superAdmin != address(0), "Invalid super admin address");
+        superAdmins[superAdmin] = true;
+        emit SuperAdminAdded(superAdmin);
+    }
+
+    /**
+     * @dev Remove super admin
+     * @param superAdmin Address to remove as super admin
+     */
+    function removeSuperAdmin(address superAdmin) 
+        external 
+        onlyOwner 
+        circuitBreakerClosed 
+    {
+        require(superAdmin != address(0), "Invalid super admin address");
+        superAdmins[superAdmin] = false;
+        emit SuperAdminRemoved(superAdmin);
+    }
+
+    /**
      * @dev Verify a user (allows them to claim rewards without being in session)
      * @param user Address of the user to verify
      */
-    function verifyUser(address user) external onlyAdmin {
+    function verifyUser(address user) 
+        external 
+        onlyAdmin 
+        circuitBreakerClosed 
+    {
         require(user != address(0), "Invalid user address");
         verifiedUsers[user] = true;
         emit UserVerified(user, msg.sender);
@@ -555,8 +842,76 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
      * @dev Deactivate a session
      * @param sessionId ID of the session
      */
-    function deactivateSession(uint256 sessionId) external onlyAdmin sessionExists(sessionId) {
+    function deactivateSession(uint256 sessionId) 
+        external 
+        onlyAdmin 
+        circuitBreakerClosed
+        sessionExists(sessionId) 
+    {
         snarkelSessions[sessionId].isActive = false;
+    }
+
+    /**
+     * @dev Ban a session
+     * @param sessionId ID of the session to ban
+     */
+    function banSession(uint256 sessionId) 
+        external 
+        onlySuperAdmin 
+        circuitBreakerClosed 
+    {
+        sessionBanned[sessionId] = true;
+        emit SessionBanned(sessionId, msg.sender);
+    }
+
+    /**
+     * @dev Unban a session
+     * @param sessionId ID of the session to unban
+     */
+    function unbanSession(uint256 sessionId) 
+        external 
+        onlySuperAdmin 
+        circuitBreakerClosed 
+    {
+        sessionBanned[sessionId] = false;
+        emit SessionUnbanned(sessionId, msg.sender);
+    }
+
+    /**
+     * @dev Check if a session is banned
+     * @param sessionId ID of the session to check
+     */
+    function isSessionBanned(uint256 sessionId) 
+        external 
+        view 
+        returns (bool) 
+    {
+        return sessionBanned[sessionId];
+    }
+
+    /**
+     * @dev Check if an address is the creator of a session
+     * @param sessionId ID of the session
+     * @param creator Address to check
+     */
+    function isSessionCreator(uint256 sessionId, address creator) 
+        external 
+        view 
+        returns (bool) 
+    {
+        return sessionCreator[sessionId] == creator;
+    }
+
+    /**
+     * @dev Get session creator address
+     * @param sessionId ID of the session
+     */
+    function getSessionCreator(uint256 sessionId) 
+        external 
+        view 
+        returns (address) 
+    {
+        return sessionCreator[sessionId];
     }
 
     // View functions
@@ -731,7 +1086,11 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
     /**
      * @dev Withdraw platform fees (owner only)
      */
-    function withdrawFees() external onlyOwner {
+    function withdrawFees() 
+        external 
+        onlyOwner 
+        circuitBreakerClosed 
+    {
         uint256 balance = address(this).balance;
         require(balance > 0, "No fees to withdraw");
         
@@ -743,7 +1102,11 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
      * @dev Emergency withdraw ERC20 tokens (owner only)
      * @param tokenAddress Address of the token to withdraw
      */
-    function emergencyWithdrawToken(address tokenAddress) external onlyOwner {
+    function emergencyWithdrawToken(address tokenAddress) 
+        external 
+        onlyOwner 
+        circuitBreakerClosed 
+    {
         IERC20 token = IERC20(tokenAddress);
         uint256 balance = token.balanceOf(address(this));
         require(balance > 0, "No tokens to withdraw");
@@ -806,5 +1169,76 @@ contract SnarkelContract is Ownable, ReentrancyGuard {
         
         session.isParticipant[participant] = false;
         session.currentParticipants--;
+    }
+
+    /**
+     * @dev Super admin emergency token withdrawal for banned sessions
+     * @dev Allows super admin to recover tokens from banned sessions
+     * @param sessionId ID of the banned session
+     * @param tokenAddress Address of the token to withdraw
+     * @param recipient Address to receive the tokens
+     * @param amount Amount to withdraw
+     */
+    function superAdminWithdrawFromBannedSession(
+        uint256 sessionId,
+        address tokenAddress,
+        address recipient,
+        uint256 amount
+    ) 
+        external 
+        onlySuperAdmin 
+        circuitBreakerClosed
+        sessionExists(sessionId) 
+    {
+        require(sessionBanned[sessionId], "Session is not banned");
+        require(recipient != address(0), "Invalid recipient address");
+        require(amount > 0, "Amount must be greater than 0");
+        
+        IERC20 token = IERC20(tokenAddress);
+        uint256 contractBalance = token.balanceOf(address(this));
+        
+        require(contractBalance >= amount, "Insufficient token balance");
+        
+        // Transfer tokens to recipient
+        require(
+            token.transfer(recipient, amount),
+            "Token transfer failed"
+        );
+        
+        emit AdminRewardDistributed(sessionId, recipient, tokenAddress, amount, msg.sender);
+    }
+
+    /**
+     * @dev Super admin emergency withdrawal of all tokens from banned session
+     * @dev Allows super admin to recover all tokens from a banned session
+     * @param sessionId ID of the banned session
+     * @param tokenAddress Address of the token to withdraw
+     * @param recipient Address to receive the tokens
+     */
+    function superAdminWithdrawAllFromBannedSession(
+        uint256 sessionId,
+        address tokenAddress,
+        address recipient
+    ) 
+        external 
+        onlySuperAdmin 
+        circuitBreakerClosed
+        sessionExists(sessionId) 
+    {
+        require(sessionBanned[sessionId], "Session is not banned");
+        require(recipient != address(0), "Invalid recipient address");
+        
+        IERC20 token = IERC20(tokenAddress);
+        uint256 contractBalance = token.balanceOf(address(this));
+        
+        require(contractBalance > 0, "No tokens to withdraw");
+        
+        // Transfer all tokens to recipient
+        require(
+            token.transfer(recipient, contractBalance),
+            "Token transfer failed"
+        );
+        
+        emit AdminRewardDistributed(sessionId, recipient, tokenAddress, contractBalance, msg.sender);
     }
 }

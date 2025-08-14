@@ -1,4 +1,4 @@
-export const SNARKEL_ABI = [
+export const SNARKEL_ABI =  [
   {
     "inputs": [],
     "stateMutability": "nonpayable",
@@ -100,6 +100,94 @@ export const SNARKEL_ABI = [
       {
         "indexed": true,
         "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "CircuitBreakerClosed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "CircuitBreakerOpened",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      }
+    ],
+    "name": "EmergencyRewardsRecovered",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "recipientsCount",
+        "type": "uint256"
+      }
+    ],
+    "name": "FallbackRewardsDistributed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "previousOwner",
         "type": "address"
       },
@@ -111,6 +199,31 @@ export const SNARKEL_ABI = [
       }
     ],
     "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalFailedAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "PartialDistributionFailureHandled",
     "type": "event"
   },
   {
@@ -250,6 +363,25 @@ export const SNARKEL_ABI = [
       {
         "indexed": true,
         "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "SessionBanned",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "token",
         "type": "address"
       },
@@ -267,6 +399,25 @@ export const SNARKEL_ABI = [
       }
     ],
     "name": "SessionRewardsFinalized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "SessionUnbanned",
     "type": "event"
   },
   {
@@ -336,6 +487,32 @@ export const SNARKEL_ABI = [
       }
     ],
     "name": "SnarkelSessionCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "superAdmin",
+        "type": "address"
+      }
+    ],
+    "name": "SuperAdminAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "superAdmin",
+        "type": "address"
+      }
+    ],
+    "name": "SuperAdminRemoved",
     "type": "event"
   },
   {
@@ -464,6 +641,19 @@ export const SNARKEL_ABI = [
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "superAdmin",
+        "type": "address"
+      }
+    ],
+    "name": "addSuperAdmin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "sessionId",
         "type": "uint256"
@@ -528,6 +718,19 @@ export const SNARKEL_ABI = [
         "internalType": "uint256",
         "name": "sessionId",
         "type": "uint256"
+      }
+    ],
+    "name": "banSession",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
       },
       {
         "internalType": "address[]",
@@ -570,6 +773,19 @@ export const SNARKEL_ABI = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "circuitBreakerOpen",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -601,6 +817,13 @@ export const SNARKEL_ABI = [
       }
     ],
     "name": "claimUserReward",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "closeCircuitBreaker",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -683,12 +906,63 @@ export const SNARKEL_ABI = [
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      }
+    ],
+    "name": "emergencyRecoverUndistributedRewards",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "tokenAddress",
         "type": "address"
       }
     ],
     "name": "emergencyWithdrawToken",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address[]",
+        "name": "recipients",
+        "type": "address[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "amounts",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "fallbackDistributeRewards",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -877,6 +1151,25 @@ export const SNARKEL_ABI = [
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getSessionCreator",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "string",
         "name": "snarkelCode",
         "type": "string"
@@ -986,6 +1279,34 @@ export const SNARKEL_ABI = [
       },
       {
         "internalType": "address",
+        "name": "tokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address[]",
+        "name": "failedRecipients",
+        "type": "address[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "failedAmounts",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "handlePartialDistributionFailure",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
         "name": "participant",
         "type": "address"
       }
@@ -1010,6 +1331,19 @@ export const SNARKEL_ABI = [
       }
     ],
     "name": "isAdmin",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "isCircuitBreakerOpen",
     "outputs": [
       {
         "internalType": "bool",
@@ -1052,9 +1386,59 @@ export const SNARKEL_ABI = [
         "type": "uint256"
       }
     ],
+    "name": "isSessionBanned",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "creator",
+        "type": "address"
+      }
+    ],
+    "name": "isSessionCreator",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      }
+    ],
     "name": "joinSnarkel",
     "outputs": [],
     "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "openCircuitBreaker",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -1102,10 +1486,42 @@ export const SNARKEL_ABI = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "superAdmin",
+        "type": "address"
+      }
+    ],
+    "name": "removeSuperAdmin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "renounceOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "sessionBanned",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -1127,6 +1543,25 @@ export const SNARKEL_ABI = [
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "sessionCreator",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -1366,12 +1801,95 @@ export const SNARKEL_ABI = [
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      }
+    ],
+    "name": "superAdminWithdrawAllFromBannedSession",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "superAdminWithdrawFromBannedSession",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "superAdmins",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "newOwner",
         "type": "address"
       }
     ],
     "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "sessionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "unbanSession",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

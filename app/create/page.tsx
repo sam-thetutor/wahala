@@ -139,6 +139,8 @@ interface SuccessModalProps {
 }
 
 const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, snarkelCode, rewardsEnabled, chainId }) => {
+  const router = useRouter();
+  
   if (!isOpen) return null;
 
   const CELO_CONTRACT = '0x8b8fb708758dc8185ef31e685305c1aa0827ea65';
@@ -159,6 +161,12 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, snarkelCod
   })();
 
   const formatAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+
+  const handleClose = () => {
+    onClose();
+    // Redirect to admin page after modal is closed
+    router.push('/admin');
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -212,7 +220,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, snarkelCod
 
         {/* Footer */}
         <div className="px-6 py-4 bg-gray-50 rounded-b-2xl flex gap-3">
-          <button onClick={onClose} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium">
+          <button onClick={handleClose} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium">
             Close
           </button>
           <SocialShareButton 
@@ -220,7 +228,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, snarkelCod
             title="I just created a quiz on Snarkels!"
             className="flex-1"
           />
-          <button onClick={() => { onClose(); }} className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-colors font-handwriting font-bold">
+          <button onClick={handleClose} className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-colors font-handwriting font-bold">
             Done
           </button>
         </div>
@@ -673,6 +681,14 @@ export default function SnarkelCreationPage() {
       });
     }
 
+    // Debug: Log the current snarkel state at submission time
+    console.log('=== SUBMIT DEBUG ===');
+    console.log('Current snarkel state:', JSON.stringify(snarkel, null, 2));
+    console.log('Rewards state at submit:', JSON.stringify(snarkel.rewards, null, 2));
+    console.log('Token symbol at submit:', snarkel.rewards.tokenSymbol);
+    console.log('Token name at submit:', snarkel.rewards.tokenName);
+    console.log('Token decimals at submit:', snarkel.rewards.tokenDecimals);
+
     // Add wallet debugging
     console.log('=== WALLET DEBUG ===');
     console.log('Wallet connected:', isConnected);
@@ -781,6 +797,15 @@ export default function SnarkelCreationPage() {
         getTokenAllowance: !!getTokenAllowance
       });
       console.log('Starting createSnarkel...');
+      
+      // Additional debugging for token information
+      console.log('=== TOKEN INFO DEBUG ===');
+      console.log('Token symbol type:', typeof snarkelData.rewards.tokenSymbol);
+      console.log('Token symbol value:', snarkelData.rewards.tokenSymbol);
+      console.log('Token name type:', typeof snarkelData.rewards.tokenName);
+      console.log('Token name value:', snarkelData.rewards.tokenName);
+      console.log('Token decimals type:', typeof snarkelData.rewards.tokenDecimals);
+      console.log('Token decimals value:', snarkelData.rewards.tokenDecimals);
       // Only pass contract functions if rewards are enabled
       const contractFunctions = snarkelData.rewards.enabled ? {
         createSnarkelSession,
@@ -1703,7 +1728,12 @@ export default function SnarkelCreationPage() {
              {activeTab === 'rewards' && (
                <RewardConfigurationSection
                  rewardConfig={snarkel.rewards}
-                 onRewardConfigChange={(rewards) => setSnarkel(prev => ({ ...prev, rewards }))}
+                 onRewardConfigChange={(rewards) => {
+                   console.log('=== REWARD CONFIG CHANGE DEBUG ===');
+                   console.log('Previous rewards:', snarkel.rewards);
+                   console.log('New rewards:', rewards);
+                   setSnarkel(prev => ({ ...prev, rewards }));
+                 }}
                  validationErrors={validationErrors}
                />
              )}

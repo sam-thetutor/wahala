@@ -19,6 +19,7 @@ interface TokenOption {
   name: string;
   chainId: number;
   network: string;
+  decimals: number;
   isNative?: boolean;
   isStablecoin?: boolean;
 }
@@ -142,7 +143,17 @@ export const TokenSelector: React.FC<TokenSelectorProps> = ({
   };
 
   const handleCustomToken = (address: string) => {
-    onChange(address);
+    // If we have validated token details, pass them along
+    if (tokenDetails.isValid && tokenDetails.name && tokenDetails.symbol) {
+      onChange(address, {
+        symbol: tokenDetails.symbol,
+        name: tokenDetails.name,
+        decimals: tokenDetails.decimals
+      });
+    } else {
+      // Otherwise just pass the address
+      onChange(address);
+    }
     setIsOpen(false);
     setSearchTerm('');
   };

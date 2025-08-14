@@ -226,23 +226,52 @@ export async function POST(request: NextRequest) {
 
     // Create reward settings if enabled
     if (rewards.enabled) {
-      await prisma.snarkelReward.create({
-        data: {
-          rewardType: rewards.type,
-          tokenAddress: rewards.tokenAddress,
-          tokenSymbol: rewards.tokenSymbol || 'CELO', // Use provided token symbol or default
-          tokenName: rewards.tokenName || 'Celo Native Token', // Use provided token name or default
-          tokenDecimals: rewards.tokenDecimals || 18, // Use provided decimals or default
-          network: rewards.network || (rewards.chainId ? `Chain ${rewards.chainId}` : 'Celo'), // Use provided network or generate from chain ID
-          chainId: rewards.chainId || 42220, // Default to Celo Mainnet
-          totalWinners: !rewards.rewardAllParticipants ? rewards.totalWinners : undefined,
-          rewardAmounts: !rewards.rewardAllParticipants ? rewards.rewardAmounts : undefined,
-          totalRewardPool: rewards.totalRewardPool,
-          minParticipants: rewards.minParticipants,
-          pointsWeight: rewards.pointsWeight,
-          rewardAllParticipants: rewards.rewardAllParticipants || false,
-          snarkelId: snarkel.id
+      // Debug logging for rewards data
+      console.log('=== REWARDS DEBUG ===');
+      console.log('Rewards data received:', JSON.stringify(rewards, null, 2));
+      console.log('Token symbol received:', rewards.tokenSymbol);
+      console.log('Token name received:', rewards.tokenName);
+      console.log('Token decimals received:', rewards.tokenDecimals);
+      console.log('Network received:', rewards.network);
+      console.log('Chain ID received:', rewards.chainId);
+      
+      // Get network name based on chain ID
+      const getNetworkName = (chainId: number): string => {
+        switch (chainId) {
+          case 42220: return 'Celo Mainnet';
+          case 44787: return 'Celo Alfajores';
+          case 8453: return 'Base Mainnet';
+          case 84531: return 'Base Sepolia';
+          case 137: return 'Polygon';
+          case 80001: return 'Mumbai';
+          case 1: return 'Ethereum Mainnet';
+          case 11155111: return 'Sepolia';
+          case 42161: return 'Arbitrum';
+          default: return `Chain ${chainId}`;
         }
+      };
+
+      const rewardData = {
+        rewardType: rewards.type,
+        tokenAddress: rewards.tokenAddress,
+        tokenSymbol: rewards.tokenSymbol && rewards.tokenSymbol.trim() !== '' ? rewards.tokenSymbol : 'TOKEN',
+        tokenName: rewards.tokenName && rewards.tokenName.trim() !== '' ? rewards.tokenName : 'Reward Token',
+        tokenDecimals: rewards.tokenDecimals && rewards.tokenDecimals > 0 ? rewards.tokenDecimals : 18,
+        network: rewards.network && rewards.network.trim() !== '' ? rewards.network : getNetworkName(rewards.chainId),
+        chainId: rewards.chainId,
+        totalWinners: !rewards.rewardAllParticipants ? rewards.totalWinners : undefined,
+        rewardAmounts: !rewards.rewardAllParticipants ? rewards.rewardAmounts : undefined,
+        totalRewardPool: rewards.totalRewardPool,
+        minParticipants: rewards.minParticipants,
+        pointsWeight: rewards.pointsWeight,
+        rewardAllParticipants: rewards.rewardAllParticipants || false,
+        snarkelId: snarkel.id
+      };
+      
+      console.log('Reward data to be saved:', JSON.stringify(rewardData, null, 2));
+
+      await prisma.snarkelReward.create({
+        data: rewardData
       });
     }
 
