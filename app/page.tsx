@@ -9,18 +9,12 @@ import {
   Sparkles, 
   Trophy, 
   Star, 
-  TrendingUp,
   Clock,
-  Gift,
   Gamepad2,
   ArrowDown,
-  ExternalLink,
-  ChevronUp,
-  BookOpen,
   Award,
   Zap,
   Shield,
-  Link as LinkIcon,
   User
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
@@ -256,12 +250,6 @@ export default function HomePage() {
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
   const { isConnected } = useAccount();
   const quizCarouselRef = useRef<HTMLDivElement>(null);
-
-  // Contract addresses - Base and Celo mainnet
-  const CELO_CONTRACT = process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO||'';
-  const BASE_CONTRACT = process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE||'';
-
-  const formatAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
   // Scroll to specific quiz position
   const scrollToQuiz = (index: number) => {
@@ -607,26 +595,12 @@ export default function HomePage() {
                    }}>
                 <div className="flex flex-col items-center gap-2 sm:gap-3 font-handwriting text-base sm:text-lg" style={{ color: '#476520' }}>
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-3 h-3 rounded-full animate-pulse bg-green-400 shadow-lg flex-shrink-0"></div>
-                    <span className="font-bold">LIVE</span>
                     <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 animate-bounce flex-shrink-0" />
+                    <span className="font-bold">Ready to Play!</span>
                   </div>
-                  <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
-                    <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-300 whitespace-nowrap">
-                      Base
-                    </span>
-                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full border border-blue-300 whitespace-nowrap">
-                      Celo
-                    </span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 text-xs mt-1">
-                    <a href={`https://basescan.org/address/${BASE_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-700 underline truncate">
-                      <LinkIcon className="w-3 h-3 flex-shrink-0" /> {formatAddr(BASE_CONTRACT)}
-                    </a>
-                    <a href={`https://celoscan.io/address/${CELO_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-green-700 underline truncate">
-                      <LinkIcon className="w-3 h-3 flex-shrink-0" /> {formatAddr(CELO_CONTRACT)}
-                    </a>
-                  </div>
+                  <p className="text-xs sm:text-sm text-center" style={{ color: '#655947' }}>
+                    Connect your wallet and start earning rewards
+                  </p>
                 </div>
               </div>
             </div>
@@ -775,22 +749,12 @@ export default function HomePage() {
                 <div className="relative z-10">
                   <div className="flex flex-col items-center gap-3 font-handwriting text-base lg:text-lg" style={{ color: '#476520' }}>
                     <div className="flex items-center gap-3">
-                      <div className="w-3 lg:w-4 h-3 lg:h-4 rounded-full animate-pulse bg-green-400 shadow-lg"></div>
-                      <span className="font-bold">LIVE</span>
                       <Sparkles className="w-6 lg:w-8 h-6 lg:h-8 text-yellow-500 animate-bounce" />
+                      <span className="font-bold">Ready to Play!</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full border border-blue-300 text-sm">Base</span>
-                      <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-300 text-sm">Celo</span>
-                    </div>
-                    <div className="flex flex-col gap-1 text-xs">
-                      <a href={`https://basescan.org/address/${BASE_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-700 underline">
-                        <LinkIcon className="w-3 h-3" /> {formatAddr(BASE_CONTRACT)}
-                      </a>
-                      <a href={`https://celoscan.io/address/${CELO_CONTRACT}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-green-700 underline">
-                        <LinkIcon className="w-3 h-3" /> {formatAddr(CELO_CONTRACT)}
-                      </a>
-                    </div>
+                    <p className="text-sm text-center" style={{ color: '#655947' }}>
+                      Connect your wallet and start earning rewards
+                    </p>
                   </div>
                 </div>
               </div>
