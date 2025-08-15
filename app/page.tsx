@@ -111,7 +111,7 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
             </div>
             <div className="flex items-center gap-1">
               <Award className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" style={{ color: '#FCFF52' }} />
-              <span className="font-bold text-xs sm:text-sm" style={{ color: '#476520' }}>{quiz.reward} CELO</span>
+              <span className="font-bold text-xs sm:text-sm" style={{ color: '#476520' }}>{quiz.reward} ERC20 Token</span>
             </div>
           </div>
 
@@ -277,8 +277,6 @@ export default function HomePage() {
             const chainId = snarkel.rewards?.chainId || snarkel.reward?.chainId;
             if (chainId === 42220) return 'Celo';
             if (chainId === 8453) return 'Base';
-            if (chainId === 44787) return 'Celo Alfajores';
-            if (chainId === 84532 || chainId === 84531) return 'Base Sepolia';
             return undefined;
           })()
         }));
@@ -683,7 +681,7 @@ export default function HomePage() {
                   <div className="space-y-3 font-handwriting text-base lg:text-lg" style={{ color: '#655947' }}>
                     <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg hover:scale-105 transition-transform">
                       <Zap className="w-5 lg:w-6 h-5 lg:h-6 text-yellow-500 animate-pulse" />
-                      <span>CELO tokens</span>
+                      <span>ERC20 tokens</span>
                     </div>
                     <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg hover:scale-105 transition-transform">
                       <Star className="w-5 lg:w-6 h-5 lg:h-6 text-green-500 animate-pulse" />
