@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, getContract, parseAbi } from 'viem';
-import { base, celo, celoAlfajores } from 'viem/chains';
+import { base, celo } from 'viem/chains';
 
 interface TokenValidationRequest {
   tokenAddress: string;

@@ -10,16 +10,6 @@ import ClientLayout from '@/components/ClientLayout'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata = {
-  title: 'Snarkels - Quiz Rewards',
-  description: 'Create and participate in quiz sessions with crypto rewards',
-  manifest: '/manifest.json',
-  icons: {
-    icon: '/icon.png',
-    apple: '/apple-icon.png'
-  }
-}
-
 export default async function RootLayout({
   children,
 }: {
@@ -45,6 +35,8 @@ export default async function RootLayout({
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Snarkels - Quiz Rewards</title>
+        <meta name="description" content="Create and participate in quiz sessions with crypto rewards" />
         
         {/* Farcaster Mini App Embed Meta Tags */}
         <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://snarkels.vercel.app/api/og","button":{"title":"🎯 Start Quiz","action":{"type":"launch_miniapp","url":"https://snarkels.vercel.app","name":"Snarkels","splashImageUrl":"https://snarkels.vercel.app/logo.png","splashBackgroundColor":"#1f2937"}}}' />

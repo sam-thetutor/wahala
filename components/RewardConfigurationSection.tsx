@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, Target, Zap, Plus, Trash2, Coins, Users, Award, Info } from 'lucide-react';
+import { Trophy, Zap, Coins, Users, Info } from 'lucide-react';
 import { TokenSelector } from './TokenSelector';
 import { ChainSelector } from './ChainSelector';
 import { ProgressModal } from './ProgressModal';
@@ -7,15 +7,13 @@ import { useRewardCreation } from '@/hooks/useRewardCreation';
 
 interface RewardConfig {
   enabled: boolean;
-  type: 'LINEAR' | 'QUADRATIC';
+  type: 'QUADRATIC';
   tokenAddress: string;
   chainId: number;
   tokenSymbol?: string;
   tokenName?: string;
   tokenDecimals?: number;
   network?: string;
-  totalWinners?: number;
-  rewardAmounts?: number[];
   totalRewardPool?: string;
   minParticipants?: number;
   pointsWeight?: number;
@@ -31,7 +29,33 @@ interface RewardConfigurationSectionProps {
 
 // Popular token presets with full token information
 const TOKEN_PRESETS = {
+  8453: { // Base
+    'SNARKEL': {
+      address: '0xe75a890ad702b14b7935bc1ba81067f2b93f35d0',
+      symbol: 'SNARKEL',
+      name: 'Snarkel Token (Base)',
+      decimals: 18
+    },
+    'USDC': {
+      address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6
+    },
+    'ETH': {
+      address: '0x0000000000000000000000000000000000000000',
+      symbol: 'ETH',
+      name: 'Ether (Base)',
+      decimals: 18
+    },
+  },
   42220: { // Celo Mainnet
+    'SNARKEL': {
+      address: '0xf18e87167db07da9160d790d87dc9d39e8147e4d',
+      symbol: 'SNARKEL',
+      name: 'Snarkel Token (Celo)',
+      decimals: 18
+    },
     'USDC': {
       address: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
       symbol: 'USDC',
@@ -50,30 +74,7 @@ const TOKEN_PRESETS = {
       name: 'Celo Native Token',
       decimals: 18
     },
-  },
-  8453: { // Base
-    'USDC': {
-      address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-      symbol: 'USDC',
-      name: 'USD Coin',
-      decimals: 6
-    },
-    'ETH': {
-      address: '0x0000000000000000000000000000000000000000',
-      symbol: 'ETH',
-      name: 'Ethereum',
-      decimals: 18
-    },
   }
-};
-
-// Default reward amounts for different winner counts
-const DEFAULT_REWARDS = {
-  1: [100],
-  2: [60, 40],
-  3: [50, 30, 20],
-  4: [40, 25, 20, 15],
-  5: [35, 25, 20, 15, 5],
 };
 
 export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProps> = ({
@@ -100,11 +101,11 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
       updateRewardConfig({ 
         enabled,
         type: 'QUADRATIC',
-        totalWinners: 5,
+        chainId: 8453, // Default to Base
         totalRewardPool: rewardConfig.totalRewardPool || '10', // Use existing value or default to 10
         minParticipants: 3,
         pointsWeight: 0.7,
-        rewardAllParticipants: false
+        rewardAllParticipants: true // Default to rewarding all participants
       });
     } else {
       updateRewardConfig({ enabled });
@@ -113,10 +114,8 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
 
   const handleChainChange = (chainId: number) => {
     const networkNames = {
-      42220: 'Celo',
       8453: 'Base',
-      1: 'Ethereum',
-      137: 'Polygon'
+      42220: 'Celo'
     };
     updateRewardConfig({ 
       chainId,
@@ -143,10 +142,6 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
     }
   };
 
-  const handleRewardTypeChange = (type: 'LINEAR' | 'QUADRATIC') => {
-    updateRewardConfig({ type });
-  };
-
   const handlePresetToken = (tokenName: string) => {
     console.log('=== PRESET TOKEN DEBUG ===');
     console.log('Token name:', tokenName);
@@ -167,46 +162,6 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
     } else {
       console.log('No presets found for chain ID:', rewardConfig.chainId);
     }
-  };
-
-  const handleWinnersChange = (totalWinners: number) => {
-    updateRewardConfig({ 
-      totalWinners,
-      rewardAmounts: DEFAULT_REWARDS[totalWinners as keyof typeof DEFAULT_REWARDS] || []
-    });
-  };
-
-  const addRewardAmount = () => {
-    const currentAmounts = rewardConfig.rewardAmounts || [];
-    updateRewardConfig({ 
-      rewardAmounts: [...currentAmounts, 0],
-      totalWinners: currentAmounts.length + 1
-    });
-  };
-
-  const removeRewardAmount = (index: number) => {
-    const currentAmounts = rewardConfig.rewardAmounts || [];
-    const newAmounts = currentAmounts.filter((_, i) => i !== index);
-    updateRewardConfig({ 
-      rewardAmounts: newAmounts,
-      totalWinners: newAmounts.length
-    });
-  };
-
-  const updateRewardAmount = (index: number, amount: number) => {
-    const currentAmounts = rewardConfig.rewardAmounts || [];
-    const newAmounts = [...currentAmounts];
-    newAmounts[index] = amount;
-    updateRewardConfig({ rewardAmounts: newAmounts });
-  };
-
-  const handleRewardAllParticipants = (rewardAll: boolean) => {
-    updateRewardConfig({ 
-      rewardAllParticipants: rewardAll,
-      // If rewarding all, set type to QUADRATIC and adjust settings
-      type: rewardAll ? 'QUADRATIC' : rewardConfig.type,
-      totalWinners: rewardAll ? undefined : rewardConfig.totalWinners
-    });
   };
 
   return (
@@ -273,155 +228,7 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
             </div>
           </div>
 
-          {/* Reward All Participants Option */}
-          <div className="space-y-3">
-            <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
-              🎁 Reward Distribution Strategy
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <button
-                onClick={() => handleRewardAllParticipants(false)}
-                className={`p-4 rounded-lg border-2 transition-all duration-200 font-handwriting ${
-                  !rewardConfig.rewardAllParticipants
-                    ? 'border-purple-500 bg-purple-50 shadow-md scale-105'
-                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white">
-                    <Award className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <h4 className="font-handwriting font-bold text-gray-900">Top Winners</h4>
-                    <p className="font-handwriting text-xs text-gray-500">Reward top performers only</p>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleRewardAllParticipants(true)}
-                className={`p-4 rounded-lg border-2 transition-all duration-200 font-handwriting ${
-                  rewardConfig.rewardAllParticipants
-                    ? 'border-purple-500 bg-purple-50 shadow-md scale-105'
-                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white">
-                    <Users className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <h4 className="font-handwriting font-bold text-gray-900">All Participants</h4>
-                    <p className="font-handwriting text-xs text-gray-500">Everyone gets rewarded</p>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Top Winners Configuration */}
-          {!rewardConfig.rewardAllParticipants && (
-            <div className="space-y-4 p-4 bg-white rounded-lg border border-gray-200">
-              <h4 className="font-handwriting font-bold text-gray-900 flex items-center gap-2">
-                <Award className="w-4 h-4" />
-                Top Winners Configuration
-              </h4>
-              
-              <div className="space-y-4">
-                {/* Winner Count Selection */}
-                <div>
-                  <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
-                    🥇 Number of Winners (Top 5)
-                  </label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {[1, 2, 3, 4, 5].map((count) => (
-                      <button
-                        key={count}
-                        onClick={() => handleWinnersChange(count)}
-                        className={`p-3 rounded-lg border-2 transition-all duration-200 font-handwriting ${
-                          rewardConfig.totalWinners === count
-                            ? 'border-purple-500 bg-purple-500 text-white shadow-md'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className="text-lg font-bold">{count}</div>
-                          <div className="text-xs opacity-80">Winner{count > 1 ? 's' : ''}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Custom Reward Amounts */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="block font-handwriting text-sm font-medium text-gray-700">
-                      💎 Reward Amounts (in tokens)
-                    </label>
-                    <button
-                      onClick={addRewardAmount}
-                      className="text-sm font-handwriting text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2 py-1 rounded transition-colors flex items-center gap-1"
-                    >
-                      <Plus size={14} />
-                      Add Amount
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {(rewardConfig.rewardAmounts || []).map((amount, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className="text-sm font-handwriting text-gray-500 w-8">
-                            #{index + 1}
-                          </span>
-                          <input
-                            type="number"
-                            value={amount}
-                            onChange={(e) => updateRewardAmount(index, parseFloat(e.target.value) || 0)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting text-sm"
-                            placeholder="0"
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                        {rewardConfig.rewardAmounts && rewardConfig.rewardAmounts.length > 1 && (
-                          <button
-                            onClick={() => removeRewardAmount(index)}
-                            className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {validationErrors.rewardsAmounts && (
-                    <p className="mt-1 text-sm text-red-600 font-handwriting">
-                      {validationErrors.rewardsAmounts}
-                    </p>
-                  )}
-                </div>
-
-                {/* Total Rewards Display */}
-                {rewardConfig.rewardAmounts && rewardConfig.rewardAmounts.length > 0 && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="font-handwriting text-sm font-medium text-green-800">
-                        Total Reward Pool:
-                      </span>
-                      <span className="font-handwriting font-bold text-green-800">
-                        {rewardConfig.rewardAmounts.reduce((sum, amount) => sum + amount, 0)} tokens
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Quadratic Reward Configuration (Default) */}
+          {/* Quadratic Reward Configuration */}
           <div className="space-y-4 p-4 bg-white rounded-lg border border-gray-200">
             <h4 className="font-handwriting font-bold text-gray-900 flex items-center gap-2">
               <Zap className="w-4 h-4" />
@@ -445,7 +252,7 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting ${
                     validationErrors.rewardsPool ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="1000"
+                  placeholder="10"
                 />
                 {validationErrors.rewardsPool && (
                   <p className="mt-1 text-sm text-red-600 font-handwriting">
@@ -496,17 +303,14 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
                 <div className="flex items-center gap-2 mb-2">
                   <Info className="w-4 h-4 text-blue-600" />
                   <span className="font-handwriting text-sm font-medium text-blue-800">
-                    Distribution Preview
+                    How Rewards Work
                   </span>
                 </div>
                 <div className="text-xs text-blue-700 space-y-1">
-                  {rewardConfig.rewardAllParticipants ? (
-                    <p>• All participants will receive rewards based on their performance</p>
-                  ) : (
-                    <p>• Top {rewardConfig.totalWinners || 5} winners will receive rewards</p>
-                  )}
+                  <p>• All participants receive rewards based on their performance</p>
                   <p>• Rewards are distributed using quadratic funding formula</p>
                   <p>• Higher scores and faster answers get proportionally more rewards</p>
+                  <p>• The system automatically calculates fair distribution</p>
                 </div>
               </div>
             </div>

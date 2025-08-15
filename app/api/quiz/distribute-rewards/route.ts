@@ -3,7 +3,7 @@ import type { Hex } from 'viem';
 import { getReferralDataSuffix, submitDivviReferral } from '@/lib/divvi';
 import { PrismaClient } from '@prisma/client';
 import { createPublicClient, createWalletClient, http, parseEther, getAddress } from 'viem';
-import { celo, celoAlfajores, base, baseSepolia } from 'viem/chains';
+import { celo, base } from 'viem/chains';
 import { erc20Abi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { SNARKEL_ABI } from '@/contracts/abi';
@@ -106,10 +106,7 @@ export async function POST(request: NextRequest) {
       switch (chainId) {
         case 42220: return celo;
         case 8453: return base;
-        case 8453: return base;
-        case 84532:
-        case 84531: return baseSepolia;
-        default: return celo;
+        default: return base; // Default to Base instead of Celo
       }
     })();
 
@@ -130,9 +127,7 @@ export async function POST(request: NextRequest) {
     // Resolve contract address per chain
     const CONTRACTS: Record<number, string> = {
       42220: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO || '0x8b8fb708758dc8185ef31e685305c1aa0827ea65',
-      8453: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40',
-      84532: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40',
-      84531: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40'
+      8453: process.env.NEXT_PLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40'
     };
     
     // Check if we have contract addresses configured

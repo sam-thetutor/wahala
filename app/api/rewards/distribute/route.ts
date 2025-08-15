@@ -4,7 +4,7 @@ import { getReferralDataSuffix, submitDivviReferral } from '@/lib/divvi';
 import { PrismaClient } from '@prisma/client/edge';
 import { privateKeyToAccount } from 'viem/accounts' ;
 import { createWalletClient, createPublicClient, http, parseEther, getAddress } from 'viem';
-import { celo, celoAlfajores, base, baseSepolia } from 'viem/chains';
+import { celo, base } from 'viem/chains';
 import { erc20Abi } from 'viem';
 
 const prisma = new PrismaClient();
@@ -73,10 +73,7 @@ export async function POST(request: NextRequest) {
       switch (chainId) {
         case 42220: return celo;
         case 8453: return base;
-        case 8453: return base;
-        case 84532:
-        case 84531: return baseSepolia;
-        default: return celo; // default mainnet
+        default: return base; // Default to Base instead of Celo
       }
     })();
 
@@ -228,7 +225,7 @@ async function executeBatchTransfers(
 
       // Wait for transaction confirmation
       const receipt = await walletClient.waitForTransactionReceipt({ hash });
-      submitDivviReferral(hash as Hex, celoAlfajores.id).catch(() => {});
+      submitDivviReferral(hash as Hex, base.id).catch(() => {});
 
       results.push({
         ...distribution,

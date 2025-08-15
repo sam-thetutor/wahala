@@ -266,15 +266,13 @@ interface SnarkelData {
   featuredPriority: number;
   rewards: {
     enabled: boolean;
-    type: 'LINEAR' | 'QUADRATIC';
+    type: 'QUADRATIC';
     tokenAddress: string;
     chainId: number;
     tokenSymbol?: string;
     tokenName?: string;
     tokenDecimals?: number;
     network?: string;
-    totalWinners?: number;
-    rewardAmounts?: number[];
     totalRewardPool?: string;
     minParticipants?: number;
     pointsWeight?: number;
@@ -336,12 +334,10 @@ export default function SnarkelCreationPage() {
       tokenName: 'USD Coin',
       tokenDecimals: 6,
       network: 'Base',
-      totalWinners: 5,
-      rewardAmounts: [35, 25, 20, 15, 5],
       totalRewardPool: '10', // Default to 10 tokens instead of 1000
       minParticipants: 3,
       pointsWeight: 0.7,
-      rewardAllParticipants: false
+      rewardAllParticipants: true
     },
     questions: []
   });
@@ -422,17 +418,7 @@ export default function SnarkelCreationPage() {
         errors.rewardsToken = 'Reward token address is required when rewards are enabled';
       }
       
-      if (!snarkel.rewards.rewardAllParticipants) {
-        // Top winners mode
-        if (!snarkel.rewards.totalWinners || snarkel.rewards.totalWinners < 1) {
-          errors.rewardsWinners = 'Total winners must be at least 1';
-        }
-        if (!snarkel.rewards.rewardAmounts || snarkel.rewards.rewardAmounts.length === 0 || snarkel.rewards.rewardAmounts.every(amt => amt === 0)) {
-          errors.rewardsAmounts = 'Reward amounts are required';
-        }
-      }
-      
-      // Both modes need quadratic settings
+      // Quadratic distribution settings
       if (!snarkel.rewards.totalRewardPool || snarkel.rewards.totalRewardPool === '0') {
         errors.rewardsPool = 'Total reward pool is required';
       }
@@ -478,7 +464,7 @@ export default function SnarkelCreationPage() {
       isValid = Object.keys(errors).length === 0;
     } else if (activeTab === 'rewards') {
       // Clear reward-related errors
-      ['rewardsToken', 'rewardsWinners', 'rewardsAmounts', 'rewardsPool', 'rewardsParticipants'].forEach(key => {
+      ['rewardsToken', 'rewardsPool', 'rewardsParticipants'].forEach(key => {
         delete newErrors[key];
       });
       const errors = validateRewardsTab();
@@ -524,15 +510,8 @@ export default function SnarkelCreationPage() {
       const hasRewardPool = snarkel.rewards.totalRewardPool !== '0';
       const hasMinParticipants = (snarkel.rewards.minParticipants ?? 0) > 0;
       
-      if (snarkel.rewards.rewardAllParticipants) {
-        // All participants mode - only need token, pool, and min participants
-        return hasToken && hasRewardPool && hasMinParticipants;
-      } else {
-        // Top winners mode - need token, winners, amounts, pool, and min participants
-        const hasWinners = (snarkel.rewards.totalWinners ?? 0) > 0;
-        const hasAmounts = snarkel.rewards.rewardAmounts && snarkel.rewards.rewardAmounts.length > 0;
-        return hasToken && hasWinners && hasAmounts && hasRewardPool && hasMinParticipants;
-      }
+      // Quadratic distribution mode - need token, pool, and min participants
+      return hasToken && hasRewardPool && hasMinParticipants;
     } else if (tabId === 'spam') {
       if (!snarkel.spamControlEnabled) return true;
       return snarkel.entryFee > 0 && snarkel.entryFeeToken.trim() !== '';

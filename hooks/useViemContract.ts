@@ -17,7 +17,7 @@ import {
 } from 'viem';
 import type { Hex } from 'viem'
 import { getReferralDataSuffix, submitDivviReferral } from '@/lib/divvi'
-import { celoAlfajores, base } from 'viem/chains';
+import { base } from 'viem/chains';
 import { SNARKEL_ABI } from '../contracts/abi';
 import { ERC20_ABI } from '../contracts/erc20-abi';
 import { readContract } from 'viem/actions';
@@ -193,7 +193,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
   const ensureCorrectChain = useCallback(async (targetChainId?: number): Promise<void> => {
     try {
       const currentChainId = chainId || fallbackChainId;
-      const desiredChainId = targetChainId || selectedChainId || celoAlfajores.id;
+      const desiredChainId = targetChainId || selectedChainId || base.id;
       
       if (!currentChainId || currentChainId !== desiredChainId) {
         console.log(`Switching to chain ${desiredChainId}. Current chain: ${currentChainId || 'undefined'}`);
@@ -279,7 +279,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ isLoading: false, success: true });
 
       // Submit referral asynchronously
-      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      const finalChainId = chainId || fallbackChainId || base.id
       submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
@@ -387,7 +387,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
 
-      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      const finalChainId = chainId || fallbackChainId || base.id
       submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
@@ -423,7 +423,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
 
-      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      const finalChainId = chainId || fallbackChainId || base.id
       submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
@@ -468,7 +468,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
 
-      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      const finalChainId = chainId || fallbackChainId || base.id
       submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
@@ -524,7 +524,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
 
-      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      const finalChainId = chainId || fallbackChainId || base.id
       submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
@@ -563,7 +563,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
 
-      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      const finalChainId = chainId || fallbackChainId || base.id
       submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
@@ -602,7 +602,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
 
-      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      const finalChainId = chainId || fallbackChainId || base.id
       submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
@@ -641,7 +641,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
 
-      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      const finalChainId = chainId || fallbackChainId || base.id
       submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
@@ -684,7 +684,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
 
-      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      const finalChainId = chainId || fallbackChainId || base.id
       submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
@@ -733,7 +733,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       updateState({ transactionHash: hash });
       updateState({ isLoading: false, success: true });
 
-      const finalChainId = chainId || fallbackChainId || celoAlfajores.id
+      const finalChainId = chainId || fallbackChainId || base.id
       submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
 
       return { success: true, transactionHash: hash };
@@ -754,7 +754,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
   // Read functions using createPublicClient
   const getTokenBalance = useCallback(async (tokenAddress: Address, userAddress: Address, tokenChainId?: number): Promise<string> => {
     try {
-      const targetChainId = tokenChainId || celoAlfajores.id;
+      const targetChainId = tokenChainId || base.id;
       console.log(`Checking token balance on chain ${targetChainId} for token ${tokenAddress}`);
       
       const balance = await readTokenBalance(tokenAddress, userAddress, targetChainId);
@@ -774,7 +774,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
     tokenChainId?: number
   ): Promise<string> => {
     try {
-      const targetChainId = tokenChainId || celoAlfajores.id;
+      const targetChainId = tokenChainId || base.id;
       console.log(`Checking token allowance on chain ${targetChainId} for token ${tokenAddress}`);
       
       const allowance = await readTokenAllowance(tokenAddress, ownerAddress, spenderAddress, targetChainId);
@@ -791,7 +791,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
   const areRewardsDistributed = useCallback(async (snarkelCode: string): Promise<boolean> => {
     try {
       const client = createPublicClient({
-        chain: celoAlfajores,
+        chain: base,
         transport: http()
       });
 
@@ -812,7 +812,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
   const getExpectedRewardToken = useCallback(async (sessionId: number): Promise<Address> => {
     try {
       const client = createPublicClient({
-        chain: celoAlfajores,
+        chain: base,
         transport: http()
       });
 
@@ -833,7 +833,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
   const getExpectedRewardAmount = useCallback(async (sessionId: number): Promise<string> => {
     try {
       const client = createPublicClient({
-        chain: celoAlfajores,
+        chain: base,
         transport: http()
       });
 
@@ -854,7 +854,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
   const canStartNewSession = useCallback(async (snarkelCode: string): Promise<{ canStart: boolean; lastSessionId: string; lastIsActive: boolean }> => {
     try {
       const client = createPublicClient({
-        chain: celoAlfajores,
+        chain: base,
         transport: http()
       });
 
@@ -876,7 +876,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
   const getUserClaimable = useCallback(async (sessionId: number, user: Address): Promise<string> => {
     try {
       const client = createPublicClient({
-        chain: celoAlfajores,
+        chain: base,
         transport: http()
       });
 
@@ -897,7 +897,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
   const getUserWins = useCallback(async (sessionId: number, user: Address): Promise<string> => {
     try {
       const client = createPublicClient({
-        chain: celoAlfajores,
+        chain: base,
         transport: http()
       });
 

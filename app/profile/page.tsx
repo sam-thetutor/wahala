@@ -173,9 +173,6 @@ export default function ProfilePage() {
     switch (chainId) {
       case 8453: return '🔵'; // Base
       case 42220: return '🟡'; // Celo
-      case 1: return '🔷'; // Ethereum
-      case 137: return '🟣'; // Polygon
-      case 42161: return '🔴'; // Arbitrum
       default: return '🔘';
     }
   };
@@ -184,9 +181,6 @@ export default function ProfilePage() {
     switch (chainId) {
       case 8453: return 'Base';
       case 42220: return 'Celo';
-      case 1: return 'Ethereum';
-      case 137: return 'Polygon';
-      case 42161: return 'Arbitrum';
       default: return `Chain ${chainId}`;
     }
   };

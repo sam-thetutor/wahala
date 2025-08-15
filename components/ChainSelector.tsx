@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Network, Globe } from 'lucide-react';
 import { useSwitchChain, useAccount } from 'wagmi';
+import Image from 'next/image';
 
 interface ChainOption {
   id: number;
@@ -19,18 +20,18 @@ interface ChainSelectorProps {
 
 const CHAIN_OPTIONS: ChainOption[] = [
   {
-    id: 42220,
-    name: 'Celo Mainnet',
-    shortName: 'Celo',
-    icon: '🌾',
-    color: 'bg-green-500',
-  },
-  {
     id: 8453,
     name: 'Base',
     shortName: 'Base',
-    icon: '🔵',
+    icon: '/base.png',
     color: 'bg-blue-500',
+  },
+  {
+    id: 42220,
+    name: 'Celo Mainnet',
+    shortName: 'Celo',
+    icon: '/celo.png',
+    color: 'bg-green-500',
   },
 ];
 
@@ -85,8 +86,14 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
             )}
             
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full ${chainOption.color} flex items-center justify-center text-white text-lg`}>
-                {chainOption.icon}
+              <div className={`w-10 h-10 rounded-full ${chainOption.color} flex items-center justify-center text-white overflow-hidden`}>
+                <Image
+                  src={chainOption.icon}
+                  alt={chainOption.name}
+                  width={32}
+                  height={32}
+                  className="w-8 h-8 object-contain"
+                />
               </div>
               
               <div className="text-left">

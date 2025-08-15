@@ -39,7 +39,17 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             title: true,
-            snarkelCode: true
+            snarkelCode: true,
+            rewards: {
+              select: {
+                id: true,
+                isDistributed: true,
+                distributedAt: true,
+                onchainSessionId: true,
+                network: true,
+                chainId: true
+              }
+            }
           }
         },
         participants: {
@@ -87,7 +97,15 @@ export async function POST(request: NextRequest) {
           isAdmin: p.isAdmin
         })),
         submissions: [], // No direct relation in Room model
-        rewards: [], // No direct relation in Room model
+        rewards: session.snarkel.rewards.map(r => ({
+          id: r.id,
+          isDistributed: r.isDistributed,
+          distributedAt: r.distributedAt?.toISOString() || null,
+          onchainSessionId: r.onchainSessionId,
+          network: r.network,
+          chainId: r.chainId,
+          distributions: [] // No direct relation in Room model
+        })),
         stats: {
           totalParticipants,
           totalSubmissions: 0,

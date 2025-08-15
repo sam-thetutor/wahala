@@ -53,6 +53,8 @@ interface Snarkel {
   entryFeeNetwork: string;
   allowlistCount: number;
   hasRewards: boolean;
+  rewardsNetwork?: string; // Add network information for rewards
+  rewardsChainId?: number; // Add chain ID for rewards
   autoStartEnabled: boolean;
   scheduledStartTime: string | null;
   creator: {
@@ -114,6 +116,8 @@ interface QuizSession {
     isDistributed: boolean;
     distributedAt: string | null;
     onchainSessionId: string | null;
+    network?: string;
+    chainId?: number;
     distributions: Array<{
       id: string;
       position: number;
@@ -318,7 +322,9 @@ export default function AdminPage() {
   const getRewardStatus = (session: QuizSession) => {
     const distributedRewards = session.rewards.filter(r => r.isDistributed).length;
     const totalRewards = session.rewards.length;
-    return `${distributedRewards}/${totalRewards} distributed`;
+    const network = session.rewards[0]?.network;
+    const baseText = `${distributedRewards}/${totalRewards} distributed`;
+    return network ? `${baseText} (${network})` : baseText;
   };
 
   if (!isConnected) {
@@ -531,7 +537,7 @@ export default function AdminPage() {
                             </span>
                             {snarkel.hasRewards && (
                               <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                                Rewards
+                                {snarkel.rewardsNetwork ? `Rewards (${snarkel.rewardsNetwork})` : 'Rewards'}
                               </span>
                             )}
                             {snarkel.entryFeeNetwork && (
@@ -717,6 +723,11 @@ export default function AdminPage() {
                               <span className="px-2 py-1 rounded-full text-xs font-medium text-gray-600 bg-gray-100">
                                 {rewardStatus}
                               </span>
+                              {session.rewards[0]?.network && (
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {session.rewards[0].network}
+                                </span>
+                              )}
                             </div>
                             
                             <div className="flex items-center gap-6 text-sm text-gray-500 mb-3">
@@ -885,6 +896,12 @@ export default function AdminPage() {
                       <span className="text-gray-600">Rewards Distributed:</span>
                       <span>{selectedSnarkel.stats.totalRewardsDistributed}</span>
                     </div>
+                    {selectedSnarkel.hasRewards && selectedSnarkel.rewardsNetwork && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Rewards Network:</span>
+                        <span className="font-medium">{selectedSnarkel.rewardsNetwork}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -990,6 +1007,11 @@ export default function AdminPage() {
                             {reward.isDistributed ? 'Distributed' : 'Pending'}
                           </span>
                         </div>
+                        {reward.network && (
+                          <div className="text-xs text-gray-500">
+                            Network: {reward.network}
+                          </div>
+                        )}
                         {reward.distributedAt && (
                           <div className="text-xs text-gray-500">
                             Distributed: {formatDate(reward.distributedAt)}

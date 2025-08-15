@@ -238,15 +238,8 @@ export async function POST(request: NextRequest) {
       // Get network name based on chain ID
       const getNetworkName = (chainId: number): string => {
         switch (chainId) {
-          case 42220: return 'Celo Mainnet';
-          case 44787: return 'Celo Alfajores';
           case 8453: return 'Base Mainnet';
-          case 84531: return 'Base Sepolia';
-          case 137: return 'Polygon';
-          case 80001: return 'Mumbai';
-          case 1: return 'Ethereum Mainnet';
-          case 11155111: return 'Sepolia';
-          case 42161: return 'Arbitrum';
+          case 42220: return 'Celo Mainnet';
           default: return `Chain ${chainId}`;
         }
       };

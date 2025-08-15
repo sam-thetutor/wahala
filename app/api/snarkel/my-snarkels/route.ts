@@ -104,6 +104,8 @@ async function fetchSnarkelsByUser(address: string) {
       entryFeeNetwork: snarkel.entryFeeNetwork || snarkel.rewards[0]?.network || '',
       allowlistCount: snarkel.allowlist.length,
       hasRewards: snarkel.rewards.length > 0,
+      rewardsNetwork: snarkel.rewards[0]?.network || '',
+      rewardsChainId: snarkel.rewards[0]?.chainId || undefined,
       autoStartEnabled: snarkel.autoStartEnabled,
       scheduledStartTime: snarkel.startTime?.toISOString() || null,
       creator: snarkel.creator,

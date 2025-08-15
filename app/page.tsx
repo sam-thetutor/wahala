@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Play, 
@@ -18,10 +18,7 @@ import {
   User
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
-import { FarcasterUI, FarcasterShareButton, FarcasterAddButton, FarcasterComposeButton } from '@/components/FarcasterUI';
-import { FarcasterContextDisplay, FarcasterUserInfo } from '@/components/FarcasterContextDisplay';
-import MiniAppHeader from '@/components/MiniAppHeader';
-import MiniAppContextDisplay from '@/components/MiniAppContextDisplay';
+import { FarcasterUI } from '@/components/FarcasterUI';
 import { useAccount } from 'wagmi';
 
 // Quiz type definition
@@ -114,7 +111,7 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
             </div>
             <div className="flex items-center gap-1">
               <Award className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" style={{ color: '#FCFF52' }} />
-              <span className="font-bold text-xs sm:text-sm" style={{ color: '#476520' }}>{quiz.reward} ETH</span>
+              <span className="font-bold text-xs sm:text-sm" style={{ color: '#476520' }}>{quiz.reward} CELO</span>
             </div>
           </div>
 
@@ -160,7 +157,7 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
 // Action Bar Component
 const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white shadow-2xl z-50 border-t-2 border-yellow-400 rounded-t-2xl sm:rounded-t-3xl md:left-1/2 md:transform md:-translate-x-1/2 md:w-3/5"
+    <div className="fixed bottom-0 left-0 right-0 bg-white shadow-2xl z-50 border-t-2 border-yellow-400 rounded-t-3xl md:left-1/2 md:transform md:-translate-x-1/2 md:w-3/5"
          style={{
            backgroundImage: `
              radial-gradient(circle at top right, rgba(252, 255, 82, 0.1) 0%, transparent 50%),
@@ -174,17 +171,17 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
              backgroundSize: '8px 8px'
            }}></div>
       
-      <div className="relative z-10 p-2 sm:p-3 md:p-4">
-        <div className="flex items-center justify-center gap-1.5 sm:gap-2 md:gap-4">
+      <div className="relative z-10 p-3 sm:p-4">
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
           {/* Join a Snarkel */}
           <div className="relative flex-1 min-w-0">
             <div className="absolute inset-0 bg-green-300 rounded-2xl blur-xl opacity-40 animate-pulse"></div>
             <Link href="/join" className="relative block">
-              <button className="w-full px-2 sm:px-4 md:px-6 py-1.5 sm:py-2 md:py-3 rounded-xl sm:rounded-2xl font-bold text-white transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden group bg-gradient-to-r from-green-500 to-emerald-600 shadow-xl">
+              <button className="w-full px-3 sm:px-6 py-2 sm:py-3 rounded-2xl font-bold text-white transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden group bg-gradient-to-r from-green-500 to-emerald-600 shadow-xl">
                 <span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base">
                   <Users className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
                   <span className="truncate">
-                  JOIN A SNARKEL
+                  {isConnected ? 'JOIN A SNARKEL' : 'CONNECT WALLET'}
                   </span>
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -195,7 +192,7 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
           {/* Host a Snarkel */}
           <div className="relative flex-1 min-w-0">
             <Link href="/create">
-              <div className="bg-white shadow-lg rounded-xl sm:rounded-2xl p-1.5 sm:p-2 md:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-yellow-400 relative overflow-hidden">
+              <div className="bg-white shadow-lg rounded-2xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-yellow-400 relative overflow-hidden">
                 <span className="font-handwriting text-xs sm:text-sm md:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate" 
                       style={{ color: '#476520' }}>
                   <Plus className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
@@ -209,7 +206,7 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
           {/* Profile */}
           <div className="relative flex-1 min-w-0">
             <Link href="/profile">
-              <div className="bg-white shadow-lg rounded-xl sm:rounded-2xl p-1.5 sm:p-2 md:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-purple-400 relative overflow-hidden">
+              <div className="bg-white shadow-lg rounded-2xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-purple-400 relative overflow-hidden">
                 <span className="font-handwriting text-xs sm:text-sm md:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate" 
                       style={{ color: '#476520' }}>
                   <User className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
@@ -222,7 +219,7 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
           
           {/* Wallet Connect */}
           <div className="flex-shrink-0">
-            <WalletConnectButton compact={true} />
+            <WalletConnectButton />
           </div>
         </div>
       </div>
@@ -247,36 +244,13 @@ export default function HomePage() {
   const [featuredQuizzes, setFeaturedQuizzes] = useState<Quiz[]>([]);
   const [loadingQuizzes, setLoadingQuizzes] = useState(true);
   const [quizError, setQuizError] = useState<string | null>(null);
-  const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
   const { isConnected } = useAccount();
-  const quizCarouselRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to specific quiz position
-  const scrollToQuiz = (index: number) => {
-    if (quizCarouselRef.current) {
-      const quizWidth = 288; // w-72 = 288px
-      const gap = 16; // gap-4 = 16px
-      const scrollPosition = index * (quizWidth + gap);
-      
-      quizCarouselRef.current.scrollTo({
-        left: scrollPosition,
-        behavior: 'smooth'
-      });
-      
-      setCurrentQuizIndex(index);
-    }
-  };
+  // Contract addresses - Base and Celo mainnet
+  const CELO_CONTRACT = '0x8b8fb708758dc8185ef31e685305c1aa0827ea65';
+  const BASE_CONTRACT = '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40';
 
-  // Handle scroll events to update current index
-  const handleScroll = () => {
-    if (quizCarouselRef.current) {
-      const scrollLeft = quizCarouselRef.current.scrollLeft;
-      const quizWidth = 288; // w-72 = 288px
-      const gap = 16; // gap-4 = 16px
-      const index = Math.round(scrollLeft / (quizWidth + gap));
-      setCurrentQuizIndex(Math.max(0, Math.min(index, featuredQuizzes.length - 1)));
-    }
-  };
+  const formatAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
   // Fetch featured quizzes from API
   const fetchFeaturedQuizzes = async () => {
@@ -370,15 +344,6 @@ export default function HomePage() {
   return (
     <FarcasterUI>
       <div className="min-h-screen overflow-hidden relative">
-        {/* Farcaster Context Display */}
-        <FarcasterContextDisplay />
-        
-        {/* Mini App Context Display - Shows Mini App info when running as Mini App */}
-        <MiniAppContextDisplay />
-        
-        {/* Mini App Header - Shows social context when running as Mini App */}
-        <MiniAppHeader />
-        
         {/* Enhanced textured background */}
         <div className="fixed inset-0 opacity-40 pointer-events-none">
           <div 
@@ -439,6 +404,10 @@ export default function HomePage() {
         {/* Mobile Layout */}
         {isMobile ? (
           <div className="relative z-10 min-h-screen p-4 sm:p-6 pb-28 flex flex-col overflow-x-hidden">
+            {/* Mobile Wallet Connect Button - Top Right */}
+            <div className="absolute top-4 right-4 z-50">
+              <WalletConnectButton />
+            </div>
             
             {/* Mobile Header */}
             <div className={`text-center mb-6 sm:mb-8 transition-all duration-1500 ${
@@ -482,127 +451,59 @@ export default function HomePage() {
                   Featured Quizzes
                 </h2>
                 <div className="flex justify-center items-center gap-2 text-xs sm:text-sm" style={{ color: '#655947' }}>
-                  <span>Swipe to explore all quizzes</span>
+                  <span>Scroll to explore</span>
                   <ArrowDown className="w-3 h-3 sm:w-4 sm:h-4 animate-bounce" />
                 </div>
               </div>
               
-              {/* Quiz Cards with Horizontal Scrolling */}
-              <div className="px-2">
-                {loadingQuizzes ? (
-                  // Loading state
+                        {/* Quiz Cards */}
+              <div className="space-y-4 sm:space-y-6 px-2">
+            {loadingQuizzes ? (
+              // Loading state
                   <div className="space-y-4 sm:space-y-6">
-                    {[1, 2, 3].map((i) => (
+                {[1, 2].map((i) => (
                       <div key={i} className="bg-white shadow-2xl rounded-2xl p-4 sm:p-6 animate-pulse">
                         <div className="h-4 bg-gray-200 rounded mb-3 sm:mb-4"></div>
-                        <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded mb-2"></div>
                         <div className="h-3 bg-gray-200 rounded mb-3 sm:mb-4 w-3/4"></div>
-                        <div className="h-8 bg-gray-200 rounded"></div>
-                      </div>
-                    ))}
+                    <div className="h-8 bg-gray-200 rounded"></div>
                   </div>
-                ) : quizError ? (
-                  // Error state
+                ))}
+              </div>
+            ) : quizError ? (
+              // Error state
                   <div className="text-center py-6 sm:py-8 px-2">
                     <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 sm:p-6">
                       <p className="font-handwriting text-base sm:text-lg" style={{ color: '#655947' }}>
-                        {quizError}
-                      </p>
-                      <button 
-                        onClick={fetchFeaturedQuizzes}
+                    {quizError}
+                  </p>
+                  <button 
+                    onClick={fetchFeaturedQuizzes}
                         className="mt-3 sm:mt-4 px-4 sm:px-6 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors text-sm sm:text-base"
-                      >
-                        Try Again
-                      </button>
-                    </div>
-                  </div>
-                ) : featuredQuizzes.length === 0 ? (
-                  // Empty state
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            ) : featuredQuizzes.length === 0 ? (
+              // Empty state
                   <div className="text-center py-6 sm:py-8 px-2">
                     <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-6">
                       <p className="font-handwriting text-base sm:text-lg" style={{ color: '#655947' }}>
-                        No featured quizzes available yet
-                      </p>
+                    No featured quizzes available yet
+                  </p>
                       <p className="text-xs sm:text-sm mt-2" style={{ color: '#655947' }}>
-                        Check back soon for new challenges!
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  // Quiz cards with horizontal scrolling
-                  <div className="relative">
-                    {/* Scrollable container */}
-                    <div 
-                      className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 scrollbar-hide quiz-carousel snap-x snap-mandatory"
-                      style={{
-                        scrollSnapType: 'x mandatory',
-                        WebkitOverflowScrolling: 'touch'
-                      }}
-                      onScroll={handleScroll}
-                      ref={quizCarouselRef}
-                    >
-                      {featuredQuizzes.map((quiz, index) => (
-                        <div 
-                          key={quiz.id} 
-                          className="flex-shrink-0 w-72 sm:w-80 md:w-96 snap-start"
-                        >
-                          <FeaturedQuizCard quiz={quiz} index={index} />
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {/* Navigation indicators */}
-                    {featuredQuizzes.length > 1 && (
-                      <div className="flex justify-center items-center gap-2 mt-4">
-                        {featuredQuizzes.map((_, index) => (
-                          <div
-                            key={index}
-                            className="w-2 h-2 rounded-full bg-gray-300 transition-colors duration-200 cursor-pointer hover:bg-gray-400"
-                            style={{
-                              backgroundColor: index === currentQuizIndex ? '#476520' : '#D1D5DB'
-                            }}
-                            onClick={() => scrollToQuiz(index)}
-                            onMouseEnter={() => scrollToQuiz(index)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Scroll hint for mobile */}
-                    {featuredQuizzes.length > 1 && (
-                      <div className="text-center mt-2">
-                        <p className="text-xs text-gray-500 font-handwriting">
-                          {featuredQuizzes.length} quizzes available • Swipe to explore
-                        </p>
-                        <div className="flex justify-center items-center gap-1 mt-1">
-                          <span className="text-xs text-gray-400">←</span>
-                          <span className="text-xs text-gray-400">→</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Mobile Status */}
-            <div className={`text-center mt-6 sm:mt-8 transition-all duration-1500 delay-500 px-2 ${
-              isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-            }`}>
-              <div className="bg-gradient-to-r from-green-50 to-emerald-100 shadow-lg rounded-2xl p-3 sm:p-4 relative overflow-hidden border border-green-200 mx-auto max-w-sm"
-                   style={{
-                     backgroundImage: `radial-gradient(circle at center, rgba(86, 223, 124, 0.1) 0%, transparent 50%)`
-                   }}>
-                <div className="flex flex-col items-center gap-2 sm:gap-3 font-handwriting text-base sm:text-lg" style={{ color: '#476520' }}>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 animate-bounce flex-shrink-0" />
-                    <span className="font-bold">Ready to Play!</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-center" style={{ color: '#655947' }}>
-                    Connect your wallet and start earning rewards
+                    Check back soon for new challenges!
                   </p>
                 </div>
               </div>
+            ) : (
+              // Quiz cards
+              featuredQuizzes.slice(0, 2).map((quiz, index) => (
+                <FeaturedQuizCard key={quiz.id} quiz={quiz} index={index} />
+              ))
+            )}
+          </div>
             </div>
             
             {/* Action Bar */}
@@ -656,30 +557,97 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Desktop Featured Quizzes Section */}
-            <div className={`absolute top-8 right-8 lg:top-16 lg:right-20 max-w-md transition-all duration-1500 delay-300 ${
-              isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            {/* Featured Quizzes Section - Center */}
+            <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-1500 delay-700 ${
+              isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
             }`}>
-              <div className="bg-white shadow-2xl rounded-3xl p-6 lg:p-8 transform rotate-1 hover:rotate-0 transition-all duration-500 relative border-l-4 border-blue-400 overflow-hidden">
+              <div className="text-center mb-8">
+                <h2 className="font-handwriting text-4xl lg:text-5xl mb-4" style={{ color: '#476520' }}>
+                  Featured Quizzes
+                </h2>
+                <div className="flex justify-center items-center gap-2 text-lg" style={{ color: '#655947' }}>
+                  <span className="font-handwriting">Discover amazing challenges</span>
+                  <ArrowDown className="w-6 h-6 animate-bounce" />
+                </div>
+              </div>
+              
+              {/* Quiz Cards Grid */}
+              <div className="grid grid-cols-2 gap-6 max-w-4xl">
+                {loadingQuizzes ? (
+                  // Loading state
+                  <div className="col-span-2 grid grid-cols-2 gap-6">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="bg-white shadow-2xl rounded-2xl p-6 animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                        <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded mb-4 w-3/4"></div>
+                        <div className="h-8 bg-gray-200 rounded"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : quizError ? (
+                  // Error state
+                  <div className="col-span-2 text-center py-8">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6">
+                      <p className="font-handwriting text-lg" style={{ color: '#655947' }}>
+                        {quizError}
+                      </p>
+                      <button 
+                        onClick={fetchFeaturedQuizzes}
+                        className="mt-4 px-6 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  </div>
+                ) : featuredQuizzes.length === 0 ? (
+                  // Empty state
+                  <div className="col-span-2 text-center py-8">
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+                      <p className="font-handwriting text-lg" style={{ color: '#655947' }}>
+                        No featured quizzes available yet
+                      </p>
+                      <p className="text-sm mt-2" style={{ color: '#655947' }}>
+                        Check back soon for new challenges!
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  // Quiz cards
+                  featuredQuizzes.map((quiz, index) => (
+                    <FeaturedQuizCard key={quiz.id} quiz={quiz} index={index} />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* What you can do - positioned to avoid overlap */}
+            <div className={`absolute top-8 right-8 lg:top-20 lg:right-16 max-w-sm transition-all duration-1500 delay-300 ${
+              isLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
+            }`}>
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 shadow-2xl rounded-3xl p-6 lg:p-8 transform rotate-1 hover:-rotate-1 transition-all duration-500 relative border-l-4 border-blue-400 overflow-hidden">
                 {/* Pin effect */}
                 <div className="absolute -top-2 -left-2 w-6 h-6 bg-blue-500 rounded-full shadow-lg border-2 border-white"></div>
                 <div className="absolute -top-1 -left-1 w-3 h-3 bg-blue-600 rounded-full"></div>
                 
                 {/* Texture overlay */}
-                <div className="absolute inset-0 opacity-25 pointer-events-none"
+                <div className="absolute inset-0 opacity-20 pointer-events-none"
                      style={{
                        backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(0,0,0,0.02) 1px, rgba(0,0,0,0.02) 2px)`,
                        backgroundSize: '10px 10px'
                      }}></div>
                 
                 <div className="relative z-10">
-                  <div className="flex items-center gap-4 mb-6">
-                    <Trophy className="w-8 lg:w-10 h-8 lg:h-10 text-blue-600 animate-spin-slow" />
-                    <h3 className="font-handwriting text-2xl lg:text-3xl" style={{ color: '#476520' }}>Featured Quizzes</h3>
-                  </div>
-                  <div className="space-y-3 font-handwriting text-base lg:text-lg" style={{ color: '#655947' }}>
-                    <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg hover:scale-105 transition-transform">
-                      <Zap className="w-5 lg:w-6 h-5 lg:h-6 text-blue-500 animate-pulse" />
+                  <h3 className="font-handwriting text-2xl lg:text-3xl mb-6 text-center" style={{ color: '#476520' }}>
+                    What you can do:
+                  </h3>
+                  <div className="space-y-4 font-handwriting text-base lg:text-lg" style={{ color: '#655947' }}>
+                    <div className="flex items-center gap-4 hover:scale-105 transition-transform bg-white bg-opacity-60 p-3 rounded-lg">
+                      <span className="text-2xl lg:text-3xl animate-pulse">✏️</span>
+                      <span>Create interactive quizzes</span>
+                    </div>
+                    <div className="flex items-center gap-4 hover:scale-105 transition-transform bg-white bg-opacity-60 p-3 rounded-lg">
+                      <span className="text-2xl lg:text-3xl animate-bounce">🎮</span>
                       <span>Join real-time battles</span>
                     </div>
                     <div className="flex items-center gap-4 hover:scale-105 transition-transform bg-white bg-opacity-60 p-3 rounded-lg">
@@ -715,7 +683,7 @@ export default function HomePage() {
                   <div className="space-y-3 font-handwriting text-base lg:text-lg" style={{ color: '#655947' }}>
                     <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg hover:scale-105 transition-transform">
                       <Zap className="w-5 lg:w-6 h-5 lg:h-6 text-yellow-500 animate-pulse" />
-                      <span>ERC20 tokens</span>
+                      <span>CELO tokens</span>
                     </div>
                     <div className="flex items-center gap-3 bg-white bg-opacity-70 p-3 rounded-lg hover:scale-105 transition-transform">
                       <Star className="w-5 lg:w-6 h-5 lg:h-6 text-green-500 animate-pulse" />
@@ -729,41 +697,13 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-
-            {/* Status indicator - positioned to avoid overlap */}
-            <div className={`absolute bottom-8 lg:bottom-16 right-8 lg:right-20 transition-all duration-1500 delay-1100 ${
-              isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-            }`}>
-              <div className="bg-gradient-to-br from-green-50 to-emerald-100 shadow-2xl rounded-3xl p-6 transform -rotate-1 hover:rotate-1 transition-all duration-500 relative border-l-4 border-green-400 overflow-hidden">
-                {/* Pin effect */}
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full shadow-lg border-2 border-white"></div>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-600 rounded-full"></div>
-                
-                {/* Texture overlay */}
-                <div className="absolute inset-0 opacity-20 pointer-events-none"
-                     style={{
-                       backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(0,0,0,0.02) 1px, rgba(0,0,0,0.02) 2px)`,
-                       backgroundSize: '8px 8px'
-                     }}></div>
-                
-                <div className="relative z-10">
-                  <div className="flex flex-col items-center gap-3 font-handwriting text-base lg:text-lg" style={{ color: '#476520' }}>
-                    <div className="flex items-center gap-3">
-                      <Sparkles className="w-6 lg:w-8 h-6 lg:h-8 text-yellow-500 animate-bounce" />
-                      <span className="font-bold">Ready to Play!</span>
-                    </div>
-                    <p className="text-sm text-center" style={{ color: '#655947' }}>
-                      Connect your wallet and start earning rewards
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
             
             {/* Action Bar */}
             <ActionBar isConnected={isConnected} />
           </div>
         )}
+
+
       </div>
     </FarcasterUI>
   );
