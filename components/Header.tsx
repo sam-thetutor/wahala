@@ -44,11 +44,11 @@ export default function Header() {
                 <span className="font-handwriting">Join</span>
               </Link>
               <Link 
-                href="/snarkel" 
+                href="/profile" 
                 className="flex items-center space-x-1 text-gray-600 hover:text-gray-800 transition-colors duration-200"
               >
                 <Trophy size={16} />
-                <span className="font-handwriting">Snarkels</span>
+                <span className="font-handwriting">Profile</span>
               </Link>
               <Link 
                 href="/admin" 

@@ -148,6 +148,19 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
               Coming Soon
             </button>
           )}
+          
+          {/* Leaderboard link */}
+          {quiz.snarkelCode && (
+            <div className="mt-3 text-center">
+              <Link 
+                href={`/quiz/${quiz.snarkelCode}/leaderboard`}
+                className="inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700 font-medium hover:underline transition-colors"
+              >
+                <Trophy className="w-3 h-3" />
+                View Leaderboard
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -175,17 +188,15 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
         <div className="flex items-center justify-center gap-2 sm:gap-4">
           {/* Join a Snarkel */}
           <div className="relative flex-1 min-w-0">
-            <div className="absolute inset-0 bg-green-300 rounded-2xl blur-xl opacity-40 animate-pulse"></div>
-            <Link href="/join" className="relative block">
-              <button className="w-full px-3 sm:px-6 py-2 sm:py-3 rounded-2xl font-bold text-white transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden group bg-gradient-to-r from-green-500 to-emerald-600 shadow-xl">
-                <span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base">
-                  <Users className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
-                  <span className="truncate">
-                  {isConnected ? 'JOIN A SNARKEL' : 'CONNECT WALLET'}
-                  </span>
+            <Link href="/join">
+              <div className="bg-white shadow-lg rounded-2xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-blue-500 relative overflow-hidden">
+                <span className="font-handwriting text-xs sm:text-sm md:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate" 
+                      style={{ color: '#655947' }}>
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-full border-2 border-green-400 bg-green-100 flex-shrink-0"></div>
+                  <span className="hidden sm:inline">Join a Snarkel</span>
+                  <span className="sm:hidden">Join</span>
                 </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </button>
+              </div>
             </Link>
           </div>
           

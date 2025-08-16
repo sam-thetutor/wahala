@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Socket } from 'socket.io-client';
+import Link from 'next/link';
 import { 
   Users, 
   Clock, 
@@ -405,9 +406,16 @@ export default function ParticipantRoom({
                   <h2 className="text-3xl font-handwriting font-bold text-gray-800 mb-2">
                     Quiz Finished!
                   </h2>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 mb-6">
                     Thanks for participating!
                   </p>
+                  <Link
+                    href={`/quiz/${snarkel?.id || ''}/leaderboard`}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all font-semibold"
+                  >
+                    <BarChart3 className="w-5 h-5" />
+                    View Full Leaderboard
+                  </Link>
                 </div>
               </div>
             )}
@@ -460,7 +468,7 @@ export default function ParticipantRoom({
                   <Trophy className="w-5 h-5 text-yellow-600" />
                   {gameState === 'finished' ? 'Final Results' : 'Current Standings'}
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-3 mb-4">
                   {leaderboard.slice(0, 5).map((player, index) => (
                     <div key={player.userId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
@@ -483,6 +491,15 @@ export default function ParticipantRoom({
                     </div>
                   ))}
                 </div>
+                {gameState === 'finished' && (
+                  <Link
+                    href={`/quiz/${snarkel?.id || ''}/leaderboard`}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all text-sm font-medium"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    View Full Leaderboard
+                  </Link>
+                )}
               </div>
             )}
 
