@@ -1140,735 +1140,743 @@ export default function SnarkelCreationPage() {
                   }}
                 />
               </div>
-              
-              {/* Enhanced Tabs - more compact */}
-              <div className="flex overflow-x-auto gap-2 pb-2">
-                {tabs.map((tab, index) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  const isCompleted = isTabCompleted(tab.id);
-                  const currentTabIndex = tabs.findIndex(t => t.id === activeTab);
-                  const canAccess = index <= currentTabIndex || isCompleted;
-                  
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => canAccess ? setActiveTab(tab.id) : null}
-                      disabled={!canAccess}
-                      className={`flex items-center gap-2 px-4 py-2 text-sm font-handwriting font-medium whitespace-nowrap rounded-lg transition-all transform hover:scale-105 ${
-                        isActive
-                          ? 'text-white bg-gradient-to-r from-purple-500 to-blue-500 shadow-md scale-105'
-                          : isCompleted
-                          ? 'text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 cursor-pointer'
-                          : canAccess
-                          ? 'text-gray-600 hover:text-purple-600 hover:bg-white hover:shadow-sm cursor-pointer'
-                          : 'text-gray-400 bg-gray-100 cursor-not-allowed opacity-60'
-                      }`}
-                    >
-                      <Icon size={16} />
-                      {tab.label}
-                      {isCompleted && (
-                        <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-xs">✓</span>
-                        </div>
-                      )}
-                      {!isCompleted && !canAccess && (
-                        <div className="w-4 h-4 bg-gray-400 rounded-full flex items-center justify-center">
-                          <span className="text-white text-xs">🔒</span>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
             </div>
 
-            {/* Questions Tab - Horizontal Navigation */}
-            {activeTab === 'questions' && snarkel.questions.length > 0 && (
-              <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <span className="font-handwriting font-bold text-sm text-gray-700">Questions:</span>
-                  
-                  {/* Question navigation pills */}
-                  <div className="flex overflow-x-auto gap-2 flex-1">
-                    {snarkel.questions.map((question, index) => (
+            {/* Responsive Layout: Vertical tabs on mobile, horizontal on desktop */}
+            <div className="flex flex-col lg:flex-row">
+              {/* Vertical Sidebar - Mobile first, then desktop */}
+              <div className="lg:w-64 bg-gradient-to-b from-gray-50 to-white border-b lg:border-b-0 lg:border-r border-gray-200">
+                <div className="p-4 space-y-2">
+                  {tabs.map((tab, index) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    const isCompleted = isTabCompleted(tab.id);
+                    const currentTabIndex = tabs.findIndex(t => t.id === activeTab);
+                    const canAccess = index <= currentTabIndex || isCompleted;
+                    
+                    return (
                       <button
-                        key={question.id}
-                        onClick={() => setActiveQuestionIndex(index)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-handwriting font-medium whitespace-nowrap transition-all transform hover:scale-105 ${
-                          activeQuestionIndex === index
-                            ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-md scale-105'
-                            : 'bg-white text-gray-600 hover:bg-green-50 hover:text-green-600 shadow-sm'
+                        key={tab.id}
+                        onClick={() => canAccess ? setActiveTab(tab.id) : null}
+                        disabled={!canAccess}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-handwriting font-medium rounded-xl transition-all transform hover:scale-105 ${
+                          isActive
+                            ? 'text-white bg-gradient-to-r from-purple-500 to-blue-500 shadow-md scale-105'
+                            : isCompleted
+                            ? 'text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 cursor-pointer'
+                            : canAccess
+                            ? 'text-gray-600 hover:text-purple-600 hover:bg-white hover:shadow-sm cursor-pointer'
+                            : 'text-gray-400 bg-gray-100 cursor-not-allowed opacity-60'
                         }`}
                       >
-                        <span className="w-4 h-4 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-xs">
-                          {index + 1}
-                        </span>
-                        <span className="max-w-20 truncate">
-                          {question.text || `Question ${index + 1}`}
-                        </span>
-                        {question.text && <Edit3 size={10} className="opacity-60" />}
+                        <Icon size={18} />
+                        <span className="flex-1 text-left">{tab.label}</span>
+                        {isCompleted && (
+                          <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-xs">✓</span>
+                          </div>
+                        )}
+                        {!isCompleted && !canAccess && (
+                          <div className="w-5 h-5 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-xs">🔒</span>
+                          </div>
+                        )}
                       </button>
-                    ))}
-                  </div>
-
-                  {/* Navigation arrows */}
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => setActiveQuestionIndex(Math.max(0, activeQuestionIndex - 1))}
-                      disabled={activeQuestionIndex === 0}
-                      className="p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ArrowLeft size={14} />
-                    </button>
-                    <button
-                      onClick={() => setActiveQuestionIndex(Math.min(snarkel.questions.length - 1, activeQuestionIndex + 1))}
-                      disabled={activeQuestionIndex === snarkel.questions.length - 1}
-                      className="p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ArrowRight size={14} />
-                    </button>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
-            )}
 
-            {/* Tab Content - more compact */}
-            <div className="p-4">
-              {activeTab === 'details' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                        🎯 Snarkel Title *
-                      </label>
-                      <input
-                        type="text"
-                        value={snarkel.title}
-                        onChange={(e) => setSnarkel(prev => ({ ...prev, title: e.target.value }))}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting ${
-                          validationErrors.title ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="Enter snarkel title..."
-                      />
-                      {validationErrors.title && (
-                        <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
-                          <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                          {validationErrors.title}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                        ⏱️ Max Questions
-                      </label>
-                      <input
-                        type="number"
-                        value={snarkel.maxQuestions}
-                        onChange={(e) => setSnarkel(prev => ({ ...prev, maxQuestions: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
-                        min="1"
-                        max="60"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                      📝 Description
-                    </label>
-                    <textarea
-                      value={snarkel.description}
-                      onChange={(e) => setSnarkel(prev => ({ ...prev, description: e.target.value }))}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
-                      placeholder="Describe your snarkel..."
-                    />
-                  </div>
-
-                  {/* Featured Quiz Section */}
-                  <div className="bg-gradient-to-r from-yellow-50 to-amber-100 p-4 rounded-lg border border-yellow-200">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Star className="w-5 h-5 text-yellow-600" />
-                      <h3 className="font-handwriting text-lg font-medium" style={{ color: '#476520' }}>
-                        Featured Quiz Options
-                      </h3>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {/* Featured Toggle */}
-                      <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={snarkel.isFeatured}
-                            onChange={(e) => setSnarkel(prev => ({ 
-                              ...prev, 
-                              isFeatured: e.target.checked,
-                              featuredPriority: e.target.checked ? prev.featuredPriority : 0
-                            }))}
-                            className="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
-                          />
-                          <span className="font-handwriting text-sm" style={{ color: '#655947' }}>
-                            Make this quiz featured on homepage
-                          </span>
-                        </label>
+              {/* Main Content Area */}
+              <div className="flex-1">
+                {/* Questions Tab - Horizontal Navigation */}
+                {activeTab === 'questions' && snarkel.questions.length > 0 && (
+                  <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="font-handwriting font-bold text-sm text-gray-700">Questions:</span>
+                      
+                      {/* Question navigation pills */}
+                      <div className="flex overflow-x-auto gap-2 flex-1">
+                        {snarkel.questions.map((question, index) => (
+                          <button
+                            key={question.id}
+                            onClick={() => setActiveQuestionIndex(index)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-handwriting font-medium whitespace-nowrap transition-all transform hover:scale-105 ${
+                              activeQuestionIndex === index
+                                ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-md scale-105'
+                                : 'bg-white text-gray-600 hover:bg-green-50 hover:text-green-600 shadow-sm'
+                            }`}
+                          >
+                            <span className="w-4 h-4 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-xs">
+                              {index + 1}
+                            </span>
+                            <span className="max-w-20 truncate">
+                              {question.text || `Question ${index + 1}`}
+                            </span>
+                            {question.text && <Edit3 size={10} className="opacity-60" />}
+                          </button>
+                        ))}
                       </div>
 
-                      {/* Priority Setting */}
-                      {snarkel.isFeatured && (
-                        <div>
-                          <label className="block font-handwriting text-sm font-medium mb-1" style={{ color: '#476520' }}>
-                            🏆 Featured Priority (1-10)
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              value={snarkel.featuredPriority}
-                              onChange={(e) => setSnarkel(prev => ({ 
-                                ...prev, 
-                                featuredPriority: Math.min(10, Math.max(1, parseInt(e.target.value) || 1))
-                              }))}
-                              className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting"
-                              min="1"
-                              max="10"
-                            />
-                            <span className="text-sm" style={{ color: '#655947' }}>
-                              Higher number = higher priority
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Featured Quiz Info */}
-                      {snarkel.isFeatured && (
-                        <div className="bg-white bg-opacity-60 p-3 rounded-lg border border-yellow-300">
-                          <div className="flex items-start gap-2">
-                            <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                            <div className="text-sm" style={{ color: '#655947' }}>
-                              <p className="font-medium mb-1">Featured Quiz Benefits:</p>
-                              <ul className="space-y-1 text-xs">
-                                <li>• Appears on homepage for all users</li>
-                                <li>• Can be started by anyone (not just creator)</li>
-                                <li>• Higher visibility and participation</li>
-                                <li>• Priority determines display order</li>
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      {/* Navigation arrows */}
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => setActiveQuestionIndex(Math.max(0, activeQuestionIndex - 1))}
+                          disabled={activeQuestionIndex === 0}
+                          className="p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ArrowLeft size={14} />
+                        </button>
+                        <button
+                          onClick={() => setActiveQuestionIndex(Math.min(snarkel.questions.length - 1, activeQuestionIndex + 1))}
+                          disabled={activeQuestionIndex === snarkel.questions.length - 1}
+                          className="p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ArrowRight size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                        💯 Base Points per Question
-                      </label>
-                      <input
-                        type="number"
-                        value={snarkel.basePointsPerQuestion}
-                        onChange={(e) => setSnarkel(prev => ({ ...prev, basePointsPerQuestion: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
-                        min="100"
-                      />
-                    </div>
+                {/* Tab Content - more compact */}
+                <div className="p-4">
+                  {activeTab === 'details' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                            🎯 Snarkel Title *
+                          </label>
+                          <input
+                            type="text"
+                            value={snarkel.title}
+                            onChange={(e) => setSnarkel(prev => ({ ...prev, title: e.target.value }))}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting ${
+                              validationErrors.title ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                            }`}
+                            placeholder="Enter snarkel title..."
+                          />
+                          {validationErrors.title && (
+                            <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                              <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                              {validationErrors.title}
+                            </p>
+                          )}
+                        </div>
 
-                    <div>
-                      <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                        ⚡ Max Speed Bonus
-                      </label>
-                      <input
-                        type="number"
-                        value={snarkel.maxSpeedBonus}
-                        onChange={(e) => setSnarkel(prev => ({ ...prev, maxSpeedBonus: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
-                       min="0"
-                     />
-                   </div>
-                 </div>
+                        <div>
+                          <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                            ⏱️ Max Questions
+                          </label>
+                          <input
+                            type="number"
+                            value={snarkel.maxQuestions}
+                            onChange={(e) => setSnarkel(prev => ({ ...prev, maxQuestions: parseInt(e.target.value) || 0 }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                            min="1"
+                            max="60"
+                          />
+                        </div>
+                      </div>
 
-                 <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                   <input
-                     type="checkbox"
-                     id="speedBonus"
-                     checked={snarkel.speedBonusEnabled}
-                     onChange={(e) => setSnarkel(prev => ({ ...prev, speedBonusEnabled: e.target.checked }))}
-                     className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                   />
-                   <label htmlFor="speedBonus" className="font-handwriting text-sm font-medium text-gray-700">
-                     ⚡ Enable speed bonus for faster answers
-                   </label>
-                 </div>
+                      <div>
+                        <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                          📝 Description
+                        </label>
+                        <textarea
+                          value={snarkel.description}
+                          onChange={(e) => setSnarkel(prev => ({ ...prev, description: e.target.value }))}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                          placeholder="Describe your snarkel..."
+                        />
+                      </div>
 
-                 {/* Auto-Start Settings */}
-                 <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                   <h4 className="font-handwriting text-lg font-bold text-gray-800 flex items-center gap-2">
-                     <Clock className="w-5 h-5" />
-                     Auto-Start Settings
-                   </h4>
-                   
-                   <div className="flex items-center gap-3">
-                     <input
-                       type="checkbox"
-                       id="autoStart"
-                       checked={snarkel.autoStartEnabled}
-                       onChange={(e) => setSnarkel(prev => ({ 
-                         ...prev, 
-                         autoStartEnabled: e.target.checked,
-                         scheduledStartTime: e.target.checked ? prev.scheduledStartTime : null
-                       }))}
-                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                     />
-                     <label htmlFor="autoStart" className="font-handwriting text-sm font-medium text-gray-700">
-                       🚀 Enable automatic quiz start
-                     </label>
-                   </div>
+                      {/* Featured Quiz Section */}
+                      <div className="bg-gradient-to-r from-yellow-50 to-amber-100 p-4 rounded-lg border border-yellow-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Star className="w-5 h-5 text-yellow-600" />
+                          <h3 className="font-handwriting text-lg font-medium" style={{ color: '#476520' }}>
+                            Featured Quiz Options
+                          </h3>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {/* Featured Toggle */}
+                          <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={snarkel.isFeatured}
+                                onChange={(e) => setSnarkel(prev => ({ 
+                                  ...prev, 
+                                  isFeatured: e.target.checked,
+                                  featuredPriority: e.target.checked ? prev.featuredPriority : 0
+                                }))}
+                                className="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
+                              />
+                              <span className="font-handwriting text-sm" style={{ color: '#655947' }}>
+                                Make this quiz featured on homepage
+                              </span>
+                            </label>
+                          </div>
 
-                   {snarkel.autoStartEnabled && (
-                     <div className="mt-3">
-                       <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
-                         📅 Scheduled Start Time
-                       </label>
-                       <input
-                         type="datetime-local"
-                         value={snarkel.scheduledStartTime || ''}
-                         onChange={(e) => setSnarkel(prev => ({ 
-                           ...prev, 
-                           scheduledStartTime: e.target.value 
-                         }))}
-                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-handwriting"
-                         min={new Date().toISOString().slice(0, 16)}
-                       />
-                       <p className="mt-1 text-xs text-gray-500 font-handwriting">
-                         If not set, admin must start quiz manually
-                       </p>
-                     </div>
-                   )}
-                 </div>
-               </div>
-             )}
+                          {/* Priority Setting */}
+                          {snarkel.isFeatured && (
+                            <div>
+                              <label className="block font-handwriting text-sm font-medium mb-1" style={{ color: '#476520' }}>
+                                🏆 Featured Priority (1-10)
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  value={snarkel.featuredPriority}
+                                  onChange={(e) => setSnarkel(prev => ({ 
+                                    ...prev, 
+                                    featuredPriority: Math.min(10, Math.max(1, parseInt(e.target.value) || 1))
+                                  }))}
+                                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting"
+                                  min="1"
+                                  max="10"
+                                />
+                                <span className="text-sm" style={{ color: '#655947' }}>
+                                  Higher number = higher priority
+                                </span>
+                              </div>
+                            </div>
+                          )}
 
-             {activeTab === 'questions' && (
-               <div className="space-y-4">
-                 <div className="flex justify-between items-center">
-                   <h3 className="font-handwriting text-lg font-bold text-gray-900 flex items-center gap-2">
-                     <Edit3 className="w-5 h-5" />
-                     Questions ({snarkel.questions.length})
-                   </h3>
-                   <div className="flex gap-2">
-                     <button
-                       onClick={() => setShowAIModal(true)}
-                       className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
-                     >
-                       <Sparkles size={16} />
-                       AI Generate
-                     </button>
-                     <button
-                       onClick={addQuestion}
-                       className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
-                     >
-                       <Plus size={16} />
-                       Add Question
-                     </button>
-                   </div>
-                 </div>
+                          {/* Featured Quiz Info */}
+                          {snarkel.isFeatured && (
+                            <div className="bg-white bg-opacity-60 p-3 rounded-lg border border-yellow-300">
+                              <div className="flex items-start gap-2">
+                                <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                <div className="text-sm" style={{ color: '#655947' }}>
+                                  <p className="font-medium mb-1">Featured Quiz Benefits:</p>
+                                  <ul className="space-y-1 text-xs">
+                                    <li>• Appears on homepage for all users</li>
+                                    <li>• Can be started by anyone (not just creator)</li>
+                                    <li>• Higher visibility and participation</li>
+                                    <li>• Priority determines display order</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
-                 {snarkel.questions.length === 0 ? (
-                   <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-                     <Edit3 size={48} className="mx-auto mb-4 text-gray-300" />
-                     <p className="font-handwriting text-gray-500 text-lg mb-4">No questions added yet</p>
-                     {validationErrors.questions && (
-                       <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                         <p className="text-red-600 font-handwriting text-sm flex items-center gap-2">
-                           <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                           {validationErrors.questions}
-                         </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                            💯 Base Points per Question
+                          </label>
+                          <input
+                            type="number"
+                            value={snarkel.basePointsPerQuestion}
+                            onChange={(e) => setSnarkel(prev => ({ ...prev, basePointsPerQuestion: parseInt(e.target.value) || 0 }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                            min="100"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                            ⚡ Max Speed Bonus
+                          </label>
+                          <input
+                            type="number"
+                            value={snarkel.maxSpeedBonus}
+                            onChange={(e) => setSnarkel(prev => ({ ...prev, maxSpeedBonus: parseInt(e.target.value) || 0 }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                           min="0"
+                         />
                        </div>
-                     )}
-                     <div className="flex gap-3 justify-center">
-                       <button
-                         onClick={() => setShowAIModal(true)}
-                         className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 font-handwriting font-bold flex items-center gap-2"
-                       >
-                         <Sparkles size={16} />
-                         AI Generate Quiz
-                       </button>
-                       <button
-                         onClick={addQuestion}
-                         className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold"
-                       >
-                         🚀 Create Your First Question
-                       </button>
                      </div>
-                   </div>
-                 ) : (
-                   <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-4 border border-gray-200">
-                     {(() => {
-                       const question = snarkel.questions[activeQuestionIndex];
-                       if (!question) return null;
+
+                     <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                       <input
+                         type="checkbox"
+                         id="speedBonus"
+                         checked={snarkel.speedBonusEnabled}
+                         onChange={(e) => setSnarkel(prev => ({ ...prev, speedBonusEnabled: e.target.checked }))}
+                         className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                       />
+                       <label htmlFor="speedBonus" className="font-handwriting text-sm font-medium text-gray-700">
+                         ⚡ Enable speed bonus for faster answers
+                       </label>
+                     </div>
+
+                     {/* Auto-Start Settings */}
+                     <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                       <h4 className="font-handwriting text-lg font-bold text-gray-800 flex items-center gap-2">
+                         <Clock className="w-5 h-5" />
+                         Auto-Start Settings
+                       </h4>
                        
-                       return (
-                         <div className="space-y-4">
-                           <div className="flex justify-between items-start">
-                             <h4 className="font-handwriting text-lg font-bold text-gray-900 flex items-center gap-2">
-                               <span className="w-6 h-6 rounded-full bg-purple-500 text-white text-sm flex items-center justify-center">
-                                 {activeQuestionIndex + 1}
-                               </span>
-                               Question {activeQuestionIndex + 1}
-                             </h4>
-                             <button
-                               onClick={() => removeQuestion(question.id)}
-                               className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg transition-colors"
-                             >
-                               <Trash2 size={16} />
-                             </button>
-                           </div>
+                       <div className="flex items-center gap-3">
+                         <input
+                           type="checkbox"
+                           id="autoStart"
+                           checked={snarkel.autoStartEnabled}
+                           onChange={(e) => setSnarkel(prev => ({ 
+                             ...prev, 
+                             autoStartEnabled: e.target.checked,
+                             scheduledStartTime: e.target.checked ? prev.scheduledStartTime : null
+                           }))}
+                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                         />
+                         <label htmlFor="autoStart" className="font-handwriting text-sm font-medium text-gray-700">
+                           🚀 Enable automatic quiz start
+                         </label>
+                       </div>
 
-                           <div className="space-y-3">
-                             <div>
-                               <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                                 ❓ Question Text *
-                               </label>
-                               <textarea
-                                 value={question.text}
-                                 onChange={(e) => updateQuestion(question.id, 'text', e.target.value)}
-                                 rows={2}
-                                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting ${
-                                   validationErrors[`question_${activeQuestionIndex}_text`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                 }`}
-                                 placeholder="Enter your question..."
-                               />
-                               {validationErrors[`question_${activeQuestionIndex}_text`] && (
-                                 <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
-                                   <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                                   {validationErrors[`question_${activeQuestionIndex}_text`]}
-                                 </p>
-                               )}
-                             </div>
-
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                               <div>
-                                 <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                                   <Clock size={14} />
-                                   Time Limit (seconds)
-                                 </label>
-                                 <input
-                                   type="number"
-                                   value={question.timeLimit}
-                                   onChange={(e) => updateQuestion(question.id, 'timeLimit', parseInt(e.target.value) || 15)}
-                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
-                                   min="5"
-                                   max="60"
-                                   placeholder="15"
-                                 />
-                               </div>
-                             </div>
-
-                             <div>
-                               <div className="flex justify-between items-center mb-2">
-                                 <label className="block font-handwriting text-sm font-medium text-gray-700">
-                                   📝 Answer Options
-                                 </label>
-                                 <button
-                                   onClick={() => addOption(question.id)}
-                                   className="text-sm font-handwriting text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2 py-1 rounded transition-colors"
-                                 >
-                                   + Add Option
-                                 </button>
-                               </div>
-
-                               <div className="space-y-2">
-                                 {question.options.map((option, oIndex) => (
-                                   <div key={option.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-gray-200 hover:border-purple-300 transition-colors">
-                                     <div className="flex items-center gap-2">
-                                       <input
-                                         type="checkbox"
-                                         checked={option.isCorrect}
-                                         onChange={(e) => updateOption(question.id, option.id, 'isCorrect', e.target.checked)}
-                                         className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                                       />
-                                       <span className="text-xs font-handwriting text-gray-500 w-8">
-                                         {option.isCorrect ? '✅' : `${String.fromCharCode(65 + oIndex)}.`}
-                                       </span>
-                                     </div>
-                                     <input
-                                       type="text"
-                                       value={option.text}
-                                       onChange={(e) => updateOption(question.id, option.id, 'text', e.target.value)}
-                                       className={`flex-1 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting text-sm ${
-                                         validationErrors[`question_${activeQuestionIndex}_option_${oIndex}`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                       }`}
-                                       placeholder={`Option ${oIndex + 1}...`}
-                                     />
-                                     {question.options.length > 2 && (
-                                       <button
-                                         onClick={() => removeOption(question.id, option.id)}
-                                         className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
-                                       >
-                                         <Trash2 size={12} />
-                                       </button>
-                                     )}
-                                   </div>
-                                 ))}
-                               </div>
-                               
-                               {/* Question-level validation errors */}
-                               {(validationErrors[`question_${activeQuestionIndex}_options`] || validationErrors[`question_${activeQuestionIndex}_correct`]) && (
-                                 <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                   {validationErrors[`question_${activeQuestionIndex}_options`] && (
-                                     <p className="text-red-600 font-handwriting text-sm flex items-center gap-2 mb-1">
-                                       <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                                       {validationErrors[`question_${activeQuestionIndex}_options`]}
-                                     </p>
-                                   )}
-                                   {validationErrors[`question_${activeQuestionIndex}_correct`] && (
-                                     <p className="text-red-600 font-handwriting text-sm flex items-center gap-2">
-                                       <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                                       {validationErrors[`question_${activeQuestionIndex}_correct`]}
-                                     </p>
-                                   )}
-                                 </div>
-                               )}
-                             </div>
-                           </div>
+                       {snarkel.autoStartEnabled && (
+                         <div className="mt-3">
+                           <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
+                             📅 Scheduled Start Time
+                           </label>
+                           <input
+                             type="datetime-local"
+                             value={snarkel.scheduledStartTime || ''}
+                             onChange={(e) => setSnarkel(prev => ({ 
+                               ...prev, 
+                               scheduledStartTime: e.target.value 
+                             }))}
+                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-handwriting"
+                             min={new Date().toISOString().slice(0, 16)}
+                           />
+                           <p className="mt-1 text-xs text-gray-500 font-handwriting">
+                             If not set, admin must start quiz manually
+                           </p>
                          </div>
-                       );
-                     })()}
+                       )}
+                     </div>
                    </div>
                  )}
-               </div>
-             )}
 
-             {activeTab === 'access' && (
-               <div className="space-y-4">
-                 <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                   <input
-                     type="checkbox"
-                     id="isPublic"
-                     checked={snarkel.isPublic}
-                     onChange={(e) => setSnarkel(prev => ({ ...prev, isPublic: e.target.checked }))}
-                     className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                   />
-                   <label htmlFor="isPublic" className="font-handwriting text-sm font-medium text-gray-700">
-                     🌍 Public snarkel (anyone can join)
-                   </label>
-                 </div>
-
-                 {!snarkel.isPublic && (
-                   <div className="space-y-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                     <div>
-                       <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                         🔐 Allowlist Addresses
-                       </label>
+                 {activeTab === 'questions' && (
+                   <div className="space-y-4">
+                     <div className="flex justify-between items-center">
+                       <h3 className="font-handwriting text-lg font-bold text-gray-900 flex items-center gap-2">
+                         <Edit3 className="w-5 h-5" />
+                         Questions ({snarkel.questions.length})
+                       </h3>
                        <div className="flex gap-2">
-                         <input
-                           type="text"
-                           value={newAllowlistAddress}
-                           onChange={(e) => setNewAllowlistAddress(e.target.value)}
-                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
-                           placeholder="Enter wallet address..."
-                         />
                          <button
-                           onClick={addAllowlistAddress}
-                           className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-handwriting font-bold"
+                           onClick={() => setShowAIModal(true)}
+                           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
                          >
-                           Add
+                           <Sparkles size={16} />
+                           AI Generate
+                         </button>
+                         <button
+                           onClick={addQuestion}
+                           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
+                         >
+                           <Plus size={16} />
+                           Add Question
                          </button>
                        </div>
                      </div>
 
-                     {snarkel.allowlist.length > 0 && (
-                       <div className="space-y-2">
-                         <label className="block font-handwriting text-sm font-medium text-gray-700">
-                           Allowed Addresses ({snarkel.allowlist.length})
-                         </label>
-                         <div className="space-y-2 max-h-40 overflow-y-auto">
-                           {snarkel.allowlist.map((address, index) => (
-                             <div key={index} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200">
-                               <span className="font-handwriting text-sm font-mono text-gray-700 truncate">{address}</span>
-                               <button
-                                 onClick={() => removeAllowlistAddress(address)}
-                                 className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
-                               >
-                                 <Trash2 size={12} />
-                               </button>
+                     {snarkel.questions.length === 0 ? (
+                       <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                         <Edit3 size={48} className="mx-auto mb-4 text-gray-300" />
+                         <p className="font-handwriting text-gray-500 text-lg mb-4">No questions added yet</p>
+                         {validationErrors.questions && (
+                           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                             <p className="text-red-600 font-handwriting text-sm flex items-center gap-2">
+                               <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                               {validationErrors.questions}
+                             </p>
+                           </div>
+                         )}
+                         <div className="flex gap-3 justify-center">
+                           <button
+                             onClick={() => setShowAIModal(true)}
+                             className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 font-handwriting font-bold flex items-center gap-2"
+                           >
+                             <Sparkles size={16} />
+                             AI Generate Quiz
+                           </button>
+                           <button
+                             onClick={addQuestion}
+                             className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold"
+                           >
+                             🚀 Create Your First Question
+                           </button>
+                         </div>
+                       </div>
+                     ) : (
+                       <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-4 border border-gray-200">
+                         {(() => {
+                           const question = snarkel.questions[activeQuestionIndex];
+                           if (!question) return null;
+                           
+                           return (
+                             <div className="space-y-4">
+                               <div className="flex justify-between items-start">
+                                 <h4 className="font-handwriting text-lg font-bold text-gray-900 flex items-center gap-2">
+                                   <span className="w-6 h-6 rounded-full bg-purple-500 text-white text-sm flex items-center justify-center">
+                                     {activeQuestionIndex + 1}
+                                   </span>
+                                   Question {activeQuestionIndex + 1}
+                                 </h4>
+                                 <button
+                                   onClick={() => removeQuestion(question.id)}
+                                   className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg transition-colors"
+                                 >
+                                   <Trash2 size={16} />
+                                 </button>
+                               </div>
+
+                               <div className="space-y-3">
+                                 <div>
+                                   <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                                     ❓ Question Text *
+                                   </label>
+                                   <textarea
+                                     value={question.text}
+                                     onChange={(e) => updateQuestion(question.id, 'text', e.target.value)}
+                                     rows={2}
+                                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting ${
+                                       validationErrors[`question_${activeQuestionIndex}_text`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                                     }`}
+                                     placeholder="Enter your question..."
+                                   />
+                                   {validationErrors[`question_${activeQuestionIndex}_text`] && (
+                                     <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                                       <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                                       {validationErrors[`question_${activeQuestionIndex}_text`]}
+                                     </p>
+                                   )}
+                                 </div>
+
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                   <div>
+                                     <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                                       <Clock size={14} />
+                                       Time Limit (seconds)
+                                     </label>
+                                     <input
+                                       type="number"
+                                       value={question.timeLimit}
+                                       onChange={(e) => updateQuestion(question.id, 'timeLimit', parseInt(e.target.value) || 15)}
+                                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                                       min="5"
+                                       max="60"
+                                       placeholder="15"
+                                     />
+                                   </div>
+                                 </div>
+
+                                 <div>
+                                   <div className="flex justify-between items-center mb-2">
+                                     <label className="block font-handwriting text-sm font-medium text-gray-700">
+                                       📝 Answer Options
+                                     </label>
+                                     <button
+                                       onClick={() => addOption(question.id)}
+                                       className="text-sm font-handwriting text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2 py-1 rounded transition-colors"
+                                     >
+                                       + Add Option
+                                     </button>
+                                   </div>
+
+                                   <div className="space-y-2">
+                                     {question.options.map((option, oIndex) => (
+                                       <div key={option.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-gray-200 hover:border-purple-300 transition-colors">
+                                         <div className="flex items-center gap-2">
+                                           <input
+                                             type="checkbox"
+                                             checked={option.isCorrect}
+                                             onChange={(e) => updateOption(question.id, option.id, 'isCorrect', e.target.checked)}
+                                             className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                                           />
+                                           <span className="text-xs font-handwriting text-gray-500 w-8">
+                                             {option.isCorrect ? '✅' : `${String.fromCharCode(65 + oIndex)}.`}
+                                           </span>
+                                         </div>
+                                         <input
+                                           type="text"
+                                           value={option.text}
+                                           onChange={(e) => updateOption(question.id, option.id, 'text', e.target.value)}
+                                           className={`flex-1 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting text-sm ${
+                                             validationErrors[`question_${activeQuestionIndex}_option_${oIndex}`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                                           }`}
+                                           placeholder={`Option ${oIndex + 1}...`}
+                                         />
+                                         {question.options.length > 2 && (
+                                           <button
+                                             onClick={() => removeOption(question.id, option.id)}
+                                             className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                                           >
+                                             <Trash2 size={12} />
+                                           </button>
+                                         )}
+                                       </div>
+                                     ))}
+                                   </div>
+                                   
+                                   {/* Question-level validation errors */}
+                                   {(validationErrors[`question_${activeQuestionIndex}_options`] || validationErrors[`question_${activeQuestionIndex}_correct`]) && (
+                                     <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                       {validationErrors[`question_${activeQuestionIndex}_options`] && (
+                                         <p className="text-red-600 font-handwriting text-sm flex items-center gap-2 mb-1">
+                                           <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                                           {validationErrors[`question_${activeQuestionIndex}_options`]}
+                                         </p>
+                                       )}
+                                       {validationErrors[`question_${activeQuestionIndex}_correct`] && (
+                                         <p className="text-red-600 font-handwriting text-sm flex items-center gap-2">
+                                           <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                                           {validationErrors[`question_${activeQuestionIndex}_correct`]}
+                                         </p>
+                                       )}
+                                     </div>
+                                   )}
+                                 </div>
+                               </div>
                              </div>
-                           ))}
+                           );
+                         })()}
+                       </div>
+                     )}
+                   </div>
+                 )}
+
+                 {activeTab === 'access' && (
+                   <div className="space-y-4">
+                     <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                       <input
+                         type="checkbox"
+                         id="isPublic"
+                         checked={snarkel.isPublic}
+                         onChange={(e) => setSnarkel(prev => ({ ...prev, isPublic: e.target.checked }))}
+                         className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                       />
+                       <label htmlFor="isPublic" className="font-handwriting text-sm font-medium text-gray-700">
+                         🌍 Public snarkel (anyone can join)
+                       </label>
+                     </div>
+
+                     {!snarkel.isPublic && (
+                       <div className="space-y-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                         <div>
+                           <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                             🔐 Allowlist Addresses
+                           </label>
+                           <div className="flex gap-2">
+                             <input
+                               type="text"
+                               value={newAllowlistAddress}
+                               onChange={(e) => setNewAllowlistAddress(e.target.value)}
+                               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                               placeholder="Enter wallet address..."
+                             />
+                             <button
+                               onClick={addAllowlistAddress}
+                               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-handwriting font-bold"
+                             >
+                               Add
+                             </button>
+                           </div>
+                         </div>
+
+                         {snarkel.allowlist.length > 0 && (
+                           <div className="space-y-2">
+                             <label className="block font-handwriting text-sm font-medium text-gray-700">
+                               Allowed Addresses ({snarkel.allowlist.length})
+                             </label>
+                             <div className="space-y-2 max-h-40 overflow-y-auto">
+                               {snarkel.allowlist.map((address, index) => (
+                                 <div key={index} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200">
+                                   <span className="font-handwriting text-sm font-mono text-gray-700 truncate">{address}</span>
+                                   <button
+                                     onClick={() => removeAllowlistAddress(address)}
+                                     className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                                   >
+                                     <Trash2 size={12} />
+                                   </button>
+                                 </div>
+                               ))}
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                     )}
+                   </div>
+                 )}
+
+                 {activeTab === 'rewards' && (
+                   <RewardConfigurationSection
+                     rewardConfig={snarkel.rewards}
+                     onRewardConfigChange={(rewards) => {
+                       console.log('=== REWARD CONFIG CHANGE DEBUG ===');
+                       console.log('Previous rewards:', snarkel.rewards);
+                       console.log('New rewards:', rewards);
+                       setSnarkel(prev => ({ ...prev, rewards }));
+                     }}
+                     validationErrors={validationErrors}
+                   />
+                 )}
+
+                 {activeTab === 'spam' && (
+                   <div className="space-y-4">
+                     <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                       <input
+                         type="checkbox"
+                         id="spamControl"
+                         checked={snarkel.spamControlEnabled}
+                         onChange={(e) => setSnarkel(prev => ({ ...prev, spamControlEnabled: e.target.checked }))}
+                         className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                       />
+                       <label htmlFor="spamControl" className="font-handwriting text-sm font-medium text-gray-700">
+                         🛡️ Enable entry fee to prevent spam
+                       </label>
+                     </div>
+
+                     {snarkel.spamControlEnabled && (
+                       <div className="space-y-3 p-4 bg-gradient-to-br from-red-50 to-pink-50 rounded-lg border border-red-200">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                           <div>
+                             <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                               💳 Entry Fee Amount
+                             </label>
+                             <input
+                               type="number"
+                               step="0.01"
+                               value={snarkel.entryFee}
+                               onChange={(e) => setSnarkel(prev => ({ ...prev, entryFee: parseFloat(e.target.value) || 0 }))}
+                               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent font-handwriting ${
+                                 validationErrors.entryFee ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                               }`}
+                               min="0"
+                             />
+                             {validationErrors.entryFee && (
+                               <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                                 <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                                 {validationErrors.entryFee}
+                               </p>
+                             )}
+                           </div>
+
+                           <div>
+                             <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                               🪙 Entry Fee Token Address
+                             </label>
+                             <input
+                               type="text"
+                               value={snarkel.entryFeeToken}
+                               onChange={(e) => setSnarkel(prev => ({ ...prev, entryFeeToken: e.target.value }))}
+                               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent font-handwriting ${
+                                 validationErrors.entryFeeToken ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                               }`}
+                               placeholder="0x..."
+                             />
+                             {validationErrors.entryFeeToken && (
+                               <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                                 <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
+                                 {validationErrors.entryFeeToken}
+                               </p>
+                             )}
+                           </div>
                          </div>
                        </div>
                      )}
                    </div>
                  )}
                </div>
-             )}
 
-             {activeTab === 'rewards' && (
-               <RewardConfigurationSection
-                 rewardConfig={snarkel.rewards}
-                 onRewardConfigChange={(rewards) => {
-                   console.log('=== REWARD CONFIG CHANGE DEBUG ===');
-                   console.log('Previous rewards:', snarkel.rewards);
-                   console.log('New rewards:', rewards);
-                   setSnarkel(prev => ({ ...prev, rewards }));
-                 }}
-                 validationErrors={validationErrors}
-               />
-             )}
-
-             {activeTab === 'spam' && (
-               <div className="space-y-4">
-                 <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
-                   <input
-                     type="checkbox"
-                     id="spamControl"
-                     checked={snarkel.spamControlEnabled}
-                     onChange={(e) => setSnarkel(prev => ({ ...prev, spamControlEnabled: e.target.checked }))}
-                     className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                   />
-                   <label htmlFor="spamControl" className="font-handwriting text-sm font-medium text-gray-700">
-                     🛡️ Enable entry fee to prevent spam
-                   </label>
-                 </div>
-
-                 {snarkel.spamControlEnabled && (
-                   <div className="space-y-3 p-4 bg-gradient-to-br from-red-50 to-pink-50 rounded-lg border border-red-200">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                       <div>
-                         <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                           💳 Entry Fee Amount
-                         </label>
-                         <input
-                           type="number"
-                           step="0.01"
-                           value={snarkel.entryFee}
-                           onChange={(e) => setSnarkel(prev => ({ ...prev, entryFee: parseFloat(e.target.value) || 0 }))}
-                           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent font-handwriting ${
-                             validationErrors.entryFee ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                           }`}
-                           min="0"
-                         />
-                         {validationErrors.entryFee && (
-                           <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
-                             <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                             {validationErrors.entryFee}
-                           </p>
-                         )}
+               {/* Footer - compact */}
+               <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-4 py-3 border-t border-gray-200">
+                 <div className="flex justify-between items-center">
+                   <div className="font-handwriting text-sm text-gray-600 flex items-center gap-4">
+                     <span className="flex items-center gap-1">
+                       <Edit3 size={14} />
+                       {snarkel.questions.length} questions
+                     </span>
+                     <span className="flex items-center gap-1">
+                       <Users size={14} />
+                       {snarkel.allowlist.length} allowlist entries
+                     </span>
+                     <span className="flex items-center gap-1">
+                       <Trophy size={14} />
+                       {snarkel.rewards.enabled ? 'Rewards enabled' : 'No rewards'}
+                     </span>
+                     {/* Progress indicator */}
+                     <span className="flex items-center gap-1 text-xs">
+                       <div className="w-3 h-3 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs">
+                         {tabs.filter(tab => isTabCompleted(tab.id)).length}
                        </div>
-
-                       <div>
-                         <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
-                           🪙 Entry Fee Token Address
-                         </label>
-                         <input
-                           type="text"
-                           value={snarkel.entryFeeToken}
-                           onChange={(e) => setSnarkel(prev => ({ ...prev, entryFeeToken: e.target.value }))}
-                           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent font-handwriting ${
-                             validationErrors.entryFeeToken ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                           }`}
-                           placeholder="0x..."
-                         />
-                         {validationErrors.entryFeeToken && (
-                           <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
-                             <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                             {validationErrors.entryFeeToken}
-                           </p>
-                         )}
-                       </div>
-                     </div>
+                       of {tabs.length} completed
+                     </span>
                    </div>
-                 )}
-               </div>
-             )}
-           </div>
-
-           {/* Footer - compact */}
-           <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-4 py-3 border-t border-gray-200">
-             <div className="flex justify-between items-center">
-               <div className="font-handwriting text-sm text-gray-600 flex items-center gap-4">
-                 <span className="flex items-center gap-1">
-                   <Edit3 size={14} />
-                   {snarkel.questions.length} questions
-                 </span>
-                 <span className="flex items-center gap-1">
-                   <Users size={14} />
-                   {snarkel.allowlist.length} allowlist entries
-                 </span>
-                 <span className="flex items-center gap-1">
-                   <Trophy size={14} />
-                   {snarkel.rewards.enabled ? 'Rewards enabled' : 'No rewards'}
-                 </span>
-                 {/* Progress indicator */}
-                 <span className="flex items-center gap-1 text-xs">
-                   <div className="w-3 h-3 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs">
-                     {tabs.filter(tab => isTabCompleted(tab.id)).length}
-                   </div>
-                   of {tabs.length} completed
-                 </span>
-               </div>
-               
-               <div className="flex items-center gap-3">
-                 {/* Back button - show on all tabs except first */}
-                 {activeTab !== 'details' && (
-                   <button
-                     onClick={() => {
-                       const tabIndex = tabs.findIndex(tab => tab.id === activeTab);
-                       if (tabIndex > 0) {
-                         setActiveTab(tabs[tabIndex - 1].id);
-                       }
-                     }}
-                     className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium"
-                   >
-                     <ArrowLeft size={16} />
-                     Back
-                   </button>
-                 )}
-                 
-                 {/* Wallet Error Display */}
-                 {activeTab === 'spam' && validationErrors.wallet && (
-                   <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                     <div className="flex items-center gap-2">
-                       <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                         <span className="text-white text-xs font-bold">!</span>
-                       </div>
-                       <span className="font-handwriting text-red-700">{validationErrors.wallet}</span>
-                     </div>
-                   </div>
-                 )}
-
-                 {/* Next/Create button */}
-                 {activeTab === 'spam' ? (
-                   // Last tab - show Create button
-                   <button
-                     onClick={handleSubmit}
-                     disabled={!isTabCompleted('details') || !isTabCompleted('questions') || isSubmitting}
-                     className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
-                   >
-                     {isSubmitting ? (
-                       <>
-                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                         {snarkel.rewards.enabled ? 'Creating with Rewards...' : 'Creating...'}
-                       </>
-                     ) : (
-                       <>
-                         <Save size={16} />
-                         {snarkel.rewards.enabled ? 'Create with Rewards' : 'Create Snarkel'}
-                       </>
+                   
+                   <div className="flex items-center gap-3">
+                     {/* Back button - show on all tabs except first */}
+                     {activeTab !== 'details' && (
+                       <button
+                         onClick={() => {
+                           const tabIndex = tabs.findIndex(tab => tab.id === activeTab);
+                           if (tabIndex > 0) {
+                             setActiveTab(tabs[tabIndex - 1].id);
+                           }
+                         }}
+                         className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium"
+                       >
+                         <ArrowLeft size={16} />
+                         Back
+                       </button>
                      )}
-                   </button>
-                 ) : (
-                   // Other tabs - show Next button
-                   <button
-                     onClick={handleNextTab}
-                     disabled={isSubmitting}
-                     className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
-                   >
-                     Next
-                     <ArrowRight size={16} />
-                   </button>
-                 )}
+                     
+                     {/* Wallet Error Display */}
+                     {activeTab === 'spam' && validationErrors.wallet && (
+                       <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                         <div className="flex items-center gap-2">
+                           <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                             <span className="text-white text-xs font-bold">!</span>
+                           </div>
+                           <span className="font-handwriting text-red-700">{validationErrors.wallet}</span>
+                         </div>
+                       </div>
+                     )}
+
+                     {/* Next/Create button */}
+                     {activeTab === 'spam' ? (
+                       // Last tab - show Create button
+                       <button
+                         onClick={handleSubmit}
+                         disabled={!isTabCompleted('details') || !isTabCompleted('questions') || isSubmitting}
+                         className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
+                       >
+                         {isSubmitting ? (
+                           <>
+                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                             {snarkel.rewards.enabled ? 'Creating with Rewards...' : 'Creating...'}
+                           </>
+                         ) : (
+                           <>
+                             <Save size={16} />
+                             {snarkel.rewards.enabled ? 'Create with Rewards' : 'Create Snarkel'}
+                           </>
+                         )}
+                       </button>
+                     ) : (
+                       // Other tabs - show Next button
+                       <button
+                         onClick={handleNextTab}
+                         disabled={isSubmitting}
+                         className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
+                       >
+                         Next
+                         <ArrowRight size={16} />
+                       </button>
+                     )}
+                   </div>
+                 </div>
                </div>
              </div>
            </div>
@@ -2019,9 +2027,9 @@ export default function SnarkelCreationPage() {
        .animate-bounce-slow {
          animation: bounce-slow 3s ease-in-out infinite;
        }
-     `}     </style>
+     `}</style>
    </div>
-     </ErrorBoundary>
+   </ErrorBoundary>
  );
 }
 
