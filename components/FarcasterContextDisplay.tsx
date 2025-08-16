@@ -74,6 +74,8 @@ export function FarcasterContextDisplay() {
 
 export function FarcasterUserInfo() {
   const { isFarcasterApp, context } = useFarcaster()
+  //return null alwyas for testing
+  return null;
 
   if (!isFarcasterApp || !context?.user) {
     return null
