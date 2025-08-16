@@ -11,6 +11,7 @@ interface FarcasterContextType {
   showToast: (message: string) => void
   composeCast: (text: string, embeds?: [] | [string] | [string, string]) => void
   addToFarcaster: () => void
+  callReady: () => Promise<void> // Add manual ready function
 }
 
 const FarcasterContext = createContext<FarcasterContextType | undefined>(undefined)
@@ -45,11 +46,48 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
           const sdkContext = sdk.context
           setContext(sdkContext)
           
-          // Call ready() to hide the splash screen
-          await sdk.actions.ready()
-          setIsReady(true)
-          
           console.log('Farcaster Mini App Context:', sdkContext)
+          
+          // Call ready() to hide the splash screen with retry logic
+          let readyCalled = false
+          let retryCount = 0
+          const maxRetries = 3
+          
+          const callReady = async () => {
+            try {
+              if (!readyCalled && retryCount < maxRetries) {
+                retryCount++
+                console.log(`Attempting to call sdk.actions.ready() (attempt ${retryCount})`)
+                
+                await sdk.actions.ready()
+                readyCalled = true
+                console.log('Successfully called sdk.actions.ready() - splash screen should be hidden')
+                setIsReady(true)
+              }
+            } catch (error) {
+              console.error(`Error calling sdk.actions.ready() (attempt ${retryCount}):`, error)
+              
+              if (retryCount < maxRetries) {
+                // Retry after a short delay
+                setTimeout(callReady, 500)
+              } else {
+                console.error('Failed to call sdk.actions.ready() after all retries')
+                setIsReady(true) // Set ready anyway to prevent blocking
+              }
+            }
+          }
+          
+          // Call ready immediately
+          await callReady()
+          
+          // Also set a fallback timeout to ensure ready is called
+          setTimeout(() => {
+            if (!readyCalled) {
+              console.log('Fallback: calling sdk.actions.ready() after timeout')
+              callReady()
+            }
+          }, 1000)
+          
         } else {
           setIsReady(true)
         }
@@ -126,6 +164,16 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
     alert(message)
   }
 
+  const callReady = async () => {
+    try {
+      await sdk.actions.ready()
+      setIsReady(true)
+      console.log('Successfully called sdk.actions.ready() - splash screen should be hidden')
+    } catch (error) {
+      console.error('Failed to call sdk.actions.ready() manually:', error)
+    }
+  }
+
   const value: FarcasterContextType = {
     isFarcasterApp,
     isReady,
@@ -134,6 +182,7 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
     showToast,
     composeCast,
     addToFarcaster,
+    callReady,
   }
 
   return (
