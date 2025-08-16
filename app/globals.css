@@ -5,6 +5,17 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* New blue theme variables - updated to sand blue */
+  --primary-blue: #2563eb;
+  --accent-blue: #3b82f6;
+  --light-blue: #dbeafe;
+  --dark-blue: #64748b; /* Changed from #1e40af to sand blue */
+  --sand-blue: #94a3b8; /* Additional sand blue tone */
+  --warm-blue: #475569; /* Warmer blue tone */
+  --success-green: #10b981;
+  --warning-amber: #f59e0b;
+  --gray-500: #6b7280;
 }
 
 @theme inline {
@@ -244,4 +255,111 @@ body {
 
 .slide-in-left {
   animation: slideInFromLeft 0.5s ease-out;
+}
+
+/* New blue theme utility classes */
+.bg-blue-gradient {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
+}
+
+.bg-blue-light {
+  background-color: var(--light-blue);
+}
+
+.text-blue-primary {
+  color: var(--primary-blue);
+}
+
+.text-blue-dark {
+  color: var(--dark-blue);
+}
+
+.border-blue-accent {
+  border-color: var(--accent-blue);
+}
+
+/* Compact card styles */
+.compact-quiz-card {
+  height: auto;
+  min-height: 80px;
+  max-height: 120px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.compact-quiz-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.15);
+}
+
+/* Playful hover effects */
+.playful-hover {
+  transition: all 0.3s ease;
+}
+
+.playful-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.15);
+}
+
+/* Glassmorphism effect */
+.glassmorphism {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Enhanced floating animations for quiz icons */
+@keyframes float-quiz {
+  0%, 100% { 
+    transform: translateY(0px) rotate(0deg) scale(1); 
+  }
+  25% { 
+    transform: translateY(-8px) rotate(2deg) scale(1.05); 
+  }
+  50% { 
+    transform: translateY(-15px) rotate(0deg) scale(1.1); 
+  }
+  75% { 
+    transform: translateY(-8px) rotate(-2deg) scale(1.05); 
+  }
+}
+
+.animate-float-quiz {
+  animation: float-quiz 4s ease-in-out infinite;
+}
+
+/* Button pulse effect */
+@keyframes pulse-blue {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); 
+  }
+  50% { 
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); 
+  }
+}
+
+.animate-pulse-blue {
+  animation: pulse-blue 2s infinite;
+}
+
+/* Ensure proper spacing for compact cards */
+.space-y-4 > .compact-quiz-card:not(:first-child) {
+  margin-top: 1rem;
+}
+
+.space-y-6 > .compact-quiz-card:not(:first-child) {
+  margin-top: 1.5rem;
+}
+
+/* Enhanced card shadows for blue theme */
+.shadow-blue {
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1), 0 2px 4px -1px rgba(37, 99, 235, 0.06);
+}
+
+.shadow-blue-lg {
+  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -2px rgba(37, 99, 235, 0.05);
+}
+
+.shadow-blue-xl {
+  box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.1), 0 10px 10px -5px rgba(37, 99, 235, 0.04);
 }
