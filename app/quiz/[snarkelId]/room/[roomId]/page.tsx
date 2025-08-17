@@ -143,6 +143,7 @@ export default function QuizRoomPage() {
   const [fadeTimeout, setFadeTimeout] = useState<NodeJS.Timeout | null>(null);
   const [futureStartCountdown, setFutureStartCountdown] = useState<number | null>(null);
   const [showFutureStartCountdown, setShowFutureStartCountdown] = useState(false);
+  const [socketConnected, setSocketConnected] = useState<boolean>(false);
 
   useEffect(() => {
     // Enhanced wallet address validation
@@ -183,8 +184,56 @@ export default function QuizRoomPage() {
       if (fadeTimeout) {
         clearTimeout(fadeTimeout);
       }
+      
+      // Cleanup socket connection on unmount
+      if (socket) {
+        console.log('Cleaning up socket connection on unmount');
+        socket.disconnect();
+        setSocket(null);
+      }
     };
   }, [isConnected, address, roomId]);
+
+  // Add socket cleanup effect
+  useEffect(() => {
+    return () => {
+      // Ensure socket is disconnected when component unmounts
+      if (socket) {
+        console.log('Socket cleanup effect: disconnecting socket');
+        socket.disconnect();
+        setSocket(null);
+      }
+    };
+  }, [socket]);
+
+  // Add periodic socket connection check
+  useEffect(() => {
+    if (!socket) return;
+
+    const checkConnection = () => {
+      if (socket && !socket.connected) {
+        console.log('Socket not connected, attempting to reconnect...');
+        socket.connect();
+      }
+    };
+
+    // Check connection every 30 seconds
+    const interval = setInterval(checkConnection, 30000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [socket]);
+
+  // Function to ensure socket connection
+  const ensureSocketConnection = () => {
+    if (!socket || !socket.connected) {
+      console.log('Socket not connected, reinitializing...');
+      initializeSocket();
+      return false;
+    }
+    return true;
+  };
 
   // Add useEffect for future start time countdown
   useEffect(() => {
@@ -335,11 +384,29 @@ export default function QuizRoomPage() {
   const initializeSocket = () => {
     if (!roomId) return;
 
+    // Disconnect existing socket if it exists
+    if (socket) {
+      console.log('Disconnecting existing socket before creating new one');
+      socket.disconnect();
+      setSocket(null);
+    }
+
+    console.log('Initializing new socket connection...');
     const newSocket = io(getSocketUrl(), {
       query: {
         roomId,
         walletAddress: address
-      }
+      },
+      // Add reconnection options
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      // Add transport options for better reliability
+      transports: ['websocket', 'polling'],
+      upgrade: true,
+      rememberUpgrade: true
     });
 
     newSocket.on('connect', () => {
@@ -347,14 +414,52 @@ export default function QuizRoomPage() {
       console.log('Socket ID:', newSocket.id);
       console.log('Room ID:', roomId);
       console.log('Wallet Address:', address);
+      setSocketConnected(true);
+      setError(null); // Clear any connection errors
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from socket server');
+    newSocket.on('disconnect', (reason) => {
+      console.log('Disconnected from socket server, reason:', reason);
+      setSocketConnected(false);
+      
+      // If it's a manual disconnect, don't try to reconnect
+      if (reason === 'io client disconnect') {
+        console.log('Manual disconnect, not attempting reconnection');
+        return;
+      }
+      
+      // For other disconnection reasons, attempt reconnection
+      console.log('Attempting to reconnect...');
     });
 
     newSocket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
+      setSocketConnected(false);
+      
+      // If connection fails, try to reconnect after a delay
+      setTimeout(() => {
+        if (newSocket.disconnected) {
+          console.log('Attempting to reconnect after connection error...');
+          newSocket.connect();
+        }
+      }, 2000);
+    });
+
+    newSocket.on('reconnect', (attemptNumber) => {
+      console.log('Socket reconnected after', attemptNumber, 'attempts');
+      setSocketConnected(true);
+      setError(null); // Clear any connection errors
+    });
+
+    newSocket.on('reconnect_error', (error) => {
+      console.error('Socket reconnection error:', error);
+      setSocketConnected(false);
+    });
+
+    newSocket.on('reconnect_failed', () => {
+      console.error('Socket reconnection failed after all attempts');
+      setSocketConnected(false);
+      setError('Failed to connect to quiz server. Please refresh the page and try again.');
     });
 
     newSocket.on('participantJoined', (participant: Participant) => {
@@ -657,23 +762,16 @@ export default function QuizRoomPage() {
   };
 
   const toggleReady = () => {
+    if (!ensureSocketConnection()) {
+      console.log('Cannot toggle ready: socket not connected');
+      return;
+    }
+    
     if (socket) {
       socket.emit('toggleReady');
       setIsReady(!isReady);
     }
   };
-
-  // Remove the startGame function - it's redundant
-  // const startGame = () => {
-  //   console.log('startGame called, socket:', !!socket, 'isAdmin:', isAdmin);
-  //   if (socket && isAdmin) {
-  //     console.log('Opening countdown modal, current state:', showCountdownModal);
-  //     setShowCountdownModal(true);
-  //     console.log('Modal state set to true');
-  //   } else {
-  //     console.log('Cannot open modal:', { hasSocket: !!socket, isAdmin });
-  //   }
-  // };
 
   const confirmStartGame = () => {
     console.log('=== confirmStartGame called ===');
@@ -681,6 +779,12 @@ export default function QuizRoomPage() {
     console.log('Is admin:', isAdmin);
     console.log('Current countdownTime (minutes):', countdownTime);
     console.log('Current gameState:', gameState);
+    
+    if (!ensureSocketConnection()) {
+      console.log('Cannot start game: socket not connected');
+      setError('Connection lost. Please wait for reconnection or refresh the page.');
+      return;
+    }
     
     if (socket && isAdmin) {
       // Convert minutes to seconds before sending to server
@@ -700,6 +804,12 @@ export default function QuizRoomPage() {
   };
 
   const sendMessage = () => {
+    if (!ensureSocketConnection()) {
+      console.log('Cannot send message: socket not connected');
+      setError('Connection lost. Please wait for reconnection or refresh the page.');
+      return;
+    }
+    
     if (socket && isAdmin && adminMessage.trim()) {
       const message = adminMessage.trim();
       
@@ -752,8 +862,15 @@ export default function QuizRoomPage() {
 
   const leaveRoom = () => {
     if (socket) {
+      console.log('Leaving room, disconnecting socket...');
       socket.disconnect();
+      setSocket(null);
     }
+    
+    // Clear any error states
+    setError(null);
+    setJoinError(null);
+    
     router.push('/join');
   };
 
@@ -862,7 +979,7 @@ export default function QuizRoomPage() {
                   {isAdmin && (
                     <div className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-500 rounded text-xs text-white flex-shrink-0">
                       <Trophy className="w-2.5 h-2.5" />
-                                              <span className="hidden min-[480px]:inline">Admin</span>
+                      <span className="hidden min-[480px]:inline">Admin</span>
                     </div>
                   )}
                 </div>
@@ -873,6 +990,33 @@ export default function QuizRoomPage() {
                     Connect Wallet
                   </span>
                 </div>
+              )}
+              
+              {/* Connection Status Indicator */}
+              <div className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium ${
+                socketConnected 
+                  ? 'bg-green-100 text-green-700 border border-green-200' 
+                  : 'bg-red-100 text-red-700 border border-red-200'
+              }`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${
+                  socketConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                }`}></div>
+                <span className="hidden min-[480px]:inline">
+                  {socketConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+              
+              {/* Manual Reconnect Button - Mobile */}
+              {!socketConnected && (
+                <button
+                  onClick={() => {
+                    console.log('Manual reconnect requested');
+                    initializeSocket();
+                  }}
+                  className="px-2 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
+                >
+                  <Zap className="w-3 h-3" />
+                </button>
               )}
               
               {/* Mobile Wallet Connect Button */}
@@ -920,6 +1064,35 @@ export default function QuizRoomPage() {
                     </span>
                   </div>
                 )}
+                
+                {/* Connection Status Indicator */}
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                  socketConnected 
+                    ? 'bg-green-100 text-green-700 border border-green-200' 
+                    : 'bg-red-100 text-red-700 border border-red-200'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${
+                    socketConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                  }`}></div>
+                  <span>
+                    {socketConnected ? 'Connected' : 'Disconnected'}
+                  </span>
+                </div>
+                
+                {/* Manual Reconnect Button - Desktop */}
+                {!socketConnected && (
+                  <button
+                    onClick={() => {
+                      console.log('Manual reconnect requested');
+                      initializeSocket();
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Reconnect
+                  </button>
+                )}
+                
                 <WalletConnectButton />
               </div>
               
@@ -941,6 +1114,31 @@ export default function QuizRoomPage() {
 
 
       <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
+        {/* Connection Status Banner */}
+        {!socketConnected && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div>
+                  <h3 className="font-medium text-red-800">Connection Lost</h3>
+                  <p className="text-sm text-red-600">Unable to communicate with the quiz server. Some features may not work.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  console.log('Manual reconnect requested from banner');
+                  initializeSocket();
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+              >
+                <Zap className="w-4 h-4" />
+                Reconnect
+              </button>
+            </div>
+          </div>
+        )}
+        
         {/* TV Display for All Participants */}
         {room && snarkel && (
           <div className="mb-6">

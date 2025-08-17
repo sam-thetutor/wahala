@@ -9,6 +9,30 @@ const io = new Server(httpServer, {
   cors: {
     origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:4000",
     methods: ["GET", "POST"]
+  },
+  // Add better connection handling
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  upgradeTimeout: 10000,
+  allowUpgrades: true,
+  transports: ['websocket', 'polling'],
+  // Add connection error handling
+  connectTimeout: 45000,
+  maxHttpBufferSize: 1e6,
+  // Add heartbeat mechanism
+  heartbeat: true
+});
+
+// Add health check endpoint
+httpServer.on('request', (req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      connections: io.engine.clientsCount,
+      uptime: process.uptime()
+    }));
   }
 });
 
@@ -40,6 +64,31 @@ io.on('connection', (socket) => {
   // Join the room
   socket.join(roomId);
   console.log(`User ${walletAddress} joined room ${roomId}`);
+
+  // Add connection monitoring
+  socket.on('error', (error) => {
+    console.error(`Socket error for ${socket.id}:`, error);
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.log(`User ${walletAddress} disconnected from room ${roomId}, reason: ${reason}`);
+    
+    // Clean up any room-specific data if needed
+    if (reason === 'io server disconnect') {
+      // Server initiated disconnect
+      console.log('Server initiated disconnect');
+    }
+  });
+
+  // Handle connection timeout
+  socket.on('connect_timeout', () => {
+    console.log(`Connection timeout for ${socket.id}`);
+  });
+
+  // Handle connection error
+  socket.on('connect_error', (error) => {
+    console.error(`Connection error for ${socket.id}:`, error);
+  });
 
   // Notify other participants about the new join
   socket.to(roomId).emit('participantJoined', {
