@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 const httpServer = createServer();
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:4000",
+    origin: "*", // Allow all origins
     methods: ["GET", "POST"]
   },
   // Add better connection handling
