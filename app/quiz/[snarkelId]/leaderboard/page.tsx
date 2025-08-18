@@ -279,7 +279,7 @@ export default function QuizLeaderboardPage() {
     
     try {
       setDistributingRewards(true);
-      setRewardDistributionStatus('Starting quadratic reward distribution using database leaderboard...');
+      setRewardDistributionStatus('Starting on-chain quadratic reward distribution...');
       
       // Get session ID from quiz info
       const sessionId = parseInt(quizInfo.onchainSessionId || '1');
@@ -303,33 +303,26 @@ export default function QuizLeaderboardPage() {
       console.log('✅ Valid participants with scores > 0:', validParticipants.length);
       console.log('📈 Participant scores from database:', validParticipants.map(p => ({ name: p.name, score: p.score, wallet: p.walletAddress })));
       
-      // Try to get reward info from database first, fallback to contract if needed
+      // GET REWARD INFO FROM ON-CHAIN CONTRACT
+      console.log('🔗 Getting reward info from on-chain contract...');
+      
       let tokenAddress: string;
       let totalRewardPool: string;
       
-      if (quizInfo.rewards && quizInfo.rewards.length > 0) {
-        // Use database reward info
-        const firstReward = quizInfo.rewards[0];
-        tokenAddress = firstReward.tokenAddress;
-        totalRewardPool = firstReward.totalRewardPool;
-        console.log('Using database reward info:', { tokenAddress, totalRewardPool });
-      } else {
-        // Fallback: try to get reward info from contract
-        try {
-          const expectedToken = await getExpectedRewardToken(sessionId);
-          const expectedAmount = await getExpectedRewardAmount(sessionId);
-          
-          if (expectedToken === '0x0000000000000000000000000000000000000000') {
-            throw new Error('No reward token configured on-chain for this session');
-          }
-          
-          tokenAddress = expectedToken;
-          totalRewardPool = expectedAmount;
-          console.log('Using contract reward info:', { tokenAddress, totalRewardPool });
-        } catch (contractError) {
-          console.error('Failed to get contract reward info:', contractError);
-          throw new Error('No rewards configured in database or on-chain. Please configure rewards first.');
+      try {
+        const expectedToken = await getExpectedRewardToken(sessionId);
+        const expectedAmount = await getExpectedRewardAmount(sessionId);
+        
+        if (expectedToken === '0x0000000000000000000000000000000000000000') {
+          throw new Error('No reward token configured on-chain for this session');
         }
+        
+        tokenAddress = expectedToken;
+        totalRewardPool = expectedAmount;
+        console.log('✅ On-chain reward info:', { tokenAddress, totalRewardPool });
+      } catch (contractError) {
+        console.error('Failed to get on-chain reward info:', contractError);
+        throw new Error('No rewards configured on-chain. Please configure rewards in the smart contract first.');
       }
       
       // QUADRATIC CALCULATIONS USING DATABASE POINTS
@@ -670,7 +663,7 @@ export default function QuizLeaderboardPage() {
                     </button>
                   </div>
                   <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded-lg">
-                    <strong>Fallback Distribute:</strong> Uses connected wallet and contract data to distribute rewards even when database rewards aren't configured. Automatically calculates equitable distribution based on participant scores.
+                    <strong>Fallback Distribute:</strong> Uses on-chain contract data and connected wallet to distribute rewards. Automatically calculates quadratic distribution based on database leaderboard scores.
                   </div>
                 </div>
               )}
