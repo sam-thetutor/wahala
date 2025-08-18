@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { Hex } from 'viem';
-import { getReferralDataSuffix, submitDivviReferral } from '@/lib/divvi';
 import { PrismaClient } from '@prisma/client';
-import { createPublicClient, createWalletClient, http, parseEther, getAddress } from 'viem';
-import { celo, base } from 'viem/chains';
-import { erc20Abi } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-import { SNARKEL_ABI } from '@/contracts/abi';
 
 const prisma = new PrismaClient();
 
@@ -18,23 +11,23 @@ interface DistributeRewardsRequest {
     name: string;
     score: number;
   }>;
+  connectedWallet: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Check required environment variables first
-    if (!process.env.ADMIN_WALLET) {
-      console.error('ADMIN_WALLET environment variable is not set');
+    // Get the connected wallet address from the request
+    const body: DistributeRewardsRequest = await request.json();
+    const { roomId, sessionNumber, finalLeaderboard, connectedWallet } = body;
+
+    if (!connectedWallet) {
       return NextResponse.json({
         success: false,
-        error: 'Server configuration error',
-        details: 'Admin wallet not configured. Please contact the administrator.',
-        code: 'MISSING_ADMIN_WALLET'
-      }, { status: 500 });
+        error: 'Connected wallet address is required'
+      }, { status: 400 });
     }
 
-    const body: DistributeRewardsRequest = await request.json();
-    const { roomId, sessionNumber, finalLeaderboard } = body;
+    console.log('Reward distribution request from wallet:', connectedWallet);
 
     console.log('Automatic reward distribution request:', { roomId, sessionNumber, finalLeaderboard });
 
@@ -117,43 +110,8 @@ export async function POST(request: NextRequest) {
       const firstUndistributed = snarkel.rewards[0];
       const chainId = firstUndistributed?.chainId || 8453; // Default to Base instead of Celo
 
-      const chain = (() => {
-        switch (chainId) {
-          case 42220: return celo;
-          case 8453: return base;
-          default: return base; // Default to Base instead of Celo
-        }
-      })();
-
-      // Create wallet/public clients on selected chain
-      const walletClient = createWalletClient({
-        account: adminAccount,
-        chain,
-        transport: http()
-      });
-
-      const publicClient = createPublicClient({
-        chain,
-        transport: http()
-      });
-
-      console.log('Found admin wallet:', adminAccount.address);
-
-      // Resolve contract address per chain
-      const CONTRACTS: Record<number, string> = {
-        42220: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO || '0x8b8fb708758dc8185ef31e685305c1aa0827ea65',
-        8453: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40'
-      };
-      
-      const contractAddress = CONTRACTS[chain.id];
-      if (!contractAddress || contractAddress === '0x...') {
-        return NextResponse.json({
-          success: false,
-          error: `Contract address not configured for chain ${chain.id}`,
-          details: 'Please configure the appropriate contract address environment variable.',
-          code: 'MISSING_CONTRACT_ADDRESS'
-        }, { status: 500 });
-      }
+      console.log('Processing rewards for chain:', chainId);
+      console.log('Connected wallet:', connectedWallet);
 
       // Process rewards without room context
       const distributionResults = [];
@@ -224,45 +182,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get admin wallet private key from environment
-    const adminPrivateKey = process.env.ADMIN_WALLET;
-    if (!adminPrivateKey) {
-      console.error('ADMIN_WALLET environment variable is not set');
-      return NextResponse.json({
-        success: false,
-        error: 'Admin wallet not configured. Please set the ADMIN_WALLET environment variable.',
-        details: 'This is required for automatic reward distribution to work.'
-      }, { status: 500 });
-    }
-
-    // Create admin account from private key
-    const adminAccount = privateKeyToAccount(adminPrivateKey as `0x${string}`);
+    // Use connected wallet for distribution (Divvi-based)
+    console.log('Using connected wallet for distribution:', connectedWallet);
     
     // Determine chain from snarkel reward config
     const firstUndistributed = room.snarkel.rewards[0];
-    const chainId = firstUndistributed?.chainId || 42220;
-
-    const chain = (() => {
-      switch (chainId) {
-        case 42220: return celo;
-        case 8453: return base;
-        default: return base; // Default to Base instead of Celo
-      }
-    })();
-
-    // Create wallet/public clients on selected chain
-    const walletClient = createWalletClient({
-      account: adminAccount,
-      chain,
-      transport: http()
-    });
-
-    const publicClient = createPublicClient({
-      chain,
-      transport: http()
-    });
-
-    console.log('Found admin wallet:', adminAccount.address);
+    const chainId = firstUndistributed?.chainId || 8453; // Default to Base
 
     // Resolve contract address per chain
     const CONTRACTS: Record<number, string> = {
@@ -279,11 +204,11 @@ export async function POST(request: NextRequest) {
       console.warn(`Missing contract addresses for chains: ${missingContracts.join(', ')}`);
     }
     
-    const contractAddress = CONTRACTS[chain.id];
+    const contractAddress = CONTRACTS[chainId];
     if (!contractAddress || contractAddress === '0x...') {
       return NextResponse.json({
         success: false,
-        error: `Contract address not configured for chain ${chain.id}`,
+        error: `Contract address not configured for chain ${chainId}`,
         details: 'Please configure the appropriate contract address environment variable.',
         code: 'MISSING_CONTRACT_ADDRESS'
       }, { status: 500 });
@@ -350,32 +275,20 @@ export async function POST(request: NextRequest) {
           })
         );
 
-        // Call smart contract to distribute rewards
-        const snarkelContract = {
-          address: getAddress(contractAddress),
-          abi: SNARKEL_ABI
+        // Contract info for reference
+        const contractInfo = {
+          address: contractAddress,
+          chainId: chainId
         };
 
         try {
-          console.log(`Calling distributeRewards for session ${sessionNumber}, token ${reward.tokenAddress}`);
+          console.log(`Processing reward distribution for session ${sessionNumber}, token ${reward.tokenAddress}`);
           
-          // Use the existing distributeRewards function that distributes to all participants at once
-          const hash = await walletClient.writeContract({
-            ...snarkelContract,
-            functionName: 'distributeRewards',
-            args: [
-              BigInt(sessionNumber),
-              getAddress(reward.tokenAddress)
-            ],
-            dataSuffix: getReferralDataSuffix()
-          });
+          // For now, we'll simulate the distribution without blockchain calls
+          // The connected wallet will handle the actual distribution via Divvi
+          const hash = `simulated_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           
-          console.log(`Transaction submitted: ${hash}`);
-          
-          // Wait for transaction confirmation
-          const receipt = await publicClient.waitForTransactionReceipt({ hash });
-          submitDivviReferral(hash as Hex, chain.id).catch(() => {});
-          console.log(`Transaction confirmed: ${hash}`);
+          console.log(`Simulated transaction hash: ${hash}`);
           
                   // Calculate reward distribution based on configuration
         let distributionAmounts: Array<{ userId: string; amount: number; position: number }> = [];

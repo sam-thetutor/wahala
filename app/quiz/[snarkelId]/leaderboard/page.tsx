@@ -207,7 +207,7 @@ export default function QuizLeaderboardPage() {
       setDistributingRewards(true);
       setRewardDistributionStatus('Starting reward distribution...');
       
-      // Call the reward distribution API
+      // Call the reward distribution API with connected wallet
       const response = await fetch('/api/quiz/distribute-rewards', {
         method: 'POST',
         headers: {
@@ -220,7 +220,8 @@ export default function QuizLeaderboardPage() {
             userId: entry.userId,
             name: entry.name,
             score: entry.score
-          }))
+          })),
+          connectedWallet: address
         }),
       });
 
