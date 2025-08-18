@@ -33,6 +33,7 @@ import WalletConnectButton from '@/components/WalletConnectButton';
 import AdminControls from '@/components/AdminControls';
 import ParticipantRoom from '@/components/ParticipantRoom';
 import { getSocketUrl } from '@/config/environment';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 interface Participant {
   id: string;
@@ -146,6 +147,18 @@ export default function QuizRoomPage() {
   const [socketConnected, setSocketConnected] = useState<boolean>(false);
 
   useEffect(() => {
+    // Call sdk.actions.ready() to hide Farcaster Mini App splash screen
+    const callReady = async () => {
+      try {
+        await sdk.actions.ready();
+        console.log('Farcaster Mini App ready() called successfully on quiz room page');
+      } catch (error) {
+        console.error('Error calling sdk.actions.ready():', error);
+      }
+    };
+    
+    callReady();
+    
     // Enhanced wallet address validation
     if (!isConnected) {
       setError('Please connect your wallet to join the quiz');

@@ -2,7 +2,37 @@ import { ImageResponse } from 'next/og'
  
 export const runtime = 'edge'
  
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  
+  // Get dynamic parameters for different page types
+  const type = searchParams.get('type') || 'default'
+  const title = searchParams.get('title') || 'Snarkels'
+  const description = searchParams.get('description') || 'On-chain Snarkels rewards users in interactive sessions with ERC20 tokens'
+  const snarkelCode = searchParams.get('code')
+  const participants = searchParams.get('participants')
+  const rewards = searchParams.get('rewards')
+  const difficulty = searchParams.get('difficulty')
+  
+  // Customize the image based on the type
+  let backgroundColor = '#1f2937'
+  let accentColor = '#f59e0b'
+  let icon = '🎯'
+  
+  if (type === 'snarkel' && snarkelCode) {
+    backgroundColor = '#1e40af'
+    accentColor = '#10b981'
+    icon = '🧠'
+  } else if (type === 'room') {
+    backgroundColor = '#7c3aed'
+    accentColor = '#f59e0b'
+    icon = '🎮'
+  } else if (type === 'featured') {
+    backgroundColor = '#059669'
+    accentColor = '#fbbf24'
+    icon = '⭐'
+  }
+ 
   return new ImageResponse(
     (
       <div
@@ -13,7 +43,7 @@ export async function GET() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#1f2937',
+          backgroundColor: backgroundColor,
           backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%)',
         }}
       >
@@ -30,17 +60,17 @@ export async function GET() {
               width: '100px',
               height: '100px',
               borderRadius: '20px',
-              background: 'linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ea580c 100%)',
+              background: `linear-gradient(135deg, ${accentColor} 0%, #f97316 50%, #ea580c 100%)`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '50px',
               fontWeight: 'bold',
               color: 'white',
-              boxShadow: '0 20px 40px rgba(245, 158, 11, 0.3)',
+              boxShadow: `0 20px 40px ${accentColor}40`,
             }}
           >
-            🎯
+            {icon}
           </div>
         </div>
         
@@ -57,7 +87,7 @@ export async function GET() {
             textShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
           }}
         >
-          Snarkels
+          {title}
         </div>
         
         <div
@@ -72,8 +102,31 @@ export async function GET() {
             textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)',
           }}
         >
-          On-chain Snarkels rewards users in interactive sessions with ERC20 tokens
+          {description}
         </div>
+        
+        {/* Show Snarkel-specific details if available */}
+        {snarkelCode && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginTop: '20px',
+              fontSize: '24px',
+              color: '#ffffff',
+              fontWeight: '600',
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)',
+              padding: '12px 24px',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+            }}
+          >
+            <span>🔑</span>
+            <span>Code: {snarkelCode}</span>
+          </div>
+        )}
         
         <div
           style={{
@@ -118,6 +171,41 @@ export async function GET() {
           <span>🏆</span>
           <span>Rewards</span>
         </div>
+        
+        {/* Show additional details if available */}
+        {(participants || rewards || difficulty) && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              marginTop: '20px',
+              fontSize: '16px',
+              color: '#d1d5db',
+              fontWeight: '500',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            {participants && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span>👥</span>
+                <span>{participants}</span>
+              </span>
+            )}
+            {rewards && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span>💰</span>
+                <span>{rewards}</span>
+              </span>
+            )}
+            {difficulty && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span>🎯</span>
+                <span>{difficulty}</span>
+              </span>
+            )}
+          </div>
+        )}
       </div>
     ),
     {
