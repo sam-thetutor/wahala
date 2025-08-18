@@ -1025,105 +1025,105 @@ export default function SnarkelCreationPage() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        {/* Enhanced notebook background */}
+      {/* Enhanced notebook background */}
         <div className="fixed inset-0 opacity-30 pointer-events-none">
-          <div 
-            className="w-full h-full"
-            style={{
-              backgroundImage: `
-                repeating-linear-gradient(
-                  transparent,
-                  transparent 24px,
-                  #E7E3D4 24px,
-                  #E7E3D4 26px
-                ),
-                radial-gradient(circle at 30% 70%, rgba(252, 255, 82, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 70% 30%, rgba(86, 223, 124, 0.1) 0%, transparent 50%)
-              `,
-              backgroundSize: '100% 26px, 600px 600px, 800px 800px'
-            }}
-          />
-        </div>
+        <div 
+          className="w-full h-full"
+          style={{
+            backgroundImage: `
+              repeating-linear-gradient(
+                transparent,
+                transparent 24px,
+                #E7E3D4 24px,
+                #E7E3D4 26px
+              ),
+              radial-gradient(circle at 30% 70%, rgba(252, 255, 82, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 70% 30%, rgba(86, 223, 124, 0.1) 0%, transparent 50%)
+            `,
+            backgroundSize: '100% 26px, 600px 600px, 800px 800px'
+          }}
+        />
+      </div>
 
-        {/* Floating elements */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          {floatingElements.map((element) => (
-            <div
-              key={element.id}
-              className="absolute opacity-10 animate-float"
-              style={{
-                left: `${element.x}%`,
-                top: `${element.y}%`,
-                width: `${element.size}px`,
-                height: `${element.size}px`,
-                animationDelay: `${element.delay}ms`,
-                animationDuration: `${element.duration}ms`,
-              }}
-            >
-              <Star className="w-full h-full text-yellow-400" />
-            </div>
-          ))}
-        </div>
+      {/* Floating elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {floatingElements.map((element) => (
+          <div
+            key={element.id}
+            className="absolute opacity-10 animate-float"
+            style={{
+              left: `${element.x}%`,
+              top: `${element.y}%`,
+              width: `${element.size}px`,
+              height: `${element.size}px`,
+              animationDelay: `${element.delay}ms`,
+              animationDuration: `${element.duration}ms`,
+            }}
+          >
+            <Star className="w-full h-full text-yellow-400" />
+          </div>
+        ))}
+      </div>
 
         {/* Mobile-First Header */}
-        <div className={`relative z-10 transition-all duration-1000 ${
-          isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
-        }`}>
-          <div className="max-w-6xl mx-auto px-4 py-4">
+      <div className={`relative z-10 transition-all duration-1000 ${
+        isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
+      }`}>
+        <div className="max-w-6xl mx-auto px-4 py-4">
             <div className="bg-white shadow-lg rounded-2xl p-4 transform -rotate-1 hover:rotate-0 transition-all duration-500 relative border-l-4 border-purple-400 overflow-hidden">
-              {/* Pin effect */}
+            {/* Pin effect */}
               <div className="absolute -top-2 -right-2 w-5 h-5 bg-purple-500 rounded-full shadow-md border-2 border-white"></div>
               <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-purple-600 rounded-full"></div>
               
               <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={() => window.history.back()}
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => window.history.back()}
                     className="p-3 hover:bg-purple-100 rounded-xl transition-colors flex items-center gap-2 text-purple-700 hover:text-purple-800"
-                  >
+                >
                     <ArrowLeft className="w-6 h-6" />
                     <span className="font-handwriting font-medium">Back</span>
-                  </button>
-                  <div className="relative">
+                </button>
+                <div className="relative">
                     <Gamepad2 className="w-10 h-10 animate-bounce-slow text-purple-600" />
                     <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-ping bg-yellow-400"></div>
-                  </div>
-                  <div>
+                </div>
+                <div>
                     <h1 className="font-handwriting text-2xl font-bold text-purple-800">
                       Create Snarkel
-                    </h1>
+                  </h1>
                     <p className="font-handwriting text-sm text-gray-600 mt-1">Design your Web3 experience!</p>
-                  </div>
                 </div>
-                
+              </div>
+              
                 <div className="flex items-center gap-3">
-                  <button 
-                    onClick={() => router.push('/admin')}
+                <button 
+                  onClick={() => router.push('/admin')}
                     className="flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-100 hover:bg-blue-200 transition-colors font-handwriting font-medium text-blue-700"
-                  >
+                >
                     <Trophy className="w-5 h-5" />
                     <span>Dashboard</span>
-                  </button>
-                  <WalletConnectButton />
-                  <button 
-                    onClick={() => router.push('/')}
+                </button>
+                <WalletConnectButton />
+                <button 
+                  onClick={() => router.push('/')}
                     className="p-3 hover:bg-purple-100 rounded-xl transition-colors text-purple-700 hover:text-purple-800"
-                    title="Go to Home"
-                  >
+                  title="Go to Home"
+                >
                     <Home className="w-6 h-6" />
-                  </button>
-                </div>
+                </button>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
         {/* Main content area - Mobile optimized */}
         <div className="relative z-10 max-w-6xl mx-auto px-4 py-6 pb-32">
           {/* Mini App Context Display */}
-          <MiniAppContextDisplay />
-          <MiniAppHeader />
-          
+        <MiniAppContextDisplay />
+        <MiniAppHeader />
+        
           {/* Mobile-First Progress Indicator */}
           <div className="mb-6">
             <div className="bg-white rounded-2xl shadow-lg p-4 border-l-4 border-blue-400">
@@ -1149,48 +1149,48 @@ export default function SnarkelCreationPage() {
                   }}
                 />
               </div>
+              </div>
             </div>
-          </div>
 
           {/* Mobile-First Tab Navigation */}
           <div className="mb-6">
             <div className="bg-white rounded-2xl shadow-lg p-4 border-l-4 border-green-400">
               <div className="flex flex-wrap gap-2">
-                {tabs.map((tab, index) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  const isCompleted = isTabCompleted(tab.id);
-                  const currentTabIndex = tabs.findIndex(t => t.id === activeTab);
-                  const canAccess = index <= currentTabIndex || isCompleted;
-                  
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => canAccess ? setActiveTab(tab.id) : null}
-                      disabled={!canAccess}
+                  {tabs.map((tab, index) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    const isCompleted = isTabCompleted(tab.id);
+                    const currentTabIndex = tabs.findIndex(t => t.id === activeTab);
+                    const canAccess = index <= currentTabIndex || isCompleted;
+                    
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => canAccess ? setActiveTab(tab.id) : null}
+                        disabled={!canAccess}
                       className={`flex items-center gap-2 px-4 py-3 rounded-xl font-handwriting font-medium transition-all transform hover:scale-105 ${
-                        isActive
+                          isActive
                           ? 'text-white bg-gradient-to-r from-purple-500 to-blue-500 shadow-lg scale-105'
-                          : isCompleted
+                            : isCompleted
                           ? 'text-green-700 bg-green-100 border border-green-200'
-                          : canAccess
+                            : canAccess
                           ? 'text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200'
                           : 'text-gray-400 bg-gray-100 border border-gray-200 opacity-60'
-                      }`}
-                    >
+                        }`}
+                      >
                       <Icon size={20} />
                       <span className="text-sm">{tab.label}</span>
-                      {isCompleted && (
+                        {isCompleted && (
                         <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-xs">✓</span>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+                            <span className="text-white text-xs">✓</span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          </div>
+                      </div>
 
           {/* Main Content Area - Mobile Optimized */}
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden border-l-4 border-blue-400">
@@ -1201,31 +1201,31 @@ export default function SnarkelCreationPage() {
                   <div className="text-center mb-6">
                     <h2 className="font-handwriting text-2xl font-bold text-gray-800 mb-2">Basic Information</h2>
                     <p className="text-gray-600">Let's start with the basics of your Snarkel</p>
-                  </div>
+                      </div>
 
-                  <div className="space-y-4">
-                    <div>
+                    <div className="space-y-4">
+                        <div>
                       <label className="block font-handwriting text-lg font-medium text-gray-700 mb-3">
-                        🎯 Snarkel Title *
-                      </label>
-                      <input
-                        type="text"
-                        value={snarkel.title}
-                        onChange={(e) => setSnarkel(prev => ({ ...prev, title: e.target.value }))}
+                            🎯 Snarkel Title *
+                          </label>
+                          <input
+                            type="text"
+                            value={snarkel.title}
+                            onChange={(e) => setSnarkel(prev => ({ ...prev, title: e.target.value }))}
                         className={`w-full px-4 py-4 border-2 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 font-handwriting text-lg ${
-                          validationErrors.title ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
+                              validationErrors.title ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                            }`}
                         placeholder="Enter your Snarkel title..."
-                      />
-                      {validationErrors.title && (
+                          />
+                          {validationErrors.title && (
                         <p className="mt-2 text-red-600 font-handwriting flex items-center gap-2">
                           <span className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
-                          {validationErrors.title}
-                        </p>
-                      )}
-                    </div>
+                              {validationErrors.title}
+                            </p>
+                          )}
+                        </div>
 
-                    <div>
+                        <div>
                       <label className="block font-handwriting text-lg font-medium text-gray-700 mb-3">
                         📝 Description
                       </label>
@@ -1241,16 +1241,16 @@ export default function SnarkelCreationPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-handwriting text-lg font-medium text-gray-700 mb-3">
-                          ⏱️ Max Questions
-                        </label>
-                        <input
-                          type="number"
-                          value={snarkel.maxQuestions}
-                          onChange={(e) => setSnarkel(prev => ({ ...prev, maxQuestions: parseInt(e.target.value) || 0 }))}
+                            ⏱️ Max Questions
+                          </label>
+                          <input
+                            type="number"
+                            value={snarkel.maxQuestions}
+                            onChange={(e) => setSnarkel(prev => ({ ...prev, maxQuestions: parseInt(e.target.value) || 0 }))}
                           className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 font-handwriting text-lg"
-                          min="1"
-                          max="60"
-                        />
+                            min="1"
+                            max="60"
+                          />
                       </div>
 
                       <div>
@@ -1265,67 +1265,67 @@ export default function SnarkelCreationPage() {
                           min="100"
                         />
                       </div>
-                    </div>
+                      </div>
 
-                    {/* Featured Quiz Section */}
+                      {/* Featured Quiz Section */}
                     <div className="bg-gradient-to-r from-yellow-50 to-amber-100 p-6 rounded-2xl border-2 border-yellow-200">
                       <div className="flex items-center gap-3 mb-4">
                         <Star className="w-8 h-8 text-yellow-600" />
                         <h3 className="font-handwriting text-xl font-bold text-yellow-800">
-                          Featured Quiz Options
-                        </h3>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={snarkel.isFeatured}
-                              onChange={(e) => setSnarkel(prev => ({ 
-                                ...prev, 
-                                isFeatured: e.target.checked,
-                                featuredPriority: e.target.checked ? prev.featuredPriority : 0
-                              }))}
-                              className="w-6 h-6 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
-                            />
-                            <span className="font-handwriting text-lg font-medium text-yellow-800">
-                              Make this quiz featured on homepage
-                            </span>
-                          </label>
+                            Featured Quiz Options
+                          </h3>
                         </div>
-
-                        {snarkel.isFeatured && (
-                          <div>
-                            <label className="block font-handwriting text-lg font-medium mb-3 text-yellow-800">
-                              🏆 Featured Priority (1-10)
-                            </label>
-                            <div className="flex items-center gap-3">
+                        
+                      <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-3 cursor-pointer">
                               <input
-                                type="number"
-                                value={snarkel.featuredPriority}
+                                type="checkbox"
+                                checked={snarkel.isFeatured}
                                 onChange={(e) => setSnarkel(prev => ({ 
                                   ...prev, 
-                                  featuredPriority: Math.min(10, Math.max(1, parseInt(e.target.value) || 1))
+                                  isFeatured: e.target.checked,
+                                  featuredPriority: e.target.checked ? prev.featuredPriority : 0
                                 }))}
-                                className="w-24 px-4 py-4 border-2 border-yellow-300 rounded-xl focus:ring-4 focus:ring-yellow-200 focus:border-yellow-500 font-handwriting text-lg"
-                                min="1"
-                                max="10"
+                              className="w-6 h-6 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
                               />
-                              <span className="text-lg text-yellow-700">
-                                Higher number = higher priority
+                            <span className="font-handwriting text-lg font-medium text-yellow-800">
+                                Make this quiz featured on homepage
                               </span>
-                            </div>
+                            </label>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+
+                          {snarkel.isFeatured && (
+                            <div>
+                            <label className="block font-handwriting text-lg font-medium mb-3 text-yellow-800">
+                                🏆 Featured Priority (1-10)
+                              </label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                  type="number"
+                                  value={snarkel.featuredPriority}
+                                  onChange={(e) => setSnarkel(prev => ({ 
+                                    ...prev, 
+                                    featuredPriority: Math.min(10, Math.max(1, parseInt(e.target.value) || 1))
+                                  }))}
+                                className="w-24 px-4 py-4 border-2 border-yellow-300 rounded-xl focus:ring-4 focus:ring-yellow-200 focus:border-yellow-500 font-handwriting text-lg"
+                                  min="1"
+                                  max="10"
+                                />
+                              <span className="text-lg text-yellow-700">
+                                  Higher number = higher priority
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                                </div>
+                              </div>
+                     </div>
+                   </div>
+                 )}
 
               {/* Questions Tab */}
-              {activeTab === 'questions' && (
+                 {activeTab === 'questions' && (
                 <div className="space-y-6">
                   <div className="text-center mb-6">
                     <h2 className="font-handwriting text-2xl font-bold text-gray-800 mb-2">Quiz Questions</h2>
@@ -1333,51 +1333,51 @@ export default function SnarkelCreationPage() {
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                    <button
-                      onClick={() => setShowAIModal(true)}
+                         <button
+                           onClick={() => setShowAIModal(true)}
                       className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 font-handwriting font-bold text-lg shadow-lg"
-                    >
+                         >
                       <Sparkles size={20} />
-                      AI Generate
-                    </button>
-                    <button
-                      onClick={addQuestion}
+                           AI Generate
+                         </button>
+                         <button
+                           onClick={addQuestion}
                       className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold text-lg shadow-lg"
-                    >
+                         >
                       <Plus size={20} />
-                      Add Question
-                    </button>
-                  </div>
+                           Add Question
+                         </button>
+                     </div>
 
-                  {snarkel.questions.length === 0 ? (
+                     {snarkel.questions.length === 0 ? (
                     <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300">
                       <Edit3 size={64} className="mx-auto mb-6 text-gray-300" />
                       <p className="font-handwriting text-gray-500 text-xl mb-6">No questions added yet</p>
-                      {validationErrors.questions && (
+                         {validationErrors.questions && (
                         <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
                           <p className="text-red-600 font-handwriting text-lg flex items-center gap-3">
                             <span className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center text-sm">!</span>
-                            {validationErrors.questions}
-                          </p>
-                        </div>
-                      )}
+                               {validationErrors.questions}
+                             </p>
+                           </div>
+                         )}
                       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <button
-                          onClick={() => setShowAIModal(true)}
+                           <button
+                             onClick={() => setShowAIModal(true)}
                           className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 font-handwriting font-bold text-lg"
-                        >
+                           >
                           <Sparkles size={20} />
-                          AI Generate Quiz
-                        </button>
-                        <button
-                          onClick={addQuestion}
+                             AI Generate Quiz
+                           </button>
+                           <button
+                             onClick={addQuestion}
                           className="px-8 py-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 font-handwriting font-bold text-lg"
-                        >
-                          🚀 Create Your First Question
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
+                           >
+                             🚀 Create Your First Question
+                           </button>
+                         </div>
+                       </div>
+                     ) : (
                     <div className="space-y-6">
                       {/* Question Navigation */}
                       <div className="bg-gray-50 rounded-2xl p-4">
@@ -1405,218 +1405,218 @@ export default function SnarkelCreationPage() {
 
                       {/* Current Question */}
                       <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border-2 border-gray-200">
-                        {(() => {
-                          const question = snarkel.questions[activeQuestionIndex];
-                          if (!question) return null;
-                          
-                          return (
+                         {(() => {
+                           const question = snarkel.questions[activeQuestionIndex];
+                           if (!question) return null;
+                           
+                           return (
                             <div className="space-y-6">
-                              <div className="flex justify-between items-start">
+                               <div className="flex justify-between items-start">
                                 <h3 className="font-handwriting text-2xl font-bold text-gray-800 flex items-center gap-3">
                                   <span className="w-8 h-8 rounded-full bg-purple-500 text-white text-lg flex items-center justify-center">
-                                    {activeQuestionIndex + 1}
-                                  </span>
-                                  Question {activeQuestionIndex + 1}
+                                     {activeQuestionIndex + 1}
+                                   </span>
+                                   Question {activeQuestionIndex + 1}
                                 </h3>
-                                <button
-                                  onClick={() => removeQuestion(question.id)}
+                                 <button
+                                   onClick={() => removeQuestion(question.id)}
                                   className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-xl transition-colors"
-                                >
+                                 >
                                   <Trash2 size={24} />
-                                </button>
-                              </div>
+                                 </button>
+                               </div>
 
                               <div className="space-y-4">
-                                <div>
+                                 <div>
                                   <label className="block font-handwriting text-lg font-medium text-gray-700 mb-3">
-                                    ❓ Question Text *
-                                  </label>
-                                  <textarea
-                                    value={question.text}
-                                    onChange={(e) => updateQuestion(question.id, 'text', e.target.value)}
+                                     ❓ Question Text *
+                                   </label>
+                                   <textarea
+                                     value={question.text}
+                                     onChange={(e) => updateQuestion(question.id, 'text', e.target.value)}
                                     rows={3}
                                     className={`w-full px-4 py-4 border-2 rounded-xl focus:ring-4 focus:ring-purple-200 focus:border-purple-500 font-handwriting text-lg ${
-                                      validationErrors[`question_${activeQuestionIndex}_text`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                    }`}
-                                    placeholder="Enter your question..."
-                                  />
-                                </div>
+                                       validationErrors[`question_${activeQuestionIndex}_text`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                                     }`}
+                                     placeholder="Enter your question..."
+                                   />
+                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                  <div>
+                                   <div>
                                     <label className="block font-handwriting text-lg font-medium text-gray-700 mb-3">
                                       ⏱️ Time Limit (seconds)
-                                    </label>
-                                    <input
-                                      type="number"
-                                      value={question.timeLimit}
-                                      onChange={(e) => updateQuestion(question.id, 'timeLimit', parseInt(e.target.value) || 15)}
+                                     </label>
+                                     <input
+                                       type="number"
+                                       value={question.timeLimit}
+                                       onChange={(e) => updateQuestion(question.id, 'timeLimit', parseInt(e.target.value) || 15)}
                                       className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-purple-200 focus:border-purple-500 font-handwriting text-lg"
-                                      min="5"
-                                      max="60"
-                                    />
-                                  </div>
-                                </div>
+                                       min="5"
+                                       max="60"
+                                     />
+                                   </div>
+                                 </div>
 
-                                <div>
+                                 <div>
                                   <div className="flex justify-between items-center mb-4">
                                     <label className="block font-handwriting text-lg font-medium text-gray-700">
-                                      📝 Answer Options
-                                    </label>
-                                    <button
-                                      onClick={() => addOption(question.id)}
+                                       📝 Answer Options
+                                     </label>
+                                     <button
+                                       onClick={() => addOption(question.id)}
                                       className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-xl transition-colors font-handwriting font-medium"
-                                    >
-                                      + Add Option
-                                    </button>
-                                  </div>
+                                     >
+                                       + Add Option
+                                     </button>
+                                   </div>
 
                                   <div className="space-y-3">
-                                    {question.options.map((option, oIndex) => (
+                                     {question.options.map((option, oIndex) => (
                                       <div key={option.id} className="flex items-center gap-4 p-4 bg-white rounded-xl border-2 border-gray-200 hover:border-purple-300 transition-colors">
                                         <div className="flex items-center gap-3">
-                                          <input
-                                            type="checkbox"
-                                            checked={option.isCorrect}
-                                            onChange={(e) => updateOption(question.id, option.id, 'isCorrect', e.target.checked)}
+                                           <input
+                                             type="checkbox"
+                                             checked={option.isCorrect}
+                                             onChange={(e) => updateOption(question.id, option.id, 'isCorrect', e.target.checked)}
                                             className="w-6 h-6 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                                          />
+                                           />
                                           <span className="text-lg font-handwriting text-gray-500 w-12">
-                                            {option.isCorrect ? '✅' : `${String.fromCharCode(65 + oIndex)}.`}
-                                          </span>
-                                        </div>
-                                        <input
-                                          type="text"
-                                          value={option.text}
-                                          onChange={(e) => updateOption(question.id, option.id, 'text', e.target.value)}
+                                             {option.isCorrect ? '✅' : `${String.fromCharCode(65 + oIndex)}.`}
+                                           </span>
+                                         </div>
+                                         <input
+                                           type="text"
+                                           value={option.text}
+                                           onChange={(e) => updateOption(question.id, option.id, 'text', e.target.value)}
                                           className={`flex-1 px-4 py-4 border-2 rounded-xl focus:ring-4 focus:ring-purple-200 focus:border-purple-500 font-handwriting text-lg ${
-                                            validationErrors[`question_${activeQuestionIndex}_option_${oIndex}`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                          }`}
-                                          placeholder={`Option ${oIndex + 1}...`}
-                                        />
-                                        {question.options.length > 2 && (
-                                          <button
-                                            onClick={() => removeOption(question.id, option.id)}
+                                             validationErrors[`question_${activeQuestionIndex}_option_${oIndex}`] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                                           }`}
+                                           placeholder={`Option ${oIndex + 1}...`}
+                                         />
+                                         {question.options.length > 2 && (
+                                           <button
+                                             onClick={() => removeOption(question.id, option.id)}
                                             className="text-red-500 hover:text-red-700 p-3 hover:bg-red-50 rounded-xl transition-colors"
-                                          >
+                                           >
                                             <Trash2 size={20} />
-                                          </button>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })()}
+                                           </button>
+                                         )}
+                                       </div>
+                                     ))}
+                                   </div>
+                                 </div>
+                               </div>
+                             </div>
+                           );
+                         })()}
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                       </div>
+                     )}
+                   </div>
+                 )}
 
               {/* Other tabs would go here... */}
-              {activeTab === 'access' && (
+                 {activeTab === 'access' && (
                 <div className="text-center py-12">
                   <h2 className="font-handwriting text-2xl font-bold text-gray-800 mb-4">Access Control</h2>
                   <p className="text-gray-600">Configure who can access your Snarkel</p>
-                </div>
-              )}
+                   </div>
+                 )}
 
-              {activeTab === 'rewards' && (
+                 {activeTab === 'rewards' && (
                 <div className="text-center py-12">
                   <h2 className="font-handwriting text-2xl font-bold text-gray-800 mb-4">Rewards Setup</h2>
                   <p className="text-gray-600">Configure rewards for your Snarkel</p>
-                </div>
-              )}
+                   </div>
+                 )}
 
-              {activeTab === 'spam' && (
+                 {activeTab === 'spam' && (
                 <div className="text-center py-12">
                   <h2 className="font-handwriting text-2xl font-bold text-gray-800 mb-4">Anti-Spam Settings</h2>
                   <p className="text-gray-600">Configure anti-spam measures</p>
-                </div>
-              )}
-            </div>
+                     </div>
+                             )}
+                           </div>
 
             {/* Mobile-First Footer with Big Buttons */}
             <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-4 py-6 border-t-2 border-gray-200">
               <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                <div className="font-handwriting text-sm text-gray-600 flex items-center gap-4">
+                   <div className="font-handwriting text-sm text-gray-600 flex items-center gap-4">
                   <span className="flex items-center gap-2">
                     <Edit3 size={16} />
-                    {snarkel.questions.length} questions
-                  </span>
+                       {snarkel.questions.length} questions
+                     </span>
                   <span className="flex items-center gap-2">
                     <Users size={16} />
                     {snarkel.allowlist.length} allowlist
-                  </span>
+                     </span>
                   <span className="flex items-center gap-2">
                     <Trophy size={16} />
                     {snarkel.rewards.enabled ? 'Rewards' : 'No rewards'}
-                  </span>
-                </div>
-                
+                     </span>
+                   </div>
+                   
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                   {/* Back button */}
-                  {activeTab !== 'details' && (
-                    <button
-                      onClick={() => {
-                        const tabIndex = tabs.findIndex(tab => tab.id === activeTab);
-                        if (tabIndex > 0) {
-                          setActiveTab(tabs[tabIndex - 1].id);
-                        }
-                      }}
+                     {activeTab !== 'details' && (
+                       <button
+                         onClick={() => {
+                           const tabIndex = tabs.findIndex(tab => tab.id === activeTab);
+                           if (tabIndex > 0) {
+                             setActiveTab(tabs[tabIndex - 1].id);
+                           }
+                         }}
                       className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-handwriting font-bold text-lg"
-                    >
+                       >
                       <ArrowLeft size={20} />
-                      Back
-                    </button>
-                  )}
-                  
-                  {/* Next/Create button */}
-                  {activeTab === 'spam' ? (
-                    <button
-                      onClick={handleSubmit}
-                      disabled={!isTabCompleted('details') || !isTabCompleted('questions') || isSubmitting}
-                      className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl hover:from-purple-600 hover:to-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold text-lg shadow-lg"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          {snarkel.rewards.enabled ? 'Creating with Rewards...' : 'Creating...'}
-                        </>
-                      ) : (
-                        <>
-                          <Save size={20} />
-                          {snarkel.rewards.enabled ? 'Create with Rewards' : 'Create Snarkel'}
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleNextTab}
-                      disabled={isSubmitting}
-                      className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold text-lg shadow-lg"
-                    >
-                      Next
-                      <ArrowRight size={20} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+                         Back
+                       </button>
+                     )}
 
-      {/* Progress Modal */}
-      <ProgressModal
-        isOpen={showProgressModal}
-        steps={progressSteps}
-        currentStep={currentProgressStep}
-        onClose={() => setShowProgressModal(false)}
-      />
+                     {/* Next/Create button */}
+                     {activeTab === 'spam' ? (
+                       <button
+                         onClick={handleSubmit}
+                         disabled={!isTabCompleted('details') || !isTabCompleted('questions') || isSubmitting}
+                      className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl hover:from-purple-600 hover:to-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold text-lg shadow-lg"
+                       >
+                         {isSubmitting ? (
+                           <>
+                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                             {snarkel.rewards.enabled ? 'Creating with Rewards...' : 'Creating...'}
+                           </>
+                         ) : (
+                           <>
+                          <Save size={20} />
+                             {snarkel.rewards.enabled ? 'Create with Rewards' : 'Create Snarkel'}
+                           </>
+                         )}
+                       </button>
+                     ) : (
+                       <button
+                         onClick={handleNextTab}
+                         disabled={isSubmitting}
+                      className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold text-lg shadow-lg"
+                       >
+                         Next
+                      <ArrowRight size={20} />
+                       </button>
+                     )}
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+     </div>
+
+     {/* Progress Modal */}
+     <ProgressModal
+       isOpen={showProgressModal}
+       steps={progressSteps}
+       currentStep={currentProgressStep}
+       onClose={() => setShowProgressModal(false)}
+     />
 
       <SuccessModal
         isOpen={showSuccessModal}
@@ -1626,111 +1626,111 @@ export default function SnarkelCreationPage() {
         chainId={successData?.chainId}
       />
 
-      {/* Error Popup */}
-      {error && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all duration-300 scale-100">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-4 rounded-t-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                  <Shield size={20} />
-                </div>
-                <div>
-                  <h3 className="font-handwriting text-lg font-bold">Creation Failed</h3>
-                  <p className="text-red-100 text-sm">Unable to create your snarkel</p>
-                </div>
-              </div>
-            </div>
+     {/* Error Popup */}
+     {error && (
+       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+         <div className="bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all duration-300 scale-100">
+           {/* Header */}
+           <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-4 rounded-t-xl">
+             <div className="flex items-center gap-3">
+               <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                 <Shield size={20} />
+               </div>
+               <div>
+                 <h3 className="font-handwriting text-lg font-bold">Creation Failed</h3>
+                 <p className="text-red-100 text-sm">Unable to create your snarkel</p>
+               </div>
+             </div>
+           </div>
 
-            {/* Content */}
-            <div className="p-6">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-red-600 text-sm font-bold">!</span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-handwriting text-gray-700 mb-4 leading-relaxed">
-                    {error}
-                  </p>
-                  
-                  {/* Enhanced error details for blockchain operations */}
-                  {error.includes('Insufficient token balance') && (
-                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <span className="text-yellow-600 text-sm">⚠️</span>
-                        <div className="text-sm text-yellow-800">
-                          <p className="font-medium mb-1">Token Balance Issue:</p>
-                          <ul className="text-xs space-y-1">
-                            <li>• Check your token balance on the correct network</li>
-                            <li>• Ensure you have enough tokens for the reward pool</li>
-                            <li>• Verify the token amount in the rewards configuration</li>
-                            <li>• Make sure you're on the right network (Base: 8453)</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {error.includes('RPC rate limit exceeded') && (
-                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <span className="text-blue-600 text-sm">🔄</span>
-                        <div className="text-sm text-blue-800">
-                          <p className="font-medium mb-1">Network Congestion:</p>
-                          <ul className="text-xs space-y-1">
-                            <li>• The Base network is experiencing high traffic</li>
-                            <li>• Please wait a few minutes and try again</li>
-                            <li>• Your quiz was created successfully</li>
-                            <li>• You can set up rewards later when traffic is lower</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-                    <p className="font-handwriting">💡 Tips:</p>
-                    <ul className="mt-1 space-y-1">
-                      <li>• Check your internet connection</li>
-                      <li>• Ensure all required fields are filled</li>
-                      <li>• Verify your wallet connection</li>
-                      <li>• Try again in a few moments</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
+           {/* Content */}
+           <div className="p-6">
+             <div className="flex items-start gap-3">
+               <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                 <span className="text-red-600 text-sm font-bold">!</span>
+               </div>
+               <div className="flex-1">
+                 <p className="font-handwriting text-gray-700 mb-4 leading-relaxed">
+                   {error}
+                 </p>
+                 
+                 {/* Enhanced error details for blockchain operations */}
+                 {error.includes('Insufficient token balance') && (
+                   <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                     <div className="flex items-start gap-2">
+                       <span className="text-yellow-600 text-sm">⚠️</span>
+                       <div className="text-sm text-yellow-800">
+                         <p className="font-medium mb-1">Token Balance Issue:</p>
+                         <ul className="text-xs space-y-1">
+                           <li>• Check your token balance on the correct network</li>
+                           <li>• Ensure you have enough tokens for the reward pool</li>
+                           <li>• Verify the token amount in the rewards configuration</li>
+                           <li>• Make sure you're on the right network (Base: 8453)</li>
+                         </ul>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+                 
+                 {error.includes('RPC rate limit exceeded') && (
+                   <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                     <div className="flex items-start gap-2">
+                       <span className="text-blue-600 text-sm">🔄</span>
+                       <div className="text-sm text-blue-800">
+                         <p className="font-medium mb-1">Network Congestion:</p>
+                         <ul className="text-xs space-y-1">
+                           <li>• The Base network is experiencing high traffic</li>
+                           <li>• Please wait a few minutes and try again</li>
+                           <li>• Your quiz was created successfully</li>
+                           <li>• You can set up rewards later when traffic is lower</li>
+                         </ul>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+                 
+                 <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                   <p className="font-handwriting">💡 Tips:</p>
+                   <ul className="mt-1 space-y-1">
+                     <li>• Check your internet connection</li>
+                     <li>• Ensure all required fields are filled</li>
+                     <li>• Verify your wallet connection</li>
+                     <li>• Try again in a few moments</li>
+                   </ul>
+                 </div>
+               </div>
+             </div>
+           </div>
 
-            {/* Footer */}
-            <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex gap-3">
-              <button
-                onClick={() => clearErrors()}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium"
-              >
-                Dismiss
-              </button>
-              <button
-                onClick={() => {
-                  clearErrors();
-                  handleSubmit();
-                }}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors font-handwriting font-bold"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+           {/* Footer */}
+           <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex gap-3">
+             <button
+               onClick={() => clearErrors()}
+               className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium"
+             >
+               Dismiss
+             </button>
+             <button
+               onClick={() => {
+                 clearErrors();
+                 handleSubmit();
+               }}
+               className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors font-handwriting font-bold"
+             >
+               Try Again
+             </button>
+           </div>
+         </div>
+       </div>
+     )}
 
-      {/* AI Generate Modal */}
-      <AIGenerateSnarkelModal
-        isOpen={showAIModal}
-        onClose={() => setShowAIModal(false)}
-        onGenerate={handleAIGeneratedQuiz}
-      />
-    </ErrorBoundary>
-  );
+     {/* AI Generate Modal */}
+     <AIGenerateSnarkelModal
+       isOpen={showAIModal}
+       onClose={() => setShowAIModal(false)}
+       onGenerate={handleAIGeneratedQuiz}
+     />
+   </ErrorBoundary>
+ );
 }
 
