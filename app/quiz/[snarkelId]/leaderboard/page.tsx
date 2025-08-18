@@ -49,7 +49,7 @@ interface QuestionBreakdown {
   pointsEarned: number;
   timeToAnswer: number;
   timeLimit: number;
-  selectedOption: string;
+  selectedOptions: string[];
   correctOption: string;
   maxPoints: number;
 }
@@ -743,7 +743,12 @@ export default function QuizLeaderboardPage() {
                             {!question.isCorrect && (
                               <div className="text-red-600 bg-red-50 p-2 rounded-lg mt-2">
                                 <div className="font-medium mb-1">Selected Answer:</div>
-                                <div className="break-words">{question.selectedOption || 'N/A'}</div>
+                                <div className="break-words">
+                                  {Array.isArray(question.selectedOptions) 
+                                    ? question.selectedOptions.join(', ') 
+                                    : question.selectedOptions || 'N/A'
+                                  }
+                                </div>
                                 <div className="font-medium mt-1 mb-1">Correct Answer:</div>
                                 <div className="break-words">{question.correctOption}</div>
                               </div>

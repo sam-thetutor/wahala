@@ -113,27 +113,28 @@ export async function GET(
             isCorrect: true,
             timeToAnswer: true,
             pointsEarned: true,
-            selectedOption: true,
-            question: {
-              select: {
-                id: true,
-                text: true,
-                points: true,
-                timeLimit: true,
-                options: {
-                  select: {
-                    id: true,
-                    text: true,
-                    isCorrect: true
-                  }
-                }
-              }
-            }
+            selectedOptions: true
           }
         }
       },
       orderBy: {
         score: 'desc'
+      }
+    });
+
+    // Fetch questions with options for question breakdown
+    const questions = await prisma.question.findMany({
+      where: {
+        snarkelId: quiz.id
+      },
+      include: {
+        options: {
+          select: {
+            id: true,
+            text: true,
+            isCorrect: true
+          }
+        }
       }
     });
 
@@ -162,17 +163,20 @@ export async function GET(
       }
 
       // Create detailed question breakdown
-      const questionBreakdown = submission.answers.map((answer: any) => ({
-        questionId: answer.questionId,
-        questionText: answer.question?.text || 'Unknown Question',
-        isCorrect: answer.isCorrect,
-        pointsEarned: answer.pointsEarned || 0,
-        timeToAnswer: answer.timeToAnswer,
-        timeLimit: answer.question?.timeLimit || 0,
-        selectedOption: answer.selectedOption,
-        correctOption: answer.question?.options?.find((opt: any) => opt.isCorrect)?.text || 'Unknown',
-        maxPoints: answer.question?.points || 0
-      }));
+      const questionBreakdown = submission.answers.map((answer: any) => {
+        const question = questions.find(q => q.id === answer.questionId);
+        return {
+          questionId: answer.questionId,
+          questionText: question?.text || 'Unknown Question',
+          isCorrect: answer.isCorrect,
+          pointsEarned: answer.pointsEarned || 0,
+          timeToAnswer: answer.timeToAnswer,
+          timeLimit: question?.timeLimit || 0,
+          selectedOptions: answer.selectedOptions,
+          correctOption: question?.options?.find((opt: any) => opt.isCorrect)?.text || 'Unknown',
+          maxPoints: question?.points || 0
+        };
+      });
 
       return {
         userId: submission.user.id,
