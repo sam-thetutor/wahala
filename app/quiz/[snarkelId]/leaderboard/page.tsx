@@ -142,7 +142,8 @@ export default function QuizLeaderboardPage() {
     contractState,
     areRewardsDistributed,
     getExpectedRewardToken,
-    getExpectedRewardAmount
+    getExpectedRewardAmount,
+    getCurrentSessionId
   } = useQuizContract(8453); // Use Base chain for now
 
   useEffect(() => {
@@ -231,47 +232,8 @@ export default function QuizLeaderboardPage() {
   };
 
   const handleDistributeRewards = async () => {
-    if (!quizInfo || !isAdmin) return;
-    
-    try {
-      setDistributingRewards(true);
-      setRewardDistributionStatus('Starting reward distribution...');
-      
-      // Get the first reward to distribute
-      const firstReward = quizInfo.rewards[0];
-      if (!firstReward) {
-        throw new Error('No rewards configured for this quiz');
-      }
-      
-      // Get session ID from quiz info
-      const sessionId = parseInt(quizInfo.onchainSessionId || '1');
-      
-      console.log('Distributing rewards for session:', sessionId, 'token:', firstReward.tokenAddress);
-      
-      // Call the smart contract distributeRewards function
-      const result = await distributeRewards({
-        sessionId: sessionId,
-        tokenAddress: firstReward.tokenAddress as `0x${string}`
-      });
-      
-      if (result.success) {
-        setRewardDistributionStatus(`Rewards distributed successfully! Transaction: ${result.transactionHash}`);
-        // Refresh leaderboard to show updated reward status
-        setTimeout(() => {
-          fetchLeaderboard();
-        }, 2000);
-      } else {
-        throw new Error(result.error || 'Reward distribution failed');
-      }
-    } catch (error) {
-      console.error('Error distributing rewards:', error);
-      setRewardDistributionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setTimeout(() => {
-        setDistributingRewards(false);
-        setRewardDistributionStatus('');
-      }, 3000);
-    }
+   //call handleFallbackDistributeRewards
+   await handleFallbackDistributeRewards();
   };
 
   const handleFallbackDistributeRewards = async () => {
@@ -281,10 +243,21 @@ export default function QuizLeaderboardPage() {
       setDistributingRewards(true);
       setRewardDistributionStatus('Starting on-chain quadratic reward distribution...');
       
-      // Get session ID from quiz info
-      const sessionId = parseInt(quizInfo.onchainSessionId || '1');
-      if (!sessionId) {
-        throw new Error('No on-chain session ID found');
+      // Get first session ID from contract instead of database
+      // This ensures we're using the actual on-chain session ID for reward distribution
+      let sessionId: number;
+      try {
+        sessionId = await getCurrentSessionId();
+        console.log('✅ Got first session ID from contract:', sessionId);
+      } catch (contractError) {
+        console.error('Failed to get first session ID from contract:', contractError);
+        // Fallback to database session ID if contract call fails
+        sessionId = parseInt(quizInfo.onchainSessionId || '1');
+        console.log('⚠️ Falling back to database session ID:', sessionId);
+      }
+      
+      if (!sessionId || sessionId === 0) {
+        throw new Error('No valid session ID found from contract or database');
       }
       
       // QUERY DATABASE FOR LEADERBOARD POINTS

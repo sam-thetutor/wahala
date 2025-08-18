@@ -152,6 +152,7 @@ interface UseQuizContractReturn {
   areRewardsDistributed: (snarkelCode: string) => Promise<boolean>;
   getExpectedRewardToken: (sessionId: number) => Promise<Address>;
   getExpectedRewardAmount: (sessionId: number) => Promise<string>;
+  getCurrentSessionId: () => Promise<number>;
   canStartNewSession: (snarkelCode: string) => Promise<{ canStart: boolean; lastSessionId: string; lastIsActive: boolean }>;
   getUserClaimable: (sessionId: number, user: Address) => Promise<string>;
   getUserWins: (sessionId: number, user: Address) => Promise<string>;
@@ -915,6 +916,27 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
     }
   }, [chainId]);
 
+  const getCurrentSessionId = useCallback(async (): Promise<number> => {
+    try {
+      const client = createPublicClient({
+        chain: base,
+        transport: http()
+      });
+
+      const result = await readContract(client, {
+        address: getContractAddress(chainId),
+        abi: SNARKEL_ABI,
+        functionName: 'getCurrentSessionId',
+        args: []
+      }) as bigint;
+
+      return Number(result);
+    } catch (error: any) {
+      console.error('Get current session ID error:', error);
+      return 0;
+    }
+  }, [chainId]);
+
   const canStartNewSession = useCallback(async (snarkelCode: string): Promise<{ canStart: boolean; lastSessionId: string; lastIsActive: boolean }> => {
     try {
       const client = createPublicClient({
@@ -1003,6 +1025,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
     areRewardsDistributed,
     getExpectedRewardToken,
     getExpectedRewardAmount,
+    getCurrentSessionId,
     canStartNewSession,
     getUserClaimable,
     getUserWins,
