@@ -132,6 +132,19 @@ export default function QuizLeaderboardPage() {
   const [rewardDistributionStatus, setRewardDistributionStatus] = useState<string>('');
   const [questions, setQuestions] = useState<any[]>([]);
   const [rewardsDistributed, setRewardsDistributed] = useState(false);
+  
+  // Distribution modal state
+  const [showDistributionModal, setShowDistributionModal] = useState(false);
+  const [distributionMethod, setDistributionMethod] = useState<'quadratic' | 'linear' | 'custom'>('quadratic');
+  const [customTopN, setCustomTopN] = useState(10);
+  const [distributionPreview, setDistributionPreview] = useState<Array<{
+    name: string;
+    walletAddress: string;
+    score: number;
+    rewardAmount: string;
+    percentage: number;
+  }>>([]);
+  const [calculatingPreview, setCalculatingPreview] = useState(false);
 
   const snarkelId = params.snarkelId as string;
   
@@ -158,6 +171,13 @@ export default function QuizLeaderboardPage() {
       checkRewardsDistributionStatus();
     }
   }, [quizInfo?.snarkelCode]);
+
+  // Recalculate distribution preview when method or customTopN changes
+  useEffect(() => {
+    if (showDistributionModal) {
+      calculateDistributionPreview();
+    }
+  }, [distributionMethod, customTopN, showDistributionModal]);
 
   const fetchLeaderboard = async () => {
     try {
@@ -231,27 +251,125 @@ export default function QuizLeaderboardPage() {
     }
   };
 
-  const handleDistributeRewards = async () => {
-   //call handleFallbackDistributeRewards
-   await handleFallbackDistributeRewards();
+  const calculateDistributionPreview = async () => {
+    if (!quizInfo || !leaderboard.length) return;
+    
+    setCalculatingPreview(true);
+    
+    try {
+      // Get first session ID from contract
+      let sessionId: number;
+      try {
+        sessionId = await getCurrentSessionId();
+      } catch (contractError) {
+        console.error('Failed to get first session ID from contract:', contractError);
+        sessionId = parseInt(quizInfo.onchainSessionId || '1');
+      }
+      
+      if (!sessionId || sessionId === 0) return;
+      
+      // Get reward info from contract
+      const expectedToken = await getExpectedRewardToken(sessionId);
+      const expectedAmount = await getExpectedRewardAmount(sessionId);
+      
+      if (expectedToken === '0x0000000000000000000000000000000000000000') return;
+      
+      const totalRewardPool = expectedAmount;
+      const totalRewardPoolBigInt = BigInt(totalRewardPool);
+      
+      // Filter valid participants
+      const validParticipants = leaderboard
+        .filter(entry => entry.score > 0)
+        .sort((a, b) => b.score - a.score);
+      
+      if (validParticipants.length === 0) return;
+      
+      let preview: Array<{
+        name: string;
+        walletAddress: string;
+        score: number;
+        rewardAmount: string;
+        percentage: number;
+      }> = [];
+      
+      if (distributionMethod === 'quadratic') {
+        // Quadratic distribution based on score proportions
+        const totalPoints = validParticipants.reduce((sum, entry) => sum + entry.score, 0);
+        
+        preview = validParticipants.slice(0, 10).map(entry => {
+          const share = entry.score / totalPoints;
+          const rewardAmountBigInt = (totalRewardPoolBigInt * BigInt(entry.score)) / BigInt(totalPoints);
+          const finalAmount = rewardAmountBigInt > 0 ? rewardAmountBigInt : BigInt(1);
+          
+          return {
+            name: entry.name,
+            walletAddress: entry.walletAddress,
+            score: entry.score,
+            rewardAmount: finalAmount.toString(),
+            percentage: Math.round(share * 100 * 100) / 100
+          };
+        });
+      } else if (distributionMethod === 'linear') {
+        // Linear distribution - equal amounts among top participants
+        const topParticipants = validParticipants.slice(0, customTopN);
+        const rewardPerParticipant = totalRewardPoolBigInt / BigInt(topParticipants.length);
+        
+        preview = topParticipants.map(entry => ({
+          name: entry.name,
+          walletAddress: entry.walletAddress,
+          score: entry.score,
+          rewardAmount: rewardPerParticipant.toString(),
+          percentage: Math.round((100 / topParticipants.length) * 100) / 100
+        }));
+      } else if (distributionMethod === 'custom') {
+        // Custom distribution - top N participants with weighted amounts
+        const topParticipants = validParticipants.slice(0, customTopN);
+        const totalWeight = topParticipants.reduce((sum, _, index) => sum + (customTopN - index), 0);
+        
+        preview = topParticipants.map((entry, index) => {
+          const weight = customTopN - index; // 1st place gets highest weight
+          const share = weight / totalWeight;
+          const rewardAmountBigInt = (totalRewardPoolBigInt * BigInt(weight)) / BigInt(totalWeight);
+          const finalAmount = rewardAmountBigInt > 0 ? rewardAmountBigInt : BigInt(1);
+          
+          return {
+            name: entry.name,
+            walletAddress: entry.walletAddress,
+            score: entry.score,
+            rewardAmount: finalAmount.toString(),
+            percentage: Math.round(share * 100 * 100) / 100
+          };
+        });
+      }
+      
+      setDistributionPreview(preview);
+    } catch (error) {
+      console.error('Error calculating distribution preview:', error);
+    } finally {
+      setCalculatingPreview(false);
+    }
   };
 
-  const handleFallbackDistributeRewards = async () => {
-    if (!quizInfo || !isAdmin) return;
+  const handleDistributeRewards = async () => {
+    setShowDistributionModal(true);
+    // Calculate initial preview
+    setTimeout(() => calculateDistributionPreview(), 100);
+  };
+
+  const executeDistribution = async () => {
+    if (!quizInfo || !isAdmin || distributionPreview.length === 0) return;
     
     try {
       setDistributingRewards(true);
-      setRewardDistributionStatus('Starting on-chain quadratic reward distribution...');
+      setRewardDistributionStatus(`Starting ${distributionMethod} reward distribution...`);
       
-      // Get first session ID from contract instead of database
-      // This ensures we're using the actual on-chain session ID for reward distribution
+      // Get first session ID from contract
       let sessionId: number;
       try {
         sessionId = await getCurrentSessionId();
         console.log('✅ Got first session ID from contract:', sessionId);
       } catch (contractError) {
         console.error('Failed to get first session ID from contract:', contractError);
-        // Fallback to database session ID if contract call fails
         sessionId = parseInt(quizInfo.onchainSessionId || '1');
         console.log('⚠️ Falling back to database session ID:', sessionId);
       }
@@ -260,145 +378,37 @@ export default function QuizLeaderboardPage() {
         throw new Error('No valid session ID found from contract or database');
       }
       
-      // QUERY DATABASE FOR LEADERBOARD POINTS
-      console.log('📊 Database Leaderboard Data:', leaderboard);
-      console.log('📊 Total participants in database:', leaderboard.length);
+      // Get reward info from contract
+      const expectedToken = await getExpectedRewardToken(sessionId);
+      const expectedAmount = await getExpectedRewardAmount(sessionId);
       
-      // Filter out participants with 0 score and sort by score (highest first)
-      const validParticipants = leaderboard
-        .filter(entry => entry.score > 0)
-        .sort((a, b) => b.score - a.score);
-      
-      if (validParticipants.length === 0) {
-        throw new Error('No participants with valid scores found in database');
+      if (expectedToken === '0x0000000000000000000000000000000000000000') {
+        throw new Error('No reward token configured on-chain for this session');
       }
       
-      console.log('✅ Valid participants with scores > 0:', validParticipants.length);
-      console.log('📈 Participant scores from database:', validParticipants.map(p => ({ name: p.name, score: p.score, wallet: p.walletAddress })));
+      const tokenAddress = expectedToken;
+      const totalRewardPool = expectedAmount;
       
-      // GET REWARD INFO FROM ON-CHAIN CONTRACT
-      console.log('🔗 Getting reward info from on-chain contract...');
+      // Prepare winners and amounts from preview
+      const winners = distributionPreview.map(entry => entry.walletAddress as `0x${string}`);
+      const amounts = distributionPreview.map(entry => entry.rewardAmount);
       
-      let tokenAddress: string;
-      let totalRewardPool: string;
-      
-      try {
-        const expectedToken = await getExpectedRewardToken(sessionId);
-        const expectedAmount = await getExpectedRewardAmount(sessionId);
-        
-        if (expectedToken === '0x0000000000000000000000000000000000000000') {
-          throw new Error('No reward token configured on-chain for this session');
-        }
-        
-        tokenAddress = expectedToken;
-        totalRewardPool = expectedAmount;
-        
-        // Debug: Log the raw values from contract
-        console.log('🔍 Raw contract values:');
-        console.log('  - Expected token:', expectedToken);
-        console.log('  - Expected amount (raw):', expectedAmount);
-        console.log('  - Expected amount type:', typeof expectedAmount);
-        console.log('  - Can convert to BigInt:', (() => {
-          try {
-            BigInt(expectedAmount);
-            return true;
-          } catch {
-            return false;
-          }
-        })());
-        
-        console.log('✅ On-chain reward info:', { tokenAddress, totalRewardPool });
-      } catch (contractError) {
-        console.error('Failed to get on-chain reward info:', contractError);
-        throw new Error('No rewards configured on-chain. Please configure rewards in the smart contract first.');
-      }
-      
-      // QUADRATIC CALCULATIONS USING DATABASE POINTS
-      console.log('🧮 Starting quadratic reward calculations...');
-      
-      // Calculate total points across all participants from database
-      const totalPoints = validParticipants.reduce((sum, entry) => sum + entry.score, 0);
-      console.log('📊 Total points from database:', totalPoints);
-      
-      // Calculate equitable rewards based on score proportion (quadratic distribution)
-      const winners = validParticipants.map(entry => entry.walletAddress as `0x${string}`);
-      const amounts = validParticipants.map(entry => {
-        // Calculate each participant's share based on their score from database
-        const share = entry.score / totalPoints;
-        
-        // totalRewardPool is already in the smallest token units (wei for 18 decimals, etc.)
-        // We need to calculate the proportional amount without losing precision
-        const totalRewardPoolBigInt = BigInt(totalRewardPool);
-        
-        // Calculate proportional amount: (totalReward * score) / totalPoints
-        // This avoids floating point precision issues
-        const rewardAmountBigInt = (totalRewardPoolBigInt * BigInt(entry.score)) / BigInt(totalPoints);
-        
-        // Ensure the amount is at least 1 (smallest unit) to avoid zero amounts
-        const finalAmount = rewardAmountBigInt > 0 ? rewardAmountBigInt : BigInt(1);
-        
-        // Convert back to string for the contract call
-        const rewardAmount = finalAmount.toString();
-        
-        console.log(`🎯 ${entry.name}: Score ${entry.score}, Share ${(share * 100).toFixed(2)}%, Reward ${rewardAmount} (smallest units)`);
-        
-        return rewardAmount;
-      });
-      
-      console.log('✅ QUADRATIC CALCULATIONS COMPLETE');
-      console.log('🎯 Final distribution parameters:');
+      console.log('🎯 Distribution parameters:');
+      console.log('  - Method:', distributionMethod);
       console.log('  - Session ID:', sessionId);
       console.log('  - Token Address:', tokenAddress);
-      console.log('  - Total Reward Pool:', totalRewardPool);
-      console.log('  - Winners (from database):', winners);
-      console.log('  - Amounts (calculated):', amounts);
+      console.log('  - Winners count:', winners.length);
+      console.log('  - Amounts:', amounts);
       
-      // Validate amounts before contract call
+      // Validate amounts
       const totalCalculatedAmount = amounts.reduce((sum, amount) => sum + BigInt(amount), BigInt(0));
       const totalRewardPoolBigInt = BigInt(totalRewardPool);
       
-      console.log('🔍 Amount validation:');
-      console.log('  - Total calculated amount:', totalCalculatedAmount.toString());
-      console.log('  - Total reward pool:', totalRewardPoolBigInt.toString());
-      console.log('  - Amounts are valid BigInts:', amounts.every(amount => {
-        try {
-          BigInt(amount);
-          return true;
-        } catch {
-          return false;
-        }
-      }));
-      
-      // Ensure we don't exceed the total reward pool
       if (totalCalculatedAmount > totalRewardPoolBigInt) {
         throw new Error(`Total calculated amount (${totalCalculatedAmount.toString()}) exceeds reward pool (${totalRewardPoolBigInt.toString()})`);
       }
       
-      // Final validation: ensure all amounts are valid BigInts
-      const invalidAmounts = amounts.filter(amount => {
-        try {
-          BigInt(amount);
-          return false;
-        } catch {
-          return true;
-        }
-      });
-      
-      if (invalidAmounts.length > 0) {
-        throw new Error(`Invalid amounts found: ${invalidAmounts.join(', ')}`);
-      }
-      
-      // SUBMIT PARAMS WHEN CALLING FALLBACK DISTRIBUTE REWARDS
-      console.log('🚀 Calling fallbackDistributeRewards with calculated parameters...');
-      
-      // Call the smart contract fallbackDistributeRewards function
-      console.log('📤 Contract call parameters:');
-      console.log('  - Session ID:', sessionId, '(type:', typeof sessionId, ')');
-      console.log('  - Token Address:', tokenAddress, '(type:', typeof tokenAddress, ')');
-      console.log('  - Winners count:', winners.length);
-      console.log('  - Amounts count:', amounts.length);
-      console.log('  - Sample amounts:', amounts.slice(0, 3));
-      
+      // Execute distribution
       const result = await fallbackDistributeRewards({
         sessionId: sessionId,
         tokenAddress: tokenAddress as `0x${string}`,
@@ -407,16 +417,17 @@ export default function QuizLeaderboardPage() {
       });
       
       if (result.success) {
-        setRewardDistributionStatus(`Quadratic rewards distributed successfully! Transaction: ${result.transactionHash}`);
-        // Refresh leaderboard to show updated reward status
+        setRewardDistributionStatus(`${distributionMethod.charAt(0).toUpperCase() + distributionMethod.slice(1)} rewards distributed successfully! Transaction: ${result.transactionHash}`);
+        setShowDistributionModal(false);
+        // Refresh leaderboard
         setTimeout(() => {
           fetchLeaderboard();
         }, 2000);
       } else {
-        throw new Error(result.error || 'Quadratic reward distribution failed');
+        throw new Error(result.error || 'Reward distribution failed');
       }
     } catch (error) {
-      console.error('Error distributing quadratic rewards:', error);
+      console.error('Error distributing rewards:', error);
       setRewardDistributionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setTimeout(() => {
@@ -446,6 +457,22 @@ export default function QuizLeaderboardPage() {
     const num = parseFloat(amount);
     if (isNaN(num)) return '0';
     return num.toLocaleString();
+  };
+
+  const formatRewardAmountWei = (amountWei: string) => {
+    try {
+      const bigIntAmount = BigInt(amountWei);
+      // Convert from wei to a more readable format
+      if (bigIntAmount > BigInt(10 ** 18)) {
+        return (Number(bigIntAmount) / 10 ** 18).toFixed(6);
+      } else if (bigIntAmount > BigInt(10 ** 6)) {
+        return (Number(bigIntAmount) / 10 ** 6).toFixed(3);
+      } else {
+        return bigIntAmount.toString();
+      }
+    } catch {
+      return amountWei;
+    }
   };
 
   const getPositionIcon = (position: number) => {
@@ -691,21 +718,9 @@ export default function QuizLeaderboardPage() {
                       )}
                       {distributingRewards ? 'Distributing...' : 'Distribute Rewards'}
                     </button>
-                    <button
-                      onClick={handleFallbackDistributeRewards}
-                      disabled={distributingRewards}
-                      className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm sm:text-base"
-                    >
-                      {distributingRewards ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4" />
-                      )}
-                      {distributingRewards ? 'Distributing...' : 'Fallback Distribute'}
-                    </button>
                   </div>
                   <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded-lg">
-                    <strong>Fallback Distribute:</strong> Uses on-chain contract data and connected wallet to distribute rewards. Automatically calculates quadratic distribution based on database leaderboard scores.
+                    <strong>Smart Distribution:</strong> Choose from multiple distribution methods (Quadratic, Linear, or Custom) with real-time preview of rewards before executing on-chain.
                   </div>
                 </div>
               )}
@@ -1067,6 +1082,208 @@ export default function QuizLeaderboardPage() {
           )}
         </div>
       </div>
+      
+      {/* Distribution Modal */}
+      {showDistributionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Reward Distribution</h2>
+                <button
+                  onClick={() => setShowDistributionModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+              <p className="text-gray-600 mt-2">Configure and preview reward distribution before executing on-chain</p>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Distribution Method Selection */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Distribution Method</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <button
+                    onClick={() => {
+                      setDistributionMethod('quadratic');
+                      calculateDistributionPreview();
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      distributionMethod === 'quadratic'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <BarChart3 className="w-8 h-8 mx-auto mb-2" />
+                      <div className="font-semibold">Quadratic</div>
+                      <div className="text-sm text-gray-600">Score-based proportions</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setDistributionMethod('linear');
+                      calculateDistributionPreview();
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      distributionMethod === 'linear'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <TrendingUp className="w-8 h-8 mx-auto mb-2" />
+                      <div className="font-semibold">Linear</div>
+                      <div className="text-sm text-gray-600">Equal distribution</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setDistributionMethod('custom');
+                      calculateDistributionPreview();
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      distributionMethod === 'custom'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <Settings className="w-8 h-8 mx-auto mb-2" />
+                      <div className="font-semibold">Custom</div>
+                      <div className="text-sm text-gray-600">Weighted top N</div>
+                    </div>
+                  </button>
+                </div>
+                
+                {/* Custom Top N Configuration */}
+                {(distributionMethod === 'linear' || distributionMethod === 'custom') && (
+                  <div className="flex items-center gap-4">
+                    <label className="text-sm font-medium text-gray-700">
+                      Top {distributionMethod === 'linear' ? 'participants' : 'N participants'}:
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={customTopN}
+                      onChange={(e) => {
+                        setCustomTopN(parseInt(e.target.value) || 10);
+                        setTimeout(() => calculateDistributionPreview(), 100);
+                      }}
+                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                )}
+              </div>
+              
+              {/* Distribution Preview */}
+              {distributionPreview.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Distribution Preview</h3>
+                    <button
+                      onClick={calculateDistributionPreview}
+                      disabled={calculatingPreview}
+                      className="text-blue-600 hover:text-blue-700 disabled:text-blue-400 text-sm font-medium flex items-center gap-2"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${calculatingPreview ? 'animate-spin' : ''}`} />
+                      {calculatingPreview ? 'Calculating...' : 'Refresh'}
+                    </button>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{distributionPreview.length}</div>
+                        <div className="text-sm text-gray-600">Participants</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {formatRewardAmountWei(distributionPreview.reduce((sum, entry) => sum + BigInt(entry.rewardAmount), BigInt(0)).toString())}
+                        </div>
+                        <div className="text-sm text-gray-600">Total Rewards</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                      <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
+                        <div className="col-span-1">#</div>
+                        <div className="col-span-4">Participant</div>
+                        <div className="col-span-2">Score</div>
+                        <div className="col-span-2">Reward</div>
+                        <div className="col-span-2">Share</div>
+                        <div className="col-span-1">Wallet</div>
+                      </div>
+                    </div>
+                    
+                    <div className="divide-y divide-gray-200">
+                      {distributionPreview.map((entry, index) => (
+                        <div key={entry.walletAddress} className="px-4 py-3 hover:bg-gray-50">
+                          <div className="grid grid-cols-12 gap-4 items-center text-sm">
+                            <div className="col-span-1 font-medium text-gray-900">
+                              {index + 1}
+                            </div>
+                            <div className="col-span-4 font-medium text-gray-900 truncate">
+                              {entry.name}
+                            </div>
+                            <div className="col-span-2 text-gray-600">
+                              {entry.score.toLocaleString()}
+                            </div>
+                            <div className="col-span-2 font-semibold text-green-600">
+                              {formatRewardAmountWei(entry.rewardAmount)}
+                            </div>
+                            <div className="col-span-2 text-gray-600">
+                              {entry.percentage}%
+                            </div>
+                            <div className="col-span-1">
+                              <button
+                                onClick={() => navigator.clipboard.writeText(entry.walletAddress)}
+                                className="text-blue-600 hover:text-blue-700 text-xs"
+                                title="Copy wallet address"
+                              >
+                                {entry.walletAddress.slice(0, 6)}...{entry.walletAddress.slice(-4)}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowDistributionModal(false)}
+                  className="px-6 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={executeDistribution}
+                  disabled={distributingRewards || distributionPreview.length === 0}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  {distributingRewards ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Zap className="w-4 h-4" />
+                  )}
+                  {distributingRewards ? 'Executing...' : 'Execute Distribution'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
