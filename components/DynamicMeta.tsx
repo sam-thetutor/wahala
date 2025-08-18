@@ -29,7 +29,7 @@ export default function DynamicMeta({
   const ogImageUrl = (() => {
     if (imageUrl) return imageUrl;
     
-    const baseUrl = 'https://snarkels.vercel.app/api/og';
+    const baseUrl = 'https://snarkels.lol/api/og';
     const params = new URLSearchParams();
     
     if (type !== 'website') {
@@ -83,7 +83,7 @@ export default function DynamicMeta({
       <meta property="og:title" content={title} />
       <meta property="og:description" content={dynamicDescription} />
       <meta property="og:type" content={type === 'website' ? 'website' : 'article'} />
-      <meta property="og:url" content={url || 'https://snarkels.vercel.app'} />
+      <meta property="og:url" content={url || 'https://snarkels.lol'} />
       <meta property="og:image" content={ogImageUrl} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
@@ -108,10 +108,10 @@ export default function DynamicMeta({
       )}
       
       {/* Farcaster Frame Meta Tags */}
-      <meta name="fc:frame" content={`{"version":"1","imageUrl":"${ogImageUrl}","button":{"title":"🎯 Join Snarkel","action":{"type":"launch_frame","url":"${url || 'https://snarkels.vercel.app'}","name":"Snarkels","splashImageUrl":"https://snarkels.vercel.app/logo.png","splashBackgroundColor":"#1f2937"}}}`} />
+      <meta name="fc:frame" content={`{"version":"1","imageUrl":"${ogImageUrl}","button":{"title":"🎯 Join Snarkel","action":{"type":"launch_frame","url":"${url || 'https://snarkels.lol'}","name":"Snarkels","splashImageUrl":"https://snarkels.lol/logo.png","splashBackgroundColor":"#1f2937"}}}`} />
       
       {/* Mini App Meta Tags */}
-      <meta name="fc:miniapp" content={`{"version":"1","imageUrl":"${ogImageUrl}","button":{"title":"🎯 Start Snarkel","action":{"type":"launch_miniapp","url":"${url || 'https://snarkels.vercel.app'}","name":"Snarkels","splashImageUrl":"https://snarkels.vercel.app/logo.png","splashBackgroundColor":"#1f2937"}}}`} />
+      <meta name="fc:miniapp" content={`{"version":"1","imageUrl":"${ogImageUrl}","button":{"title":"🎯 Start Snarkel","action":{"type":"launch_miniapp","url":"${url || 'https://snarkels.lol'}","name":"Snarkels","splashImageUrl":"https://snarkels.lol/logo.png","splashBackgroundColor":"#1f2937"}}}`} />
     </Head>
   );
 }

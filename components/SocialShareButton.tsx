@@ -23,8 +23,8 @@ export const SocialShareButton: React.FC<SocialShareButtonProps> = ({
     : `${title} 🎯\n\nJoin Snarkels - Interactive Quiz Rewards on Base! 🚀`;
 
   const shareUrl = snarkelCode 
-    ? `https://snarkels.vercel.app/join/${snarkelCode}`
-    : 'https://snarkels.vercel.app';
+    ? `https://snarkels.lol/join/${snarkelCode}`
+    : 'https://snarkels.lol';
 
   const handleShare = async () => {
     if (navigator.share && isMiniApp) {
