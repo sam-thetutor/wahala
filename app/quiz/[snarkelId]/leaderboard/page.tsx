@@ -277,7 +277,7 @@ export default function QuizLeaderboardPage() {
     
     try {
       setDistributingRewards(true);
-      setRewardDistributionStatus('Starting fallback reward distribution...');
+      setRewardDistributionStatus('Starting equitable reward distribution...');
       
       // Get the first reward to distribute
       const firstReward = quizInfo.rewards[0];
@@ -288,20 +288,32 @@ export default function QuizLeaderboardPage() {
       // Get session ID from quiz info
       const sessionId = parseInt(quizInfo.onchainSessionId || '1');
       
-      // Get winners from leaderboard (top participants)
-      const winners = leaderboard.slice(0, Math.min(3, leaderboard.length)).map(entry => 
-        entry.walletAddress as `0x${string}`
-      );
+      // Filter out participants with 0 score and sort by score (highest first)
+      const validParticipants = leaderboard
+        .filter(entry => entry.score > 0)
+        .sort((a, b) => b.score - a.score);
       
-      // Calculate amounts based on position (example: 1st gets 50%, 2nd gets 30%, 3rd gets 20%)
-      const amounts = winners.map((_, index) => {
-        if (index === 0) return (parseFloat(firstReward.totalRewardPool) * 0.5).toString();
-        if (index === 1) return (parseFloat(firstReward.totalRewardPool) * 0.3).toString();
-        if (index === 2) return (parseFloat(firstReward.totalRewardPool) * 0.2).toString();
-        return '0';
-      }).filter(amount => parseFloat(amount) > 0);
+      if (validParticipants.length === 0) {
+        throw new Error('No participants with valid scores found');
+      }
       
-      console.log('Fallback distributing rewards for session:', sessionId, 'token:', firstReward.tokenAddress, 'winners:', winners, 'amounts:', amounts);
+      // Calculate total points across all participants
+      const totalPoints = validParticipants.reduce((sum, entry) => sum + entry.score, 0);
+      
+      // Calculate equitable rewards based on score proportion (quadratic distribution)
+      const winners = validParticipants.map(entry => entry.walletAddress as `0x${string}`);
+      const amounts = validParticipants.map(entry => {
+        // Calculate each participant's share based on their score
+        const share = entry.score / totalPoints;
+        // Convert to the token's decimal precision (assuming 18 decimals like most ERC20)
+        const rewardAmount = (parseFloat(firstReward.totalRewardPool) * share).toFixed(18);
+        return rewardAmount;
+      });
+      
+      console.log('Equitable reward distribution for session:', sessionId, 'token:', firstReward.tokenAddress);
+      console.log('Total participants:', validParticipants.length, 'Total points:', totalPoints);
+      console.log('Winners:', winners);
+      console.log('Amounts:', amounts);
       
       // Call the smart contract fallbackDistributeRewards function
       const result = await fallbackDistributeRewards({
@@ -312,16 +324,16 @@ export default function QuizLeaderboardPage() {
       });
       
       if (result.success) {
-        setRewardDistributionStatus(`Fallback rewards distributed successfully! Transaction: ${result.transactionHash}`);
+        setRewardDistributionStatus(`Equitable rewards distributed successfully! Transaction: ${result.transactionHash}`);
         // Refresh leaderboard to show updated reward status
         setTimeout(() => {
           fetchLeaderboard();
         }, 2000);
       } else {
-        throw new Error(result.error || 'Fallback reward distribution failed');
+        throw new Error(result.error || 'Equitable reward distribution failed');
       }
     } catch (error) {
-      console.error('Error fallback distributing rewards:', error);
+      console.error('Error distributing equitable rewards:', error);
       setRewardDistributionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setTimeout(() => {
@@ -605,7 +617,7 @@ export default function QuizLeaderboardPage() {
                     ) : (
                       <AlertTriangle className="w-4 h-4" />
                     )}
-                    {distributingRewards ? 'Distributing...' : 'Fallback Distribute'}
+                    {distributingRewards ? 'Distributing...' : 'Equitable Distribute'}
                   </button>
                 </div>
               )}
