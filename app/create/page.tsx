@@ -1125,18 +1125,19 @@ export default function SnarkelCreationPage() {
         </div>
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 py-6">
+      {/* Main content area with mobile-optimized scrolling */}
+      <div className="relative z-10 max-w-6xl mx-auto px-4 py-6 pb-24">
         {/* Mini App Context Display - Shows Mini App info when running as Mini App */}
         <MiniAppContextDisplay />
         
         {/* Mini App Header - Shows social context when running as Mini App */}
         <MiniAppHeader />
         
-        {/* Main content card */}
+        {/* Main content card - Make it scrollable on mobile */}
         <div className={`transition-all duration-1000 delay-300 ${
           isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}>
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden relative border-l-3 border-blue-400">
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden relative border-l-3 border-blue-400 max-h-[calc(100vh-200px)] flex flex-col">
             {/* Pin effects */}
             <div className="absolute -top-2 -left-2 w-5 h-5 bg-blue-500 rounded-full shadow-md border-2 border-white z-10"></div>
             <div className="absolute -top-0.5 -left-0.5 w-2.5 h-2.5 bg-blue-600 rounded-full z-10"></div>
@@ -1144,7 +1145,7 @@ export default function SnarkelCreationPage() {
             <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-yellow-600 rounded-full z-10"></div>
 
             {/* Progress indicator */}
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 px-4 pt-4 pb-2">
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 px-4 pt-4 pb-2 flex-shrink-0">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-handwriting text-sm font-medium text-gray-600">
                   Step {tabs.findIndex(tab => tab.id === activeTab) + 1} of {tabs.length}
@@ -1170,9 +1171,9 @@ export default function SnarkelCreationPage() {
             </div>
 
             {/* Responsive Layout: Vertical tabs on mobile, horizontal on desktop */}
-            <div className="flex flex-col lg:flex-row">
+            <div className="flex flex-col lg:flex-row flex-1 min-h-0">
               {/* Vertical Sidebar - Mobile first, then desktop */}
-              <div className="lg:w-64 bg-gradient-to-b from-gray-50 to-white border-b lg:border-b-0 lg:border-r border-gray-200">
+              <div className="lg:w-64 bg-gradient-to-b from-gray-50 to-white border-b lg:border-b-0 lg:border-r border-gray-200 flex-shrink-0">
                 <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
                   {tabs.map((tab, index) => {
                     const Icon = tab.icon;
@@ -1214,11 +1215,11 @@ export default function SnarkelCreationPage() {
                 </div>
               </div>
 
-              {/* Main Content Area */}
-              <div className="flex-1">
+              {/* Main Content Area - Make it scrollable */}
+              <div className="flex-1 flex flex-col min-h-0">
                 {/* Questions Tab - Horizontal Navigation */}
                 {activeTab === 'questions' && snarkel.questions.length > 0 && (
-                  <div className="border-b border-gray-200 bg-gray-50 px-2 sm:px-4 py-2 sm:py-3">
+                  <div className="border-b border-gray-200 bg-gray-50 px-2 sm:px-4 py-2 sm:py-3 flex-shrink-0">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                       <span className="font-handwriting font-bold text-xs sm:text-sm text-gray-700">Questions:</span>
                       
@@ -1266,8 +1267,8 @@ export default function SnarkelCreationPage() {
                   </div>
                 )}
 
-                {/* Tab Content - more compact */}
-                <div className="p-2 sm:p-4">
+                {/* Tab Content - Make it scrollable */}
+                <div className="p-2 sm:p-4 flex-1 overflow-y-auto">
                   {activeTab === 'details' && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1847,8 +1848,8 @@ export default function SnarkelCreationPage() {
                  )}
                </div>
 
-               {/* Footer - compact */}
-               <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-4 py-3 border-t border-gray-200">
+               {/* Footer - Always visible at bottom */}
+               <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-4 py-3 border-t border-gray-200 flex-shrink-0">
                  <div className="flex justify-between items-center">
                    <div className="font-handwriting text-sm text-gray-600 flex items-center gap-4">
                      <span className="flex items-center gap-1">
