@@ -362,12 +362,22 @@ export default function QuizLeaderboardPage() {
                 <Trophy className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-handwriting font-bold text-gray-800">
-                  Quiz Leaderboard
-                </h1>
-                <p className="text-gray-600 text-sm">
-                  {quizInfo?.title || 'Quiz Results'}
-                </p>
+                                 <h1 className="text-xl sm:text-2xl font-handwriting font-bold text-gray-800">
+                   Quiz Leaderboard
+                   {quizInfo?.onchainSessionId && (
+                     <span className="block text-sm font-normal text-purple-600 mt-1">
+                       Session #{quizInfo.onchainSessionId} Results
+                     </span>
+                   )}
+                 </h1>
+                                 <p className="text-gray-600 text-sm">
+                   {quizInfo?.title || 'Quiz Results'}
+                 </p>
+                 {quizInfo?.onchainSessionId && (
+                   <p className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full mt-1">
+                     Session #{quizInfo.onchainSessionId}
+                   </p>
+                 )}
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
@@ -478,15 +488,15 @@ export default function QuizLeaderboardPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="font-medium text-yellow-700 mb-1">Chain ID:</p>
+                  <p className="font-medium text-yellow-700 mb-1">Session ID:</p>
                   <p className="text-gray-700">
-                    {quizInfo?.onchainSessionId ? 'On-chain' : 'Off-chain'}
+                    {quizInfo?.onchainSessionId || 'No Session'}
                   </p>
                 </div>
                 <div>
-                  <p className="font-medium text-yellow-700 mb-1">Rewards Status:</p>
+                  <p className="font-medium text-yellow-700 mb-1">On-Chain Status:</p>
                   <p className="text-gray-700">
-                    {quizInfo?.hasRewards ? 'Enabled' : 'Disabled'}
+                    {rewardsDistributed ? 'Distributed' : 'Pending'}
                   </p>
                 </div>
                 <div>
@@ -495,6 +505,11 @@ export default function QuizLeaderboardPage() {
                     {leaderboard.length}
                   </p>
                 </div>
+              </div>
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-700">
+                  <strong>Note:</strong> The distribute button is always shown for quiz creators because rewards are distributed on-chain via smart contract, not just in the database.
+                </p>
               </div>
             </div>
           )}
@@ -507,7 +522,7 @@ export default function QuizLeaderboardPage() {
                   <Gift className="w-6 h-6 text-green-600" />
                   <h3 className="text-lg font-semibold text-gray-800">Quiz Rewards</h3>
                 </div>
-                {isAdmin && quizInfo.canDistributeRewards && !rewardsDistributed && (
+                {isAdmin && quizInfo.canDistributeRewards && (
                   <button
                     onClick={handleDistributeRewards}
                     disabled={distributingRewards}
@@ -524,7 +539,7 @@ export default function QuizLeaderboardPage() {
                 {isAdmin && rewardsDistributed && (
                   <div className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" />
-                    Rewards Distributed
+                    On-Chain Distribution Complete
                   </div>
                 )}
               </div>
@@ -554,7 +569,7 @@ export default function QuizLeaderboardPage() {
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {rewardsDistributed ? 'Distributed' : 'Pending'}
+                        {rewardsDistributed ? 'On-Chain' : 'Pending'}
                       </div>
                     </div>
                     
@@ -580,9 +595,17 @@ export default function QuizLeaderboardPage() {
                       
                       {rewardsDistributed && (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Distributed:</span>
+                          <span className="text-gray-600">Status:</span>
                           <span className="font-medium">
-                            Smart Contract Verified
+                            On-Chain Verified
+                          </span>
+                        </div>
+                      )}
+                      {!rewardsDistributed && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Status:</span>
+                          <span className="font-medium">
+                            Ready for Distribution
                           </span>
                         </div>
                       )}
@@ -728,16 +751,14 @@ export default function QuizLeaderboardPage() {
                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500 mt-1">
                           <span className="flex items-center gap-1 flex-shrink-0">
                             <Target className="w-3 h-3" />
-                            <span className="hidden sm:inline">{entry.totalQuestions || questions.length} questions</span>
-                            <span className="sm:hidden">{entry.totalQuestions || questions.length}q</span>
+                            <span className="hidden sm:inline">{entry.totalQuestions || 0} questions</span>
+                            <span className="sm:hidden">{entry.totalQuestions || 0}q</span>
                           </span>
-                          {entry.correctAnswers !== undefined && (
-                            <span className="flex items-center gap-1 flex-shrink-0">
-                              <CheckCircle className="w-3 h-3 text-green-600" />
-                              <span className="hidden sm:inline">{entry.correctAnswers} correct</span>
-                              <span className="sm:hidden">{entry.correctAnswers}✓</span>
-                            </span>
-                          )}
+                          <span className="flex items-center gap-1 flex-shrink-0">
+                            <CheckCircle className="w-3 h-3 text-green-600" />
+                            <span className="hidden sm:inline">{entry.correctAnswers || 0} correct</span>
+                            <span className="sm:hidden">{entry.correctAnswers || 0}✓</span>
+                          </span>
                           <span className="flex items-center gap-1 flex-shrink-0">
                             <Percent className="w-3 h-3" />
                             <span className="hidden sm:inline">{entry.accuracy ? entry.accuracy.toFixed(1) : '0.0'}% accuracy</span>
