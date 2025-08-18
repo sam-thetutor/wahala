@@ -5,10 +5,10 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { snarkelId: string } }
+  { params }: { params: Promise<{ snarkelId: string }> }
 ) {
+  const { snarkelId } = await params;
   try {
-    const { snarkelId } = params;
 
     // Fetch questions with options for the quiz
     const questions = await prisma.question.findMany({
