@@ -1,5 +1,15 @@
 'use client';
 
+/**
+ * IMPORTANT: NEVER USE DUMMY DATA!
+ * 
+ * This page fetches featured quizzes from the actual database via API routes.
+ * Always use real data from your database and API endpoints.
+ * 
+ * API Route: /api/snarkel/featured
+ * Database: Featured snarkels with priority ordering
+ */
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
@@ -28,18 +38,30 @@ import {
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { useAccount } from 'wagmi';
 
-// Quiz type definition
+// Quiz type definition - Updated to match actual API response
 interface Quiz {
   id: number;
   title: string;
   description: string;
   category: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
-  participants: string;
+  formattedParticipants: string;
   duration: string;
-  reward: string;
-  snarkelCode?: string;
-  network?: string;
+  reward?: {
+    amount: string;
+    symbol: string;
+    name: string;
+  };
+  snarkelCode: string;
+  totalQuestions: number;
+  totalParticipants: number;
+  isActive: boolean;
+  startTime?: string;
+  rewardsEnabled: boolean;
+  basePointsPerQuestion: number;
+  speedBonusEnabled: boolean;
+  maxSpeedBonus: number;
+  priority: number;
 }
 
 // Featured Quiz Card Component
@@ -104,7 +126,7 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
               <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
                 <Users className="w-4 h-4" />
               </div>
-              <p className="text-sm font-semibold text-gray-900">{quiz.participants}</p>
+              <p className="text-sm font-semibold text-gray-900">{quiz.formattedParticipants}</p>
               <p className="text-xs text-gray-500">Players</p>
             </div>
             <div className="text-center">
@@ -118,15 +140,19 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
               <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
                 <Trophy className="w-4 h-4" />
               </div>
-              <p className="text-sm font-semibold text-gray-900">{quiz.reward}</p>
-              <p className="text-xs text-gray-500">Reward</p>
+              <p className="text-sm font-semibold text-gray-900">
+                {quiz.reward ? `${quiz.reward.amount} ${quiz.reward.symbol}` : 'No rewards'}
+              </p>
+              <p className="text-xs text-gray-500">
+                {quiz.reward ? 'Reward' : 'Free to play'}
+              </p>
             </div>
           </div>
           
           {/* Action Button */}
           <div className="pt-2">
             <Link
-              href={`/quiz/${quiz.snarkelCode || quiz.id}`}
+              href={`/quiz/${quiz.snarkelCode}`}
               className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-3 rounded-xl font-semibold text-center transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group"
             >
               <Play className="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -150,92 +176,68 @@ export default function FeaturedPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Sample featured quizzes data
-  const sampleQuizzes: Quiz[] = [
-    {
-      id: 1,
-      title: "Web3 Fundamentals Quiz",
-      description: "Test your knowledge of blockchain basics, smart contracts, and decentralized applications. Perfect for beginners starting their Web3 journey.",
-      category: "Blockchain",
-      difficulty: "Easy",
-      participants: "1.2k",
-      duration: "15 min",
-      reward: "50 USDC",
-      snarkelCode: "web3-fundamentals"
-    },
-    {
-      id: 2,
-      title: "DeFi Master Challenge",
-      description: "Advanced questions about decentralized finance protocols, yield farming, and liquidity pools. For experienced DeFi users.",
-      category: "DeFi",
-      difficulty: "Hard",
-      participants: "856",
-      duration: "25 min",
-      reward: "100 USDC",
-      snarkelCode: "defi-master"
-    },
-    {
-      id: 3,
-      title: "NFT & Metaverse Quiz",
-      description: "Explore the world of non-fungible tokens, digital art, and virtual worlds. Learn about the future of digital ownership.",
-      category: "NFT",
-      difficulty: "Medium",
-      participants: "2.1k",
-      duration: "20 min",
-      reward: "75 USDC",
-      snarkelCode: "nft-metaverse"
-    },
-    {
-      id: 4,
-      title: "Layer 2 Scaling Solutions",
-      description: "Deep dive into Ethereum scaling solutions like Polygon, Arbitrum, and Optimism. Understand the technical details.",
-      category: "Scaling",
-      difficulty: "Hard",
-      participants: "432",
-      duration: "30 min",
-      reward: "150 USDC",
-      snarkelCode: "layer2-scaling"
-    },
-    {
-      id: 5,
-      title: "Crypto Security Basics",
-      description: "Essential security practices for cryptocurrency users. Learn about wallets, private keys, and avoiding scams.",
-      category: "Security",
-      difficulty: "Easy",
-      participants: "3.4k",
-      duration: "12 min",
-      reward: "25 USDC",
-      snarkelCode: "crypto-security"
-    },
-    {
-      id: 6,
-      title: "Smart Contract Development",
-      description: "Test your Solidity knowledge and smart contract best practices. For developers and advanced users.",
-      category: "Development",
-      difficulty: "Hard",
-      participants: "298",
-      duration: "35 min",
-      reward: "200 USDC",
-      snarkelCode: "smart-contracts"
-    }
-  ];
-
+  // Fetch featured quizzes from API instead of using dummy data
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
-      setFeaturedQuizzes(sampleQuizzes);
-      setLoadingQuizzes(false);
-      setIsLoaded(true);
-    }, 1000);
+    const fetchFeaturedQuizzes = async () => {
+      try {
+        setLoadingQuizzes(true);
+        setQuizError(null);
+        const response = await fetch('/api/snarkel/featured?limit=50');
+        
+        if (response.ok) {
+          const data = await response.json();
+          setFeaturedQuizzes(data.featuredSnarkels || []);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.message || 'Failed to fetch featured quizzes';
+          console.error('Failed to fetch featured quizzes:', errorMessage);
+          setQuizError(errorMessage);
+          setFeaturedQuizzes([]);
+        }
+      } catch (error) {
+        console.error('Error fetching featured quizzes:', error);
+        setQuizError('Network error. Please check your connection and try again.');
+        setFeaturedQuizzes([]);
+      } finally {
+        setLoadingQuizzes(false);
+        setIsLoaded(true);
+      }
+    };
 
-    return () => clearTimeout(timer);
+    fetchFeaturedQuizzes();
   }, []);
+
+  // Retry function for failed API calls
+  const retryFetch = () => {
+    setQuizError(null);
+    setLoadingQuizzes(true);
+    const fetchFeaturedQuizzes = async () => {
+      try {
+        const response = await fetch('/api/snarkel/featured?limit=50');
+        
+        if (response.ok) {
+          const data = await response.json();
+          setFeaturedQuizzes(data.featuredSnarkels || []);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.message || 'Failed to fetch featured quizzes';
+          setQuizError(errorMessage);
+        }
+      } catch (error) {
+        setQuizError('Network error. Please check your connection and try again.');
+      } finally {
+        setLoadingQuizzes(false);
+      }
+    };
+    
+    fetchFeaturedQuizzes();
+  };
 
   // Filter quizzes based on search and filters
   const filteredQuizzes = featuredQuizzes.filter(quiz => {
     const matchesSearch = quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          quiz.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         quiz.category.toLowerCase().includes(searchTerm.toLowerCase());
+                         (quiz.category && quiz.category.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesCategory = selectedCategory === 'all' || quiz.category === selectedCategory;
     const matchesDifficulty = selectedDifficulty === 'all' || quiz.difficulty === selectedDifficulty;
@@ -243,8 +245,8 @@ export default function FeaturedPage() {
     return matchesSearch && matchesCategory && matchesDifficulty;
   });
 
-  // Get unique categories
-  const categories = ['all', ...Array.from(new Set(featuredQuizzes.map(q => q.category)))];
+  // Get unique categories from actual data
+  const categories = ['all', ...Array.from(new Set(featuredQuizzes.map(q => q.category).filter(Boolean)))];
   const difficulties = ['all', 'Easy', 'Medium', 'Hard'];
 
   return (
@@ -421,7 +423,7 @@ export default function FeaturedPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 max-w-md mx-auto">
               <p className="text-lg text-amber-800 mb-4">{quizError}</p>
               <button 
-                onClick={() => window.location.reload()}
+                onClick={retryFetch}
                 className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
               >
                 Try Again
