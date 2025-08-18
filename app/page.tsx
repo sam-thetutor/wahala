@@ -25,148 +25,6 @@ import WalletConnectButton from '@/components/WalletConnectButton';
 import { FarcasterUI } from '@/components/FarcasterUI';
 import { useAccount } from 'wagmi';
 
-// Quiz type definition
-interface Quiz {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
-  participants: string;
-  duration: string;
-  reward: string;
-  snarkelCode?: string; // For linking to actual quiz
-  network?: string; // Optional network tag
-}
-
-// Featured Quiz Card Component
-const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
-  const { isConnected } = useAccount();
-  const [isHovered, setIsHovered] = useState(false);
-  
-  const difficultyColors = {
-    Easy: 'text-emerald-600',
-    Medium: 'text-amber-600', 
-    Hard: 'text-red-600'
-  };
-
-  const difficultyIcons = {
-    Easy: '🟢',
-    Medium: '🟡',
-    Hard: '🔴'
-  };
-
-  return (
-    <div 
-      className="group relative bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-200 hover:border-blue-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Gradient border on hover */}
-      <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-      
-      <div className="relative z-10">
-        <div className="flex flex-col gap-4">
-          {/* Header with category and difficulty */}
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              {/* Title */}
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
-                {quiz.title}
-              </h3>
-              
-              {/* Description */}
-              <p className="text-sm sm:text-base text-gray-600 line-clamp-2 leading-relaxed">
-                {quiz.description}
-              </p>
-            </div>
-            
-            {/* Category and Difficulty */}
-            <div className="flex flex-col items-end gap-2 ml-3">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                {quiz.category}
-              </span>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 border border-gray-200">
-                <span className="text-sm">{difficultyIcons[quiz.difficulty]}</span>
-                <span className={`text-xs font-semibold ${difficultyColors[quiz.difficulty]}`}>
-                  {quiz.difficulty}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-3 py-3 border-t border-gray-100">
-            <div className="text-center">
-              <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 bg-blue-50 rounded-lg">
-                <Users className="w-4 h-4 text-blue-600" />
-              </div>
-              <p className="text-xs text-gray-500 mb-1">Participants</p>
-              <p className="text-sm font-semibold text-gray-900">{quiz.participants}</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 bg-green-50 rounded-lg">
-                <Clock className="w-4 h-4 text-green-600" />
-              </div>
-              <p className="text-xs text-gray-500 mb-1">Duration</p>
-              <p className="text-sm font-semibold text-gray-900">{quiz.duration}</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 bg-emerald-50 rounded-lg">
-                <Award className="w-4 h-4 text-emerald-600" />
-              </div>
-              <p className="text-xs text-gray-500 mb-1">Reward</p>
-              <p className="text-sm font-semibold text-gray-900">{quiz.reward}</p>
-            </div>
-          </div>
-          
-          {/* Action Row */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-            {/* Leaderboard link */}
-            {quiz.snarkelCode && (
-              <Link 
-                href={`/quiz/${quiz.snarkelCode}/leaderboard`}
-                className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors"
-              >
-                <Trophy className="w-4 h-4" />
-                <span className="hidden sm:inline">View Results</span>
-                <span className="sm:hidden">Results</span>
-              </Link>
-            )}
-            
-            {/* Join button */}
-            {quiz.snarkelCode ? (
-              <Link href={`/join?code=${quiz.snarkelCode}`}>
-                <button className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 sm:px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
-                  <Play className="w-4 h-4" />
-                  <span className="text-sm">
-                    {isConnected ? 'Join Quiz' : 'Connect & Join'}
-                  </span>
-                </button>
-              </Link>
-            ) : (
-              <button className="inline-flex items-center gap-2 bg-gray-400 text-white px-4 sm:px-6 py-2.5 rounded-xl font-semibold text-sm cursor-not-allowed">
-                <Clock className="w-4 h-4" />
-                Coming Soon
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      {/* Network badge if available */}
-      {quiz.network && (
-        <div className="absolute top-3 right-3">
-          <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-300 font-medium">
-            <Sparkles className="w-3 h-3 flex-shrink-0" /> {quiz.network}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-};
 
 // Action Bar Component
 const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
@@ -246,9 +104,7 @@ export default function HomePage() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
   // Action bar is always visible, no need for open/close state
-  const [featuredQuizzes, setFeaturedQuizzes] = useState<Quiz[]>([]);
-  const [loadingQuizzes, setLoadingQuizzes] = useState(true);
-  const [quizError, setQuizError] = useState<string | null>(null);
+
   const { isConnected } = useAccount();
 
   // Contract addresses - Base and Celo mainnet
@@ -257,46 +113,7 @@ export default function HomePage() {
 
   const formatAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
-  // Fetch featured quizzes from API
-  const fetchFeaturedQuizzes = async () => {
-    try {
-      setLoadingQuizzes(true);
-      setQuizError(null);
-      
-      const response = await fetch('/api/snarkel/featured?limit=4');
-      const data = await response.json();
-      
-      if (data.featuredSnarkels) {
-        // Transform API data to match our Quiz interface
-        const transformedQuizzes: Quiz[] = data.featuredSnarkels.map((snarkel: any) => ({
-          id: parseInt(snarkel.id.replace(/\D/g, '') || '0'), // Extract numeric ID
-          title: snarkel.title,
-          description: snarkel.description,
-          category: snarkel.category || 'Quiz',
-          difficulty: snarkel.difficulty as 'Easy' | 'Medium' | 'Hard',
-          participants: snarkel.formattedParticipants || '0',
-          duration: snarkel.duration || '5 min',
-          reward: snarkel.reward?.amount || '0',
-          snarkelCode: snarkel.snarkelCode,
-          network: (() => {
-            const chainId = snarkel.rewards?.chainId || snarkel.reward?.chainId;
-            if (chainId === 42220) return 'Celo';
-            if (chainId === 8453) return 'Base';
-            return undefined;
-          })()
-        }));
-        
-        setFeaturedQuizzes(transformedQuizzes);
-      } else {
-        setQuizError('No featured quizzes available');
-      }
-    } catch (error) {
-      console.error('Error fetching featured quizzes:', error);
-      setQuizError('Failed to load featured quizzes');
-    } finally {
-      setLoadingQuizzes(false);
-    }
-  };
+
 
   // Initialize floating elements with quiz-related icons
   useEffect(() => {
@@ -334,8 +151,7 @@ export default function HomePage() {
 
     window.addEventListener('mousemove', handleMouseMove);
     
-    // Fetch featured quizzes
-    fetchFeaturedQuizzes();
+
     
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
@@ -471,7 +287,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Featured Quizzes Section */}
+                        {/* Featured Quizzes Section */}
             <div className={`flex-1 transition-all duration-1500 delay-300 ${
               isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
             }`}>
@@ -483,65 +299,41 @@ export default function HomePage() {
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 </div>
                 <h2 className="font-handwriting text-3xl sm:text-4xl font-bold text-blue-900 mb-3">
-                  Featured Quizzes
+                  Featured Snarkels
                 </h2>
                 <p className="text-gray-600 text-sm sm:text-base mb-4 max-w-md mx-auto">
                   Discover amazing challenges and test your knowledge
                 </p>
-                <div className="flex justify-center items-center gap-2 text-sm text-gray-500">
-                  <span className="font-medium">Scroll to explore</span>
-                  <ArrowDown className="w-4 h-4 animate-bounce text-blue-600" />
-                </div>
               </div>
               
-                        {/* Quiz Cards */}
-              <div className="space-y-4 sm:space-y-6 px-2">
-            {loadingQuizzes ? (
-              // Loading state
-                  <div className="space-y-4 sm:space-y-6">
-                {[1, 2].map((i) => (
-                      <div key={i} className="bg-white shadow-2xl rounded-3xl p-4 sm:p-6 animate-pulse border border-blue-200">
-                        <div className="h-4 bg-blue-200 rounded mb-3 sm:mb-4"></div>
-                    <div className="h-3 bg-blue-200 rounded mb-2"></div>
-                        <div className="h-3 bg-blue-200 rounded mb-3 sm:mb-4 w-3/4"></div>
-                    <div className="h-8 bg-blue-200 rounded"></div>
+              {/* Explore Button */}
+              <div className="text-center px-2">
+                <Link
+                  href="/featured"
+                  className="group inline-flex items-center gap-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white px-8 py-6 rounded-3xl font-bold text-xl transition-all duration-500 transform hover:-translate-y-2 shadow-2xl hover:shadow-3xl border-2 border-white/20 hover:border-white/40"
+                >
+                  <div className="relative">
+                    <Star className="w-8 h-8 group-hover:rotate-12 transition-transform duration-300" />
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full animate-pulse"></div>
                   </div>
-                ))}
-              </div>
-            ) : quizError ? (
-              // Error state
-                  <div className="text-center py-6 sm:py-8 px-2">
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-6">
-                      <p className="font-handwriting text-base sm:text-lg text-amber-800">
-                    {quizError}
-                  </p>
-                  <button 
-                    onClick={fetchFeaturedQuizzes}
-                        className="mt-3 sm:mt-4 px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm sm:text-base"
-                  >
-                    Try Again
-                  </button>
+                  <span>Explore Featured Snarkels</span>
+                  <div className="relative">
+                    <Trophy className="w-8 h-8 group-hover:scale-110 transition-transform duration-300" />
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+                  </div>
+                </Link>
+                
+                {/* Decorative elements */}
+                <div className="mt-6 flex justify-center items-center gap-4">
+                  <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full animate-pulse" style={{animationDelay: '0.3s'}}></div>
+                  <div className="w-3 h-3 bg-gradient-to-r from-pink-400 to-red-500 rounded-full animate-pulse" style={{animationDelay: '0.6s'}}></div>
                 </div>
+                
+                <p className="text-gray-500 text-sm mt-4">
+                  Browse curated quizzes by category, difficulty, and more
+                </p>
               </div>
-            ) : featuredQuizzes.length === 0 ? (
-              // Empty state
-                  <div className="text-center py-6 sm:py-8 px-2">
-                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-6">
-                      <p className="font-handwriting text-base sm:text-lg text-blue-800">
-                    No featured quizzes available yet
-                  </p>
-                      <p className="text-xs sm:text-sm mt-2 text-blue-600">
-                    Check back soon for new challenges!
-                  </p>
-                </div>
-              </div>
-            ) : (
-              // Quiz cards
-              featuredQuizzes.slice(0, 2).map((quiz, index) => (
-                <FeaturedQuizCard key={quiz.id} quiz={quiz} index={index} />
-              ))
-            )}
-          </div>
             </div>
             
             {/* Action Bar */}
@@ -621,64 +413,40 @@ export default function HomePage() {
                   <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                 </div>
                 <h2 className="font-handwriting text-4xl lg:text-5xl xl:text-6xl font-bold text-blue-900 mb-4">
-                  Featured Quizzes
+                  Featured Snarkels
                 </h2>
                 <p className="text-gray-600 text-lg lg:text-xl mb-6 max-w-2xl mx-auto">
                   Discover amazing challenges and test your knowledge with our curated selection
                 </p>
-                <div className="flex justify-center items-center gap-3 text-lg text-gray-600">
-                  <span className="font-handwriting font-medium">Scroll to explore</span>
-                  <ArrowDown className="w-6 h-6 animate-bounce text-blue-600" />
-                </div>
               </div>
               
-              {/* Quiz Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl">
-                {loadingQuizzes ? (
-                  // Loading state
-                  <div className="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="bg-white shadow-2xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 animate-pulse border border-blue-200">
-                        <div className="h-4 bg-blue-200 rounded mb-3 sm:mb-4"></div>
-                        <div className="h-3 bg-blue-200 rounded mb-2"></div>
-                        <div className="h-3 bg-blue-200 rounded mb-3 sm:mb-4 w-3/4"></div>
-                        <div className="h-8 bg-blue-200 rounded"></div>
-                      </div>
-                    ))}
+              {/* Explore Button */}
+              <div className="text-center">
+                <Link
+                  href="/featured"
+                  className="group inline-flex items-center gap-6 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white px-12 py-8 rounded-3xl font-bold text-2xl lg:text-3xl transition-all duration-500 transform hover:-translate-y-3 shadow-2xl hover:shadow-3xl border-2 border-white/20 hover:border-white/40"
+                >
+                  <div className="relative">
+                    <Star className="w-10 h-10 lg:w-12 lg:h-12 group-hover:rotate-12 transition-transform duration-300" />
+                    <div className="absolute -top-2 -right-2 w-5 h-5 bg-yellow-400 rounded-full animate-pulse"></div>
                   </div>
-                ) : quizError ? (
-                  // Error state
-                  <div className="col-span-2 text-center py-6 sm:py-8">
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-6">
-                      <p className="font-handwriting text-base sm:text-lg text-amber-800">
-                        {quizError}
-                      </p>
-                      <button 
-                        onClick={fetchFeaturedQuizzes}
-                        className="mt-3 sm:mt-4 px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm sm:text-base"
-                      >
-                        Try Again
-                      </button>
-                    </div>
+                  <span>Explore Featured Snarkels</span>
+                  <div className="relative">
+                    <Trophy className="w-10 h-10 lg:w-12 lg:h-12 group-hover:scale-110 transition-transform duration-300" />
+                    <div className="absolute -top-2 -right-2 w-5 h-5 bg-orange-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
                   </div>
-                ) : featuredQuizzes.length === 0 ? (
-                  // Empty state
-                  <div className="col-span-2 text-center py-6 sm:py-8">
-                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-6">
-                      <p className="font-handwriting text-base sm:text-lg text-blue-800">
-                        No featured quizzes available yet
-                      </p>
-                      <p className="text-xs sm:text-sm mt-2 text-blue-600">
-                        Check back soon for new challenges!
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  // Quiz cards
-                  featuredQuizzes.map((quiz, index) => (
-                    <FeaturedQuizCard key={quiz.id} quiz={quiz} index={index} />
-                  ))
-                )}
+                </Link>
+                
+                {/* Decorative elements */}
+                <div className="mt-8 flex justify-center items-center gap-6">
+                  <div className="w-4 h-4 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full animate-pulse"></div>
+                  <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full animate-pulse" style={{animationDelay: '0.3s'}}></div>
+                  <div className="w-4 h-4 bg-gradient-to-r from-pink-400 to-red-500 rounded-full animate-pulse" style={{animationDelay: '0.6s'}}></div>
+                </div>
+                
+                <p className="text-gray-500 text-lg mt-6">
+                  Browse curated quizzes by category, difficulty, and more
+                </p>
               </div>
             </div>
 
