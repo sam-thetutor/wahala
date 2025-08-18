@@ -110,6 +110,12 @@ interface UseQuizContractReturn {
     sessionId: number;
     tokenAddress: Address;
   }) => Promise<{ success: boolean; transactionHash?: string; error?: string }>;
+  fallbackDistributeRewards: (params: {
+    sessionId: number;
+    tokenAddress: Address;
+    winners: Address[];
+    amounts: string[];
+  }) => Promise<{ success: boolean; transactionHash?: string; error?: string }>;
   adminDistributeReward: (params: {
     sessionId: number;
     tokenAddress: Address;
@@ -474,6 +480,64 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
       return { success: true, transactionHash: hash };
     } catch (error: any) {
       console.error('Distribute rewards error:', error);
+      
+      let errorMessage = error.message || 'Failed to distribute rewards';
+      
+      if (error.message?.includes('Rewards already distributed')) {
+        errorMessage = 'Rewards have already been distributed for this session.';
+      } else if (error.message?.includes('Session not active')) {
+        errorMessage = 'Session is not active.';
+      }
+      
+      updateState({ isLoading: false, error: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+  }, [updateState, resetState, isConnected, userAddress, ensureCorrectChain, writeContractAsync, chainId, fallbackChainId]);
+
+  // Fallback distribute rewards for a session
+  const fallbackDistributeRewards = useCallback(async (params: {
+    sessionId: number;
+    tokenAddress: Address;
+    winners: Address[];
+    amounts: string[];
+  }): Promise<{ success: boolean; transactionHash?: string; error?: string }> => {
+    try {
+      resetState();
+      updateState({ isLoading: true, error: null });
+
+      if (!isConnected || !userAddress) {
+        throw new Error('Wallet not connected - please connect your wallet first');
+      }
+
+      await ensureCorrectChain();
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      console.log('Fallback distributing rewards for session:', params.sessionId);
+
+      const hash = await writeContractAsync({
+        address: getContractAddress(chainId),
+        abi: SNARKEL_ABI,
+        functionName: 'fallbackDistributeRewards',
+        args: [
+          BigInt(params.sessionId),
+          params.tokenAddress,
+          params.winners,
+          params.amounts.map(amount => BigInt(amount))
+        ],
+        // @ts-ignore dataSuffix not in wagmi types yet
+        dataSuffix: getReferralDataSuffix()
+      });
+
+      console.log('Fallback distribute rewards transaction hash:', hash);
+      updateState({ transactionHash: hash });
+      updateState({ isLoading: false, success: true });
+
+      const finalChainId = chainId || fallbackChainId || base.id
+      submitDivviReferral(hash as Hex, finalChainId).catch(() => {})
+
+      return { success: true, transactionHash: hash };
+    } catch (error: any) {
+      console.error('Fallback distribute rewards error:', error);
       
       let errorMessage = error.message || 'Failed to distribute rewards';
       
@@ -921,6 +985,7 @@ export function useQuizContract(selectedChainId?: number): UseQuizContractReturn
     createSnarkelSession,
     addReward,
     distributeRewards,
+    fallbackDistributeRewards,
     finalizeSessionRewards,
     claimUserReward,
     adminDistributeReward,

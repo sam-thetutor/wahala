@@ -138,6 +138,7 @@ export default function QuizLeaderboardPage() {
   // Get contract functions for blockchain operations
   const { 
     distributeRewards, 
+    fallbackDistributeRewards,
     contractState,
     areRewardsDistributed
   } = useQuizContract(8453); // Use Base chain for now
@@ -262,6 +263,65 @@ export default function QuizLeaderboardPage() {
       }
     } catch (error) {
       console.error('Error distributing rewards:', error);
+      setRewardDistributionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setTimeout(() => {
+        setDistributingRewards(false);
+        setRewardDistributionStatus('');
+      }, 3000);
+    }
+  };
+
+  const handleFallbackDistributeRewards = async () => {
+    if (!quizInfo || !isAdmin) return;
+    
+    try {
+      setDistributingRewards(true);
+      setRewardDistributionStatus('Starting fallback reward distribution...');
+      
+      // Get the first reward to distribute
+      const firstReward = quizInfo.rewards[0];
+      if (!firstReward) {
+        throw new Error('No rewards configured for this quiz');
+      }
+      
+      // Get session ID from quiz info
+      const sessionId = parseInt(quizInfo.onchainSessionId || '1');
+      
+      // Get winners from leaderboard (top participants)
+      const winners = leaderboard.slice(0, Math.min(3, leaderboard.length)).map(entry => 
+        entry.walletAddress as `0x${string}`
+      );
+      
+      // Calculate amounts based on position (example: 1st gets 50%, 2nd gets 30%, 3rd gets 20%)
+      const amounts = winners.map((_, index) => {
+        if (index === 0) return (parseFloat(firstReward.totalRewardPool) * 0.5).toString();
+        if (index === 1) return (parseFloat(firstReward.totalRewardPool) * 0.3).toString();
+        if (index === 2) return (parseFloat(firstReward.totalRewardPool) * 0.2).toString();
+        return '0';
+      }).filter(amount => parseFloat(amount) > 0);
+      
+      console.log('Fallback distributing rewards for session:', sessionId, 'token:', firstReward.tokenAddress, 'winners:', winners, 'amounts:', amounts);
+      
+      // Call the smart contract fallbackDistributeRewards function
+      const result = await fallbackDistributeRewards({
+        sessionId: sessionId,
+        tokenAddress: firstReward.tokenAddress as `0x${string}`,
+        winners: winners,
+        amounts: amounts
+      });
+      
+      if (result.success) {
+        setRewardDistributionStatus(`Fallback rewards distributed successfully! Transaction: ${result.transactionHash}`);
+        // Refresh leaderboard to show updated reward status
+        setTimeout(() => {
+          fetchLeaderboard();
+        }, 2000);
+      } else {
+        throw new Error(result.error || 'Fallback reward distribution failed');
+      }
+    } catch (error) {
+      console.error('Error fallback distributing rewards:', error);
       setRewardDistributionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setTimeout(() => {
@@ -508,21 +568,21 @@ export default function QuizLeaderboardPage() {
               </div>
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-xs text-blue-700">
-                  <strong>Note:</strong> The distribute button is always shown for quiz creators because rewards are distributed on-chain via smart contract, not just in the database.
+                  <strong>Note:</strong> The distribute button is only shown when rewards haven't been distributed yet. Once distributed on-chain, the button disappears.
                 </p>
               </div>
             </div>
           )}
 
           {/* Rewards Section */}
-          {quizInfo.hasRewards && (
-            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3 justify-center sm:justify-start">
-                  <Gift className="w-6 h-6 text-green-600" />
-                  <h3 className="text-lg font-semibold text-gray-800">Quiz Rewards</h3>
-                </div>
-                {isAdmin && quizInfo.canDistributeRewards && (
+          <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3 justify-center sm:justify-start">
+                <Gift className="w-6 h-6 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-800">Quiz Rewards</h3>
+              </div>
+              {isAdmin && !rewardsDistributed && (
+                <div className="flex gap-2">
                   <button
                     onClick={handleDistributeRewards}
                     disabled={distributingRewards}
@@ -535,14 +595,27 @@ export default function QuizLeaderboardPage() {
                     )}
                     {distributingRewards ? 'Distributing...' : 'Distribute Rewards'}
                   </button>
-                )}
-                {isAdmin && rewardsDistributed && (
-                  <div className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    On-Chain Distribution Complete
-                  </div>
-                )}
-              </div>
+                  <button
+                    onClick={handleFallbackDistributeRewards}
+                    disabled={distributingRewards}
+                    className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm sm:text-base"
+                  >
+                    {distributingRewards ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4" />
+                    )}
+                    {distributingRewards ? 'Distributing...' : 'Fallback Distribute'}
+                  </button>
+                </div>
+              )}
+              {isAdmin && rewardsDistributed && (
+                <div className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  On-Chain Distribution Complete
+                </div>
+              )}
+            </div>
 
               {rewardDistributionStatus && (
                 <div className={`p-3 rounded-lg mb-4 ${
@@ -554,67 +627,79 @@ export default function QuizLeaderboardPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                {quizInfo.rewards.map((reward, index) => (
-                  <div key={reward.id} className="border border-gray-200 rounded-lg p-3 sm:p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-green-600" />
-                        <span className="font-medium text-gray-800">
-                          {reward.tokenSymbol || 'TOKEN'}
-                        </span>
-                      </div>
-                      <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        rewardsDistributed 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {rewardsDistributed ? 'On-Chain' : 'Pending'}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Total Pool:</span>
-                        <span className="font-medium">
-                          {formatRewardAmount(reward.totalRewardPool)} {reward.tokenSymbol}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Network:</span>
-                        <span className="font-medium">{reward.network}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Strategy:</span>
-                        <span className="font-medium">
-                          {reward.rewardAllParticipants ? 'All Participants' : `Top ${reward.totalWinners || 5}`}
-                        </span>
-                      </div>
-                      
-                      {rewardsDistributed && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Status:</span>
-                          <span className="font-medium">
-                            On-Chain Verified
+              {quizInfo.rewards && quizInfo.rewards.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                  {quizInfo.rewards.map((reward, index) => (
+                    <div key={reward.id} className="border border-gray-200 rounded-lg p-3 sm:p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-green-600" />
+                          <span className="font-medium text-gray-800">
+                            {reward.tokenSymbol || 'TOKEN'}
                           </span>
                         </div>
-                      )}
-                      {!rewardsDistributed && (
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          rewardsDistributed 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {rewardsDistributed ? 'On-Chain' : 'Pending'}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Status:</span>
+                          <span className="text-gray-600">Total Pool:</span>
                           <span className="font-medium">
-                            Ready for Distribution
+                            {formatRewardAmount(reward.totalRewardPool)} {reward.tokenSymbol}
                           </span>
                         </div>
-                      )}
+                        
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Network:</span>
+                          <span className="font-medium">{reward.network}</span>
+                        </div>
+                        
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Strategy:</span>
+                          <span className="font-medium">
+                            {reward.rewardAllParticipants ? 'All Participants' : `Top ${reward.totalWinners || 5}`}
+                          </span>
+                        </div>
+                        
+                        {rewardsDistributed && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Status:</span>
+                            <span className="font-medium">
+                              On-Chain Verified
+                            </span>
+                          </div>
+                        )}
+                        {!rewardsDistributed && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Status:</span>
+                            <span className="font-medium">
+                              Ready for Distribution
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Gift className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-lg font-medium mb-2">No Rewards Configured</p>
+                  <p className="text-sm">This quiz doesn't have rewards configured yet.</p>
+                  {isAdmin && (
+                    <p className="text-sm mt-2 text-blue-600">
+                      You can still distribute rewards on-chain using the button above.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-          )}
 
           {/* Admin Functions */}
           {isAdmin && (
