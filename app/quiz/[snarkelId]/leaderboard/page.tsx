@@ -415,6 +415,54 @@ export default function QuizLeaderboardPage() {
             </div>
           </div>
 
+          {/* Debug Information */}
+          {isAdmin && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+              <h3 className="font-handwriting font-bold text-yellow-800 mb-3 flex items-center gap-2">
+                <Info className="w-5 h-5" />
+                Debug Information (Admin Only)
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p className="font-medium text-yellow-700 mb-1">Connected Wallet:</p>
+                  <p className="text-gray-700 font-mono text-xs break-all">
+                    {address || 'Not connected'}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-yellow-700 mb-1">Admin Status:</p>
+                  <p className="text-gray-700">
+                    {isAdmin ? 'Quiz Creator' : 'Not Admin'}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-yellow-700 mb-1">Quiz Creator:</p>
+                  <p className="text-gray-700 font-mono text-xs break-all">
+                    {adminDetails?.creatorAddress || 'Unknown'}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-yellow-700 mb-1">Chain ID:</p>
+                  <p className="text-gray-700">
+                    {quizInfo?.onchainSessionId ? 'On-chain' : 'Off-chain'}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-yellow-700 mb-1">Rewards Status:</p>
+                  <p className="text-gray-700">
+                    {quizInfo?.hasRewards ? 'Enabled' : 'Disabled'}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-yellow-700 mb-1">Total Submissions:</p>
+                  <p className="text-gray-700">
+                    {leaderboard.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Rewards Section */}
           {quizInfo.hasRewards && (
             <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm mb-6">

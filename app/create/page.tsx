@@ -307,7 +307,7 @@ export default function SnarkelCreationPage() {
   
   // Use the custom hook for snarkel creation
   const { isSubmitting, error, validationErrors, setValidationErrors, createSnarkel, clearErrors } = useSnarkelCreation();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
   
   const [snarkel, setSnarkel] = useState<SnarkelData>({
     title: '',
@@ -368,6 +368,26 @@ export default function SnarkelCreationPage() {
     }));
     setFloatingElements(elements);
   }, []);
+
+  // Detect connected wallet's network and update default chain
+  useEffect(() => {
+    if (isConnected && chain) {
+      const networkNames = {
+        8453: 'Base',
+        42220: 'Celo'
+      };
+      const networkName = networkNames[chain.id as keyof typeof networkNames] || `Chain ${chain.id}`;
+      
+      setSnarkel(prev => ({
+        ...prev,
+        rewards: {
+          ...prev.rewards,
+          chainId: chain.id,
+          network: networkName
+        }
+      }));
+    }
+  }, [isConnected, chain]);
 
   // Tab validation functions - return errors instead of setting state directly
   const validateDetailsTab = useCallback(() => {
@@ -1718,16 +1738,46 @@ export default function SnarkelCreationPage() {
                  )}
 
                  {activeTab === 'rewards' && (
-                   <RewardConfigurationSection
-                     rewardConfig={snarkel.rewards}
-                     onRewardConfigChange={(rewards) => {
-                       console.log('=== REWARD CONFIG CHANGE DEBUG ===');
-                       console.log('Previous rewards:', snarkel.rewards);
-                       console.log('New rewards:', rewards);
-                       setSnarkel(prev => ({ ...prev, rewards }));
-                     }}
-                     validationErrors={validationErrors}
-                   />
+                   <div className="space-y-6">
+                     {/* Debug Network Info */}
+                     {isConnected && (
+                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                         <h4 className="font-handwriting font-bold text-blue-800 mb-2 flex items-center gap-2">
+                           <Info className="w-4 h-4" />
+                           Network Information
+                         </h4>
+                         <div className="grid grid-cols-2 gap-4 text-sm">
+                           <div>
+                             <span className="font-medium text-blue-700">Connected Chain:</span>
+                             <p className="text-gray-700">{chain?.name || 'Unknown'}</p>
+                           </div>
+                           <div>
+                             <span className="font-medium text-blue-700">Chain ID:</span>
+                             <p className="text-gray-700">{chain?.id || 'Unknown'}</p>
+                           </div>
+                           <div>
+                             <span className="font-medium text-blue-700">Selected Network:</span>
+                             <p className="text-gray-700">{snarkel.rewards.network}</p>
+                           </div>
+                           <div>
+                             <span className="font-medium text-blue-700">Selected Chain ID:</span>
+                             <p className="text-gray-700">{snarkel.rewards.chainId}</p>
+                           </div>
+                         </div>
+                       </div>
+                     )}
+                     
+                     <RewardConfigurationSection
+                       rewardConfig={snarkel.rewards}
+                       onRewardConfigChange={(rewards) => {
+                         console.log('=== REWARD CONFIG CHANGE DEBUG ===');
+                         console.log('Previous rewards:', snarkel.rewards);
+                         console.log('New rewards:', rewards);
+                         setSnarkel(prev => ({ ...prev, rewards }));
+                       }}
+                       validationErrors={validationErrors}
+                     />
+                   </div>
                  )}
 
                  {activeTab === 'spam' && (

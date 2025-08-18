@@ -152,12 +152,18 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
     if (presets && presets[tokenName as keyof typeof presets]) {
       const tokenInfo = presets[tokenName as keyof typeof presets];
       console.log('Selected token info:', tokenInfo);
+      const networkNames = {
+        8453: 'Base',
+        42220: 'Celo'
+      };
+      const networkName = networkNames[rewardConfig.chainId as keyof typeof networkNames] || `Chain ${rewardConfig.chainId}`;
+      
       updateRewardConfig({ 
         tokenAddress: tokenInfo.address,
         tokenSymbol: tokenInfo.symbol,
         tokenName: tokenInfo.name,
         tokenDecimals: tokenInfo.decimals,
-        network: `Chain ${rewardConfig.chainId}`
+        network: networkName
       });
     } else {
       console.log('No presets found for chain ID:', rewardConfig.chainId);
