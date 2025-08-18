@@ -40,6 +40,7 @@ import {
   Home
 } from 'lucide-react';
 import Link from 'next/link';
+import { useQuizContract } from '@/hooks/useViemContract';
 
 
 interface QuestionBreakdown {
@@ -130,8 +131,16 @@ export default function QuizLeaderboardPage() {
   const [distributingRewards, setDistributingRewards] = useState(false);
   const [rewardDistributionStatus, setRewardDistributionStatus] = useState<string>('');
   const [questions, setQuestions] = useState<any[]>([]);
+  const [rewardsDistributed, setRewardsDistributed] = useState(false);
 
   const snarkelId = params.snarkelId as string;
+  
+  // Get contract functions for blockchain operations
+  const { 
+    distributeRewards, 
+    contractState,
+    areRewardsDistributed
+  } = useQuizContract(8453); // Use Base chain for now
 
   useEffect(() => {
     if (snarkelId) {
@@ -139,6 +148,12 @@ export default function QuizLeaderboardPage() {
       fetchQuestions();
     }
   }, [snarkelId, address]);
+
+  useEffect(() => {
+    if (quizInfo?.snarkelCode) {
+      checkRewardsDistributionStatus();
+    }
+  }, [quizInfo?.snarkelCode]);
 
   const fetchLeaderboard = async () => {
     try {
@@ -200,40 +215,44 @@ export default function QuizLeaderboardPage() {
     }
   };
 
-  const distributeRewards = async () => {
+  const checkRewardsDistributionStatus = async () => {
+    if (!quizInfo?.snarkelCode || !areRewardsDistributed) return;
+    
+    try {
+      const isDistributed = await areRewardsDistributed(quizInfo.snarkelCode);
+      setRewardsDistributed(isDistributed);
+      console.log('Rewards distribution status:', isDistributed);
+    } catch (error) {
+      console.error('Error checking rewards distribution status:', error);
+    }
+  };
+
+  const handleDistributeRewards = async () => {
     if (!quizInfo || !isAdmin) return;
     
     try {
       setDistributingRewards(true);
       setRewardDistributionStatus('Starting reward distribution...');
       
-      // Call the reward distribution API with connected wallet
-      const response = await fetch('/api/quiz/distribute-rewards', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          roomId: quizInfo.id,
-          sessionNumber: quizInfo.onchainSessionId || 1,
-          finalLeaderboard: leaderboard.map(entry => ({
-            userId: entry.userId,
-            name: entry.name,
-            score: entry.score
-          })),
-          connectedWallet: address
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to distribute rewards');
+      // Get the first reward to distribute
+      const firstReward = quizInfo.rewards[0];
+      if (!firstReward) {
+        throw new Error('No rewards configured for this quiz');
       }
-
-      const result = await response.json();
+      
+      // Get session ID from quiz info
+      const sessionId = parseInt(quizInfo.onchainSessionId || '1');
+      
+      console.log('Distributing rewards for session:', sessionId, 'token:', firstReward.tokenAddress);
+      
+      // Call the smart contract distributeRewards function
+      const result = await distributeRewards({
+        sessionId: sessionId,
+        tokenAddress: firstReward.tokenAddress as `0x${string}`
+      });
       
       if (result.success) {
-        setRewardDistributionStatus('Rewards distributed successfully!');
+        setRewardDistributionStatus(`Rewards distributed successfully! Transaction: ${result.transactionHash}`);
         // Refresh leaderboard to show updated reward status
         setTimeout(() => {
           fetchLeaderboard();
@@ -488,9 +507,9 @@ export default function QuizLeaderboardPage() {
                   <Gift className="w-6 h-6 text-green-600" />
                   <h3 className="text-lg font-semibold text-gray-800">Quiz Rewards</h3>
                 </div>
-                {isAdmin && quizInfo.canDistributeRewards && (
+                {isAdmin && quizInfo.canDistributeRewards && !rewardsDistributed && (
                   <button
-                    onClick={distributeRewards}
+                    onClick={handleDistributeRewards}
                     disabled={distributingRewards}
                     className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm sm:text-base"
                   >
@@ -501,6 +520,12 @@ export default function QuizLeaderboardPage() {
                     )}
                     {distributingRewards ? 'Distributing...' : 'Distribute Rewards'}
                   </button>
+                )}
+                {isAdmin && rewardsDistributed && (
+                  <div className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    Rewards Distributed
+                  </div>
                 )}
               </div>
 
@@ -525,11 +550,11 @@ export default function QuizLeaderboardPage() {
                         </span>
                       </div>
                       <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        reward.isDistributed 
+                        rewardsDistributed 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {reward.isDistributed ? 'Distributed' : 'Pending'}
+                        {rewardsDistributed ? 'Distributed' : 'Pending'}
                       </div>
                     </div>
                     
@@ -553,11 +578,11 @@ export default function QuizLeaderboardPage() {
                         </span>
                       </div>
                       
-                      {reward.isDistributed && reward.distributedAt && (
+                      {rewardsDistributed && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Distributed:</span>
                           <span className="font-medium">
-                            {new Date(reward.distributedAt).toLocaleDateString()}
+                            Smart Contract Verified
                           </span>
                         </div>
                       )}

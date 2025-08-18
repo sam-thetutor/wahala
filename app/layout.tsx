@@ -36,7 +36,7 @@ export default async function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Snarkels - Quiz Rewards</title>
-        <meta name="description" content="Create and participate in quiz sessions with crypto rewards" />
+        <meta name="description" content="On-chain Snarkels rewards users in interactive sessions with ERC20 tokens on Base and Celo networks" />
         
         {/* Farcaster Mini App Embed Meta Tags */}
         <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://snarkels.vercel.app/api/og","button":{"title":"🎯 Start Quiz","action":{"type":"launch_miniapp","url":"https://snarkels.vercel.app","name":"Snarkels","splashImageUrl":"https://snarkels.vercel.app/logo.png","splashBackgroundColor":"#1f2937"}}}' />
@@ -50,7 +50,7 @@ export default async function RootLayout({
         
         {/* Social Media Meta Tags */}
         <meta property="og:title" content="Snarkels - Interactive Quiz Rewards" />
-        <meta property="og:description" content="Create and participate in interactive quizzes with crypto rewards on Base and Celo networks" />
+        <meta property="og:description" content="On-chain Snarkels rewards users in interactive sessions with ERC20 tokens on Base and Celo networks" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://snarkels.lol" />
         <meta property="og:image" content="https://snarkels.lol/api/og" />
@@ -58,7 +58,7 @@ export default async function RootLayout({
         {/* Twitter Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Snarkels - Interactive Quiz Rewards" />
-        <meta name="twitter:description" content="Create and participate in interactive quizzes with crypto rewards on Base and Celo networks" />
+        <meta name="twitter:description" content="On-chain Snarkels rewards users in interactive sessions with ERC20 tokens on Base and Celo networks" />
         <meta name="twitter:image" content="https://snarkels.lol/api/og" />
       </head>
       <body className={inter.className}>
