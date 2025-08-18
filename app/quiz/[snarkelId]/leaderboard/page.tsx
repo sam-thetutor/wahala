@@ -292,6 +292,21 @@ export default function QuizLeaderboardPage() {
         
         tokenAddress = expectedToken;
         totalRewardPool = expectedAmount;
+        
+        // Debug: Log the raw values from contract
+        console.log('🔍 Raw contract values:');
+        console.log('  - Expected token:', expectedToken);
+        console.log('  - Expected amount (raw):', expectedAmount);
+        console.log('  - Expected amount type:', typeof expectedAmount);
+        console.log('  - Can convert to BigInt:', (() => {
+          try {
+            BigInt(expectedAmount);
+            return true;
+          } catch {
+            return false;
+          }
+        })());
+        
         console.log('✅ On-chain reward info:', { tokenAddress, totalRewardPool });
       } catch (contractError) {
         console.error('Failed to get on-chain reward info:', contractError);
@@ -310,10 +325,22 @@ export default function QuizLeaderboardPage() {
       const amounts = validParticipants.map(entry => {
         // Calculate each participant's share based on their score from database
         const share = entry.score / totalPoints;
-        // Convert to the token's decimal precision (assuming 18 decimals like most ERC20)
-        const rewardAmount = (parseFloat(totalRewardPool) * share).toFixed(18);
         
-        console.log(`🎯 ${entry.name}: Score ${entry.score}, Share ${(share * 100).toFixed(2)}%, Reward ${rewardAmount}`);
+        // totalRewardPool is already in the smallest token units (wei for 18 decimals, etc.)
+        // We need to calculate the proportional amount without losing precision
+        const totalRewardPoolBigInt = BigInt(totalRewardPool);
+        
+        // Calculate proportional amount: (totalReward * score) / totalPoints
+        // This avoids floating point precision issues
+        const rewardAmountBigInt = (totalRewardPoolBigInt * BigInt(entry.score)) / BigInt(totalPoints);
+        
+        // Ensure the amount is at least 1 (smallest unit) to avoid zero amounts
+        const finalAmount = rewardAmountBigInt > 0 ? rewardAmountBigInt : BigInt(1);
+        
+        // Convert back to string for the contract call
+        const rewardAmount = finalAmount.toString();
+        
+        console.log(`🎯 ${entry.name}: Score ${entry.score}, Share ${(share * 100).toFixed(2)}%, Reward ${rewardAmount} (smallest units)`);
         
         return rewardAmount;
       });
@@ -326,10 +353,52 @@ export default function QuizLeaderboardPage() {
       console.log('  - Winners (from database):', winners);
       console.log('  - Amounts (calculated):', amounts);
       
+      // Validate amounts before contract call
+      const totalCalculatedAmount = amounts.reduce((sum, amount) => sum + BigInt(amount), BigInt(0));
+      const totalRewardPoolBigInt = BigInt(totalRewardPool);
+      
+      console.log('🔍 Amount validation:');
+      console.log('  - Total calculated amount:', totalCalculatedAmount.toString());
+      console.log('  - Total reward pool:', totalRewardPoolBigInt.toString());
+      console.log('  - Amounts are valid BigInts:', amounts.every(amount => {
+        try {
+          BigInt(amount);
+          return true;
+        } catch {
+          return false;
+        }
+      }));
+      
+      // Ensure we don't exceed the total reward pool
+      if (totalCalculatedAmount > totalRewardPoolBigInt) {
+        throw new Error(`Total calculated amount (${totalCalculatedAmount.toString()}) exceeds reward pool (${totalRewardPoolBigInt.toString()})`);
+      }
+      
+      // Final validation: ensure all amounts are valid BigInts
+      const invalidAmounts = amounts.filter(amount => {
+        try {
+          BigInt(amount);
+          return false;
+        } catch {
+          return true;
+        }
+      });
+      
+      if (invalidAmounts.length > 0) {
+        throw new Error(`Invalid amounts found: ${invalidAmounts.join(', ')}`);
+      }
+      
       // SUBMIT PARAMS WHEN CALLING FALLBACK DISTRIBUTE REWARDS
       console.log('🚀 Calling fallbackDistributeRewards with calculated parameters...');
       
       // Call the smart contract fallbackDistributeRewards function
+      console.log('📤 Contract call parameters:');
+      console.log('  - Session ID:', sessionId, '(type:', typeof sessionId, ')');
+      console.log('  - Token Address:', tokenAddress, '(type:', typeof tokenAddress, ')');
+      console.log('  - Winners count:', winners.length);
+      console.log('  - Amounts count:', amounts.length);
+      console.log('  - Sample amounts:', amounts.slice(0, 3));
+      
       const result = await fallbackDistributeRewards({
         sessionId: sessionId,
         tokenAddress: tokenAddress as `0x${string}`,
