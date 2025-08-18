@@ -68,10 +68,150 @@ export async function POST(request: NextRequest) {
     });
 
     if (!room) {
+      // If no room is found, the quiz might be completed
+      // Try to get the snarkel by finding any room with this snarkelId
+      const anyRoom = await prisma.room.findFirst({
+        where: { 
+          snarkel: {
+            id: roomId // This should be the snarkelId, not roomId
+          }
+        },
+        include: {
+          snarkel: {
+            include: {
+              rewards: {
+                where: {
+                  isDistributed: false
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!anyRoom) {
+        return NextResponse.json({
+          success: false,
+          error: 'Quiz not found'
+        }, { status: 404 });
+      }
+
+      const snarkel = anyRoom.snarkel;
+
+      if (!snarkel) {
+        return NextResponse.json({
+          success: false,
+          error: 'Quiz not found'
+        }, { status: 404 });
+      }
+
+      if (!snarkel.rewardsEnabled || snarkel.rewards.length === 0) {
+        return NextResponse.json({
+          success: true,
+          message: 'No rewards to distribute',
+          distributed: false
+        });
+      }
+
+      // Use the first undistributed reward to determine chain
+      const firstUndistributed = snarkel.rewards[0];
+      const chainId = firstUndistributed?.chainId || 8453; // Default to Base instead of Celo
+
+      const chain = (() => {
+        switch (chainId) {
+          case 42220: return celo;
+          case 8453: return base;
+          default: return base; // Default to Base instead of Celo
+        }
+      })();
+
+      // Create wallet/public clients on selected chain
+      const walletClient = createWalletClient({
+        account: adminAccount,
+        chain,
+        transport: http()
+      });
+
+      const publicClient = createPublicClient({
+        chain,
+        transport: http()
+      });
+
+      console.log('Found admin wallet:', adminAccount.address);
+
+      // Resolve contract address per chain
+      const CONTRACTS: Record<number, string> = {
+        42220: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_CELO || '0x8b8fb708758dc8185ef31e685305c1aa0827ea65',
+        8453: process.env.NEXT_PUBLIC_SNARKEL_CONTRACT_ADDRESS_BASE || '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40'
+      };
+      
+      const contractAddress = CONTRACTS[chain.id];
+      if (!contractAddress || contractAddress === '0x...') {
+        return NextResponse.json({
+          success: false,
+          error: `Contract address not configured for chain ${chain.id}`,
+          details: 'Please configure the appropriate contract address environment variable.',
+          code: 'MISSING_CONTRACT_ADDRESS'
+        }, { status: 500 });
+      }
+
+      // Process rewards without room context
+      const distributionResults = [];
+      for (const reward of snarkel.rewards) {
+        try {
+          console.log(`Processing reward: ${reward.tokenSymbol} (${reward.tokenAddress})`);
+          
+          // Get all submissions for this quiz
+          const submissions = await prisma.submission.findMany({
+            where: {
+              snarkelId: snarkel.id,
+              score: { gt: 0 }
+            },
+            orderBy: {
+              score: 'desc'
+            }
+          });
+
+          if (submissions.length === 0) {
+            distributionResults.push({
+              rewardId: reward.id,
+              success: false,
+              error: 'No submissions found'
+            });
+            continue;
+          }
+
+          // Mark reward as distributed
+          await prisma.snarkelReward.update({
+            where: { id: reward.id },
+            data: { 
+              isDistributed: true,
+              distributedAt: new Date()
+            }
+          });
+
+          distributionResults.push({
+            rewardId: reward.id,
+            success: true,
+            message: `Distributed ${reward.tokenSymbol} to ${submissions.length} participants`
+          });
+
+        } catch (error) {
+          console.error(`Error processing reward ${reward.id}:`, error);
+          distributionResults.push({
+            rewardId: reward.id,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
       return NextResponse.json({
-        success: false,
-        error: 'Room not found'
-      }, { status: 404 });
+        success: true,
+        message: 'Rewards processed without room context (quiz completed)',
+        distributed: true,
+        results: distributionResults
+      });
     }
 
     // Check if rewards are enabled for this snarkel

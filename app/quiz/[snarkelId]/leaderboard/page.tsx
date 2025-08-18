@@ -129,12 +129,14 @@ export default function QuizLeaderboardPage() {
   const [showQuestionDetails, setShowQuestionDetails] = useState<string | null>(null);
   const [distributingRewards, setDistributingRewards] = useState(false);
   const [rewardDistributionStatus, setRewardDistributionStatus] = useState<string>('');
+  const [questions, setQuestions] = useState<any[]>([]);
 
   const snarkelId = params.snarkelId as string;
 
   useEffect(() => {
     if (snarkelId) {
       fetchLeaderboard();
+      fetchQuestions();
     }
   }, [snarkelId, address]);
 
@@ -181,6 +183,20 @@ export default function QuizLeaderboardPage() {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchQuestions = async () => {
+    try {
+      const response = await fetch(`/api/quiz/${snarkelId}/questions`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setQuestions(data.questions || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching questions:', error);
     }
   };
 
@@ -686,8 +702,8 @@ export default function QuizLeaderboardPage() {
                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500 mt-1">
                           <span className="flex items-center gap-1 flex-shrink-0">
                             <Target className="w-3 h-3" />
-                            <span className="hidden sm:inline">{entry.totalQuestions || 'N/A'} questions</span>
-                            <span className="sm:hidden">{entry.totalQuestions || 'N/A'}q</span>
+                            <span className="hidden sm:inline">{entry.totalQuestions || questions.length} questions</span>
+                            <span className="sm:hidden">{entry.totalQuestions || questions.length}q</span>
                           </span>
                           {entry.correctAnswers !== undefined && (
                             <span className="flex items-center gap-1 flex-shrink-0">
@@ -698,8 +714,8 @@ export default function QuizLeaderboardPage() {
                           )}
                           <span className="flex items-center gap-1 flex-shrink-0">
                             <Percent className="w-3 h-3" />
-                            <span className="hidden sm:inline">{entry.accuracy.toFixed(1)}% accuracy</span>
-                            <span className="sm:hidden">{entry.accuracy.toFixed(1)}%</span>
+                            <span className="hidden sm:inline">{entry.accuracy ? entry.accuracy.toFixed(1) : '0.0'}% accuracy</span>
+                            <span className="sm:hidden">{entry.accuracy ? entry.accuracy.toFixed(1) : '0.0'}%</span>
                           </span>
                           {entry.averageTimePerQuestion && (
                             <span className="flex items-center gap-1 flex-shrink-0">
