@@ -93,10 +93,10 @@ const ProgressModal: React.FC<ProgressModalProps> = ({ isOpen, steps, currentSte
                       <div className="flex items-start gap-2">
                         <Star className="w-3 h-3 text-yellow-600 mt-0.5 flex-shrink-0" />
                         <div className="text-xs" style={{ color: '#655947' }}>
-                          <p className="font-medium">Featured Quiz Benefits:</p>
+                          <p className="font-medium">Featured Snarkel Benefits:</p>
                           <ul className="mt-1 space-y-0.5">
                             <li>• Appears on homepage for all users</li>
-                            <li>• Anyone can start the quiz session</li>
+                            <li>• Anyone can start the Snarkel session</li>
                             <li>• Higher visibility and participation</li>
                           </ul>
                         </div>
@@ -198,7 +198,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, snarkelCod
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-handwriting text-gray-700">
               <Sparkles className="w-4 h-4 text-yellow-500" />
-              <span>Anyone can start a session for featured quizzes.</span>
+              <span>Anyone can start a session for featured Snarkels.</span>
             </div>
             {rewardsEnabled && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -733,20 +733,20 @@ export default function SnarkelCreationPage() {
       },
       {
         id: 'create-quiz',
-        title: 'Creating Quiz',
-        description: 'Creating quiz in database and setting up blockchain',
+        title: 'Creating Snarkel',
+        description: 'Creating Snarkel in database and setting up blockchain',
         status: 'pending'
       },
       ...(snarkel.isFeatured ? [{
         id: 'featured-setup',
-        title: 'Featured Quiz Setup',
+        title: 'Featured Snarkel Setup',
         description: 'Setting up featured content and homepage visibility',
         status: 'pending' as const
       }] : []),
       ...(snarkel.rewards.enabled ? [{
         id: 'create-session',
-        title: 'Creating Quiz Session',
-        description: 'Setting up quiz session with rewards pool',
+        title: 'Creating Snarkel Session',
+        description: 'Setting up Snarkel session with rewards pool',
         status: 'pending' as const
       }] : []),
       {
@@ -773,7 +773,7 @@ export default function SnarkelCreationPage() {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate preparation
       updateProgressStep(0, 'completed');
 
-      // Step 2: Create quiz (database + blockchain if rewards enabled)
+      // Step 2: Create Snarkel (database + blockchain if rewards enabled)
       updateProgressStep(1, 'loading');
       console.log('=== CREATE PAGE DEBUG ===');
       console.log('Snarkel data being sent:', JSON.stringify(snarkelData, null, 2));
@@ -820,24 +820,24 @@ export default function SnarkelCreationPage() {
       
       if (result.success && result.snarkelCode) {
         updateProgressStep(1, 'completed');
-        console.log('Quiz creation completed, snarkelCode:', result.snarkelCode);
+        console.log('Snarkel creation completed, snarkelCode:', result.snarkelCode);
         
-        // Handle featured quiz setup if enabled
+        // Handle featured Snarkel setup if enabled
         if (snarkelData.isFeatured) {
           updateProgressStep(2, 'loading');
-          console.log('Setting up featured quiz...');
+          console.log('Setting up featured Snarkel...');
           await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate featured setup
           updateProgressStep(2, 'completed');
-          console.log('Featured quiz setup completed');
+          console.log('Featured Snarkel setup completed');
         }
         
-        // Handle featured quiz setup if enabled
+        // Handle featured Snarkel setup if enabled
         if (snarkelData.isFeatured) {
           updateProgressStep(2, 'loading');
-          console.log('Setting up featured quiz...');
+          console.log('Setting up featured Snarkel...');
           await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate featured setup
           updateProgressStep(2, 'completed');
-          console.log('Featured quiz setup completed');
+          console.log('Featured Snarkel setup completed');
         }
         
         // If rewards are enabled and blockchain operations succeeded, create session
@@ -848,7 +848,7 @@ export default function SnarkelCreationPage() {
           
           // Create session step
           updateProgressStep(sessionStepIndex, 'loading');
-          console.log('Creating quiz session with rewards...');
+          console.log('Creating Snarkel session with rewards...');
           
           try {
             // Call the create-session API to create a session immediately
@@ -866,7 +866,7 @@ export default function SnarkelCreationPage() {
             
             if (sessionResponse.ok) {
               const sessionData = await sessionResponse.json();
-              console.log('Quiz session created:', sessionData);
+              console.log('Snarkel session created:', sessionData);
               updateProgressStep(sessionStepIndex, 'completed');
             } else {
               const errorData = await sessionResponse.json();
@@ -910,7 +910,7 @@ export default function SnarkelCreationPage() {
           updateProgressStep(blockchainStepIndex, 'error', blockchainError);
           updateProgressStep(tokenStepIndex, 'error', 'Token operations skipped due to blockchain failure');
           
-          console.log('Quiz created but blockchain operations failed:', result.error);
+          console.log('Snarkel created but blockchain operations failed:', result.error);
         } else {
           // Skip blockchain and token steps if no rewards
           const blockchainStepIndex = snarkelData.isFeatured ? 3 : 2;
@@ -926,7 +926,7 @@ export default function SnarkelCreationPage() {
           setShowSuccessModal(true);
         }, 600);
       } else {
-        updateProgressStep(1, 'error', result.error || 'Failed to create quiz');
+        updateProgressStep(1, 'error', result.error || 'Failed to create Snarkel');
       }
     } catch (error: any) {
       updateProgressStep(currentProgressStep, 'error', error.message || 'An unexpected error occurred');
@@ -1381,7 +1381,7 @@ export default function SnarkelCreationPage() {
                               <div className="flex items-start gap-2">
                                 <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                                 <div className="text-sm" style={{ color: '#655947' }}>
-                                  <p className="font-medium mb-1">Featured Quiz Benefits:</p>
+                                  <p className="font-medium mb-1">Featured Snarkel Benefits:</p>
                                   <ul className="space-y-1 text-xs">
                                     <li>• Appears on homepage for all users</li>
                                     <li>• Can be started by anyone (not just creator)</li>

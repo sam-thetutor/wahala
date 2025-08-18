@@ -3,11 +3,11 @@
 /**
  * IMPORTANT: NEVER USE DUMMY DATA!
  * 
- * This page fetches featured quizzes from the actual database via API routes.
+ * This page fetches featured Snarkels from the actual database via API routes.
  * Always use real data from your database and API endpoints.
  * 
  * API Route: /api/snarkel/featured
- * Database: Featured snarkels with priority ordering
+ * Database: Featured Snarkels with priority ordering
  */
 
 import React, { useState, useEffect } from 'react';
@@ -38,8 +38,8 @@ import {
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { useAccount } from 'wagmi';
 
-// Quiz type definition - Updated to match actual API response
-interface Quiz {
+// Snarkel type definition - Updated to match actual API response
+interface Snarkel {
   id: number;
   title: string;
   description: string;
@@ -64,8 +64,8 @@ interface Quiz {
   priority: number;
 }
 
-// Featured Quiz Card Component
-const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
+// Featured Snarkel Card Component
+const FeaturedSnarkelCard = ({ snarkel, index }: { snarkel: Snarkel; index: number }) => {
   const { isConnected } = useAccount();
   const [isHovered, setIsHovered] = useState(false);
   
@@ -97,24 +97,24 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
             <div className="flex-1 min-w-0">
               {/* Title */}
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
-                {quiz.title}
+                {snarkel.title}
               </h3>
               
               {/* Description */}
               <p className="text-sm sm:text-base text-gray-600 line-clamp-2 leading-relaxed">
-                {quiz.description}
+                {snarkel.description}
               </p>
             </div>
             
             {/* Category and Difficulty */}
             <div className="flex flex-col items-end gap-2 ml-3">
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                {quiz.category}
+                {snarkel.category}
               </span>
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 border border-gray-200">
-                <span className="text-sm">{difficultyIcons[quiz.difficulty]}</span>
-                <span className={`text-xs font-semibold ${difficultyColors[quiz.difficulty]}`}>
-                  {quiz.difficulty}
+                <span className="text-sm">{difficultyIcons[snarkel.difficulty]}</span>
+                <span className={`text-xs font-semibold ${difficultyColors[snarkel.difficulty]}`}>
+                  {snarkel.difficulty}
                 </span>
               </div>
             </div>
@@ -126,14 +126,14 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
               <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
                 <Users className="w-4 h-4" />
               </div>
-              <p className="text-sm font-semibold text-gray-900">{quiz.formattedParticipants}</p>
+              <p className="text-sm font-semibold text-gray-900">{snarkel.formattedParticipants}</p>
               <p className="text-xs text-gray-500">Players</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
                 <Clock className="w-4 h-4" />
               </div>
-              <p className="text-sm font-semibold text-gray-900">{quiz.duration}</p>
+              <p className="text-sm font-semibold text-gray-900">{snarkel.duration}</p>
               <p className="text-xs text-gray-500">Duration</p>
             </div>
             <div className="text-center">
@@ -141,10 +141,10 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
                 <Trophy className="w-4 h-4" />
               </div>
               <p className="text-sm font-semibold text-gray-900">
-                {quiz.reward ? `${quiz.reward.amount} ${quiz.reward.symbol}` : 'No rewards'}
+                {snarkel.reward ? `${snarkel.reward.amount} ${snarkel.reward.symbol}` : 'No rewards'}
               </p>
               <p className="text-xs text-gray-500">
-                {quiz.reward ? 'Reward' : 'Free to play'}
+                {snarkel.reward ? 'Reward' : 'Free to play'}
               </p>
             </div>
           </div>
@@ -152,11 +152,11 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
           {/* Action Button */}
           <div className="pt-2">
             <Link
-              href={`/quiz/${quiz.snarkelCode}`}
+              href={`/snarkel/${snarkel.snarkelCode}`}
               className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-3 rounded-xl font-semibold text-center transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group"
             >
               <Play className="w-4 h-4 group-hover:scale-110 transition-transform" />
-              Start Quiz
+              Start Snarkel
             </Link>
           </div>
         </div>
@@ -167,86 +167,86 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
 
 export default function FeaturedPage() {
   const { isConnected } = useAccount();
-  const [featuredQuizzes, setFeaturedQuizzes] = useState<Quiz[]>([]);
-  const [loadingQuizzes, setLoadingQuizzes] = useState(true);
-  const [quizError, setQuizError] = useState<string | null>(null);
+  const [featuredSnarkels, setFeaturedSnarkels] = useState<Snarkel[]>([]);
+  const [loadingSnarkels, setLoadingSnarkels] = useState(true);
+  const [snarkelError, setSnarkelError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Fetch featured quizzes from API instead of using dummy data
+  // Fetch featured Snarkels from API instead of using dummy data
   useEffect(() => {
-    const fetchFeaturedQuizzes = async () => {
+    const fetchFeaturedSnarkels = async () => {
       try {
-        setLoadingQuizzes(true);
-        setQuizError(null);
+        setLoadingSnarkels(true);
+        setSnarkelError(null);
         const response = await fetch('/api/snarkel/featured?limit=50');
         
         if (response.ok) {
           const data = await response.json();
-          setFeaturedQuizzes(data.featuredSnarkels || []);
+          setFeaturedSnarkels(data.featuredSnarkels || []);
         } else {
           const errorData = await response.json().catch(() => ({}));
-          const errorMessage = errorData.message || 'Failed to fetch featured quizzes';
-          console.error('Failed to fetch featured quizzes:', errorMessage);
-          setQuizError(errorMessage);
-          setFeaturedQuizzes([]);
+          const errorMessage = errorData.message || 'Failed to fetch featured Snarkels';
+          console.error('Failed to fetch featured Snarkels:', errorMessage);
+          setSnarkelError(errorMessage);
+          setFeaturedSnarkels([]);
         }
       } catch (error) {
-        console.error('Error fetching featured quizzes:', error);
-        setQuizError('Network error. Please check your connection and try again.');
-        setFeaturedQuizzes([]);
+        console.error('Error fetching featured Snarkels:', error);
+        setSnarkelError('Network error. Please check your connection and try again.');
+        setFeaturedSnarkels([]);
       } finally {
-        setLoadingQuizzes(false);
+        setLoadingSnarkels(false);
         setIsLoaded(true);
       }
     };
 
-    fetchFeaturedQuizzes();
+    fetchFeaturedSnarkels();
   }, []);
 
   // Retry function for failed API calls
   const retryFetch = () => {
-    setQuizError(null);
-    setLoadingQuizzes(true);
-    const fetchFeaturedQuizzes = async () => {
+    setSnarkelError(null);
+    setLoadingSnarkels(true);
+    const fetchFeaturedSnarkels = async () => {
       try {
         const response = await fetch('/api/snarkel/featured?limit=50');
         
         if (response.ok) {
           const data = await response.json();
-          setFeaturedQuizzes(data.featuredSnarkels || []);
+          setFeaturedSnarkels(data.featuredSnarkels || []);
         } else {
           const errorData = await response.json().catch(() => ({}));
-          const errorMessage = errorData.message || 'Failed to fetch featured quizzes';
-          setQuizError(errorMessage);
+          const errorMessage = errorData.message || 'Failed to fetch featured Snarkels';
+          setSnarkelError(errorMessage);
         }
       } catch (error) {
-        setQuizError('Network error. Please check your connection and try again.');
+        setSnarkelError('Network error. Please check your connection and try again.');
       } finally {
-        setLoadingQuizzes(false);
+        setLoadingSnarkels(false);
       }
     };
     
-    fetchFeaturedQuizzes();
+    fetchFeaturedSnarkels();
   };
 
-  // Filter quizzes based on search and filters
-  const filteredQuizzes = featuredQuizzes.filter(quiz => {
-    const matchesSearch = quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         quiz.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (quiz.category && quiz.category.toLowerCase().includes(searchTerm.toLowerCase()));
+  // Filter Snarkels based on search and filters
+  const filteredSnarkels = featuredSnarkels.filter(snarkel => {
+    const matchesSearch = snarkel.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         snarkel.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (snarkel.category && snarkel.category.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesCategory = selectedCategory === 'all' || quiz.category === selectedCategory;
-    const matchesDifficulty = selectedDifficulty === 'all' || quiz.difficulty === selectedDifficulty;
+    const matchesCategory = selectedCategory === 'all' || snarkel.category === selectedCategory;
+    const matchesDifficulty = selectedDifficulty === 'all' || snarkel.difficulty === selectedDifficulty;
     
     return matchesSearch && matchesCategory && matchesDifficulty;
   });
 
   // Get unique categories from actual data
-  const categories = ['all', ...Array.from(new Set(featuredQuizzes.map(q => q.category).filter(Boolean)))];
+  const categories = ['all', ...Array.from(new Set(featuredSnarkels.map(s => s.category).filter(Boolean)))];
   const difficulties = ['all', 'Easy', 'Medium', 'Hard'];
 
   return (
@@ -292,9 +292,16 @@ export default function FeaturedPage() {
             
             <div className="flex items-center gap-4">
               <Link
+                href="/admin"
+                className="group p-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl transition-all duration-300 text-white hover:scale-105 transform shadow-lg hover:shadow-xl"
+                title="Dashboard"
+              >
+                <Trophy className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+              </Link>
+              <Link
                 href="/create"
                 className="group p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl transition-all duration-300 text-white hover:scale-105 transform shadow-lg hover:shadow-xl"
-                title="Create Quiz"
+                title="Create Snarkel"
               >
                 <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
               </Link>
@@ -314,7 +321,7 @@ export default function FeaturedPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search featured quizzes..."
+                placeholder="Search featured Snarkels..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
@@ -382,8 +389,8 @@ export default function FeaturedPage() {
         {/* Results Count */}
         <div className="flex items-center justify-between mb-6">
           <p className="text-gray-600">
-            Showing <span className="font-semibold text-gray-900">{filteredQuizzes.length}</span> of{' '}
-            <span className="font-semibold text-gray-900">{featuredQuizzes.length}</span> featured quizzes
+            Showing <span className="font-semibold text-gray-900">{filteredSnarkels.length}</span> of{' '}
+            <span className="font-semibold text-gray-900">{featuredSnarkels.length}</span> featured Snarkels
           </p>
           
           {searchTerm || selectedCategory !== 'all' || selectedDifficulty !== 'all' ? (
@@ -400,8 +407,8 @@ export default function FeaturedPage() {
           ) : null}
         </div>
 
-        {/* Quizzes Grid/List */}
-        {loadingQuizzes ? (
+        {/* Snarkels Grid/List */}
+        {loadingSnarkels ? (
           // Loading state
           <div className={`${
             viewMode === 'grid' 
@@ -417,11 +424,11 @@ export default function FeaturedPage() {
               </div>
             ))}
           </div>
-        ) : quizError ? (
+        ) : snarkelError ? (
           // Error state
           <div className="text-center py-12">
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 max-w-md mx-auto">
-              <p className="text-lg text-amber-800 mb-4">{quizError}</p>
+              <p className="text-lg text-amber-800 mb-4">{snarkelError}</p>
               <button 
                 onClick={retryFetch}
                 className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
@@ -430,14 +437,14 @@ export default function FeaturedPage() {
               </button>
             </div>
           </div>
-        ) : filteredQuizzes.length === 0 ? (
+        ) : filteredSnarkels.length === 0 ? (
           // Empty state
           <div className="text-center py-12">
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-8 max-w-md mx-auto">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Search className="w-8 h-8 text-blue-600" />
               </div>
-              <p className="text-lg text-blue-800 mb-2">No quizzes found</p>
+              <p className="text-lg text-blue-800 mb-2">No Snarkels found</p>
               <p className="text-blue-600 mb-4">Try adjusting your search or filters</p>
               <button
                 onClick={() => {
@@ -452,14 +459,14 @@ export default function FeaturedPage() {
             </div>
           </div>
         ) : (
-          // Quiz cards
+          // Snarkel cards
           <div className={`${
             viewMode === 'grid' 
               ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6' 
               : 'space-y-4'
           }`}>
-            {filteredQuizzes.map((quiz, index) => (
-              <FeaturedQuizCard key={quiz.id} quiz={quiz} index={index} />
+            {filteredSnarkels.map((snarkel, index) => (
+              <FeaturedSnarkelCard key={snarkel.id} snarkel={snarkel} index={index} />
             ))}
           </div>
         )}
@@ -468,10 +475,10 @@ export default function FeaturedPage() {
         <div className="text-center mt-16">
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl p-8 border border-blue-200 shadow-xl">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              Want to create your own featured quiz?
+              Want to create your own featured Snarkel?
             </h3>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-              Join our community of quiz creators and share your knowledge with the world. 
+              Join our community of Snarkel creators and share your knowledge with the world. 
               Create engaging content and earn rewards!
             </p>
             <Link
@@ -479,7 +486,7 @@ export default function FeaturedPage() {
               className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 shadow-xl hover:shadow-2xl"
             >
               <Plus className="w-5 h-5" />
-              Create Your Quiz
+              Create Your Snarkel
             </Link>
           </div>
         </div>

@@ -45,7 +45,7 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <span className="font-handwriting text-sm sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 sm:gap-3 relative z-10 truncate text-blue-700 font-semibold">
                   <div className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 rounded-full border-2 border-blue-400 bg-blue-100 flex-shrink-0 group-hover:bg-blue-200 transition-colors"></div>
-                  <span className="hidden sm:inline">Join a Quiz</span>
+                  <span className="hidden sm:inline">Join a Snarkel</span>
                   <span className="sm:hidden">Join</span>
                 </span>
               </div>
@@ -59,7 +59,7 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <span className="font-handwriting text-sm sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 sm:gap-3 relative z-10 truncate text-blue-700 font-semibold">
                   <Plus className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-600" />
-                  <span className="hidden sm:inline">Create Quiz</span>
+                  <span className="hidden sm:inline">Create Snarkel</span>
                   <span className="sm:hidden">Create</span>
                 </span>
               </div>
@@ -287,7 +287,7 @@ export default function HomePage() {
               </div>
             </div>
 
-                        {/* Featured Quizzes Section */}
+                        {/* Featured Snarkels Section */}
             <div className={`flex-1 transition-all duration-1500 delay-300 ${
               isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
             }`}>
@@ -331,7 +331,7 @@ export default function HomePage() {
                 </div>
                 
                 <p className="text-gray-500 text-sm mt-4">
-                  Browse curated quizzes by category, difficulty, and more
+                  Browse curated Snarkels by category, difficulty, and more
                 </p>
               </div>
             </div>
@@ -402,7 +402,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Featured Quizzes Section - Center */}
+            {/* Featured Snarkels Section - Center */}
             <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-1500 delay-700 ${
               isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
             }`}>
@@ -445,7 +445,7 @@ export default function HomePage() {
                 </div>
                 
                 <p className="text-gray-500 text-lg mt-6">
-                  Browse curated quizzes by category, difficulty, and more
+                  Browse curated Snarkels by category, difficulty, and more
                 </p>
               </div>
             </div>
