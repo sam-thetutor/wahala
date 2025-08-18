@@ -769,6 +769,16 @@ export default function QuizRoomPage() {
       }
     });
 
+    newSocket.on('redirectToLeaderboard', (data: {snarkelId: string, message: string}) => {
+      // Show redirect message
+      setTvMessage(data.message);
+      
+      // Redirect to leaderboard after 3 seconds
+      setTimeout(() => {
+        router.push(`/quiz/${data.snarkelId}/leaderboard`);
+      }, 3000);
+    });
+
     newSocket.on('rewardsDistributed', (data: {success: boolean, message: string, results?: any[], error?: string}) => {
       setDistributingRewards(false);
       

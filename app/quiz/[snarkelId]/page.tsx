@@ -13,7 +13,8 @@ import {
   ArrowLeft,
   Star,
   Calendar,
-  Gamepad2
+  Gamepad2,
+  Home
 } from 'lucide-react';
 import Link from 'next/link';
 import WalletConnectButton from '@/components/WalletConnectButton';
@@ -173,15 +174,16 @@ export default function QuizPage() {
             <div className="flex items-center gap-4">
               <Link
                 href="/"
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2 text-gray-600 hover:text-gray-800"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                <ArrowLeft className="w-5 h-5" />
+                <span className="hidden sm:inline">Back to Home</span>
               </Link>
               <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
                 <Trophy className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-handwriting font-bold text-gray-800">
+                <h1 className="text-xl sm:text-2xl font-handwriting font-bold text-gray-800">
                   {quiz.title}
                 </h1>
                 <p className="text-gray-600 text-sm">
@@ -189,16 +191,24 @@ export default function QuizPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {quiz.isCompleted && (
                 <Link
                   href={`/quiz/${snarkelId}/leaderboard`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all font-medium"
+                  className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all font-medium text-sm sm:text-base"
                 >
                   <BarChart3 className="w-4 h-4" />
-                  View Leaderboard
+                  <span className="hidden sm:inline">View Leaderboard</span>
+                  <span className="sm:hidden">Leaderboard</span>
                 </Link>
               )}
+              <Link
+                href="/"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-gray-800"
+                title="Go to Home"
+              >
+                <Home className="w-5 h-5" />
+              </Link>
               <WalletConnectButton />
             </div>
           </div>
@@ -206,55 +216,55 @@ export default function QuizPage() {
       </div>
 
       {/* Quiz Info */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Quiz Details */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-handwriting font-bold text-gray-800 mb-4">
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-handwriting font-bold text-gray-800 mb-4">
                 Quiz Information
               </h2>
               <div className="space-y-4">
                 {quiz.description && (
                   <div>
                     <h3 className="font-semibold text-gray-700 mb-2">Description</h3>
-                    <p className="text-gray-600">{quiz.description}</p>
+                    <p className="text-gray-600 text-sm sm:text-base">{quiz.description}</p>
                   </div>
                 )}
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <Target className="w-5 h-5 text-purple-500" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Target className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
                     <div>
-                      <p className="text-sm text-gray-600">Questions</p>
-                      <p className="font-semibold">{quiz.maxQuestions || 'N/A'}</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Questions</p>
+                      <p className="font-semibold text-sm sm:text-base">{quiz.maxQuestions || 'N/A'}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    <Star className="w-5 h-5 text-yellow-500" />
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
                     <div>
-                      <p className="text-sm text-gray-600">Base Points</p>
-                      <p className="font-semibold">{quiz.basePointsPerQuestion || 'N/A'}</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Base Points</p>
+                      <p className="font-semibold text-sm sm:text-base">{quiz.basePointsPerQuestion || 'N/A'}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    <Clock className="w-5 h-5 text-green-500" />
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                     <div>
-                      <p className="text-sm text-gray-600">Speed Bonus</p>
-                      <p className="font-semibold">
+                      <p className="text-xs sm:text-sm text-gray-600">Speed Bonus</p>
+                      <p className="font-semibold text-sm sm:text-base">
                         {quiz.speedBonusEnabled ? `+${quiz.maxSpeedBonus}` : 'Disabled'}
                       </p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    <Trophy className="w-5 h-5 text-orange-500" />
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
                     <div>
-                      <p className="text-sm text-gray-600">Rewards</p>
-                      <p className="font-semibold">
+                      <p className="text-xs sm:text-sm text-gray-600">Rewards</p>
+                      <p className="font-semibold text-sm sm:text-base">
                         {quiz.rewardsEnabled ? 'Enabled' : 'Disabled'}
                       </p>
                     </div>
@@ -262,7 +272,7 @@ export default function QuizPage() {
                 </div>
                 
                 <div className="pt-4 border-t border-gray-100">
-                  <div className="flex items-center justify-between text-sm text-gray-500">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500">
                     <span>Created by {quiz.creator.name || `${quiz.creator.address.slice(0, 6)}...${quiz.creator.address.slice(-4)}`}</span>
                     <span>{formatDate(quiz.createdAt)}</span>
                   </div>
@@ -272,19 +282,19 @@ export default function QuizPage() {
 
             {/* Active Rooms */}
             {getActiveRooms().length > 0 && (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-xl font-handwriting font-bold text-gray-800 mb-4 flex items-center gap-2">
-                  <Play className="w-5 h-5 text-green-500" />
+              <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-handwriting font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <Play className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                   Active Sessions
                 </h2>
                 <div className="space-y-3">
                   {getActiveRooms().map((room) => (
-                    <div key={room.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div key={room.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 bg-gray-50 rounded-lg">
                       <div>
-                        <h3 className="font-semibold text-gray-800">
+                        <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
                           Session #{room.sessionNumber}
                         </h3>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-xs sm:text-sm text-gray-600">
                           {room.currentParticipants}/{room.maxParticipants} participants
                         </p>
                       </div>

@@ -1021,6 +1021,12 @@ async function endQuiz(roomId) {
 
       // Send final results
       io.to(roomId).emit('gameEnd', finalLeaderboard);
+      
+      // Emit redirect to leaderboard event
+      io.to(roomId).emit('redirectToLeaderboard', {
+        snarkelId: room.snarkelId,
+        message: 'Quiz completed! Redirecting to leaderboard...'
+      });
 
       // Automatically distribute rewards if enabled
       if (room.snarkel.rewardsEnabled) {

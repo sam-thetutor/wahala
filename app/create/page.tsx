@@ -1062,35 +1062,42 @@ export default function SnarkelCreationPage() {
             
             <div className="relative z-10 flex items-center justify-between">
               <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => window.history.back()}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors flex items-center gap-2 text-white hover:text-gray-100"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span className="hidden sm:inline">Back</span>
+                </button>
                 <div className="relative">
                   <Gamepad2 className="w-8 h-8 animate-bounce-slow" style={{ color: '#476520' }} />
                   <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-ping bg-yellow-400"></div>
                 </div>
                 <div>
-                  <h1 className="font-handwriting text-2xl font-bold" style={{ color: '#476520' }}>
+                  <h1 className="font-handwriting text-xl sm:text-2xl font-bold" style={{ color: '#476520' }}>
                     Create New Snarkel
                   </h1>
-                  <p className="font-handwriting text-sm text-gray-600 mt-0.5">Design your Web3 quiz experience!</p>
+                  <p className="font-handwriting text-xs sm:text-sm text-gray-600 mt-0.5">Design your Web3 quiz experience!</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button 
                   onClick={() => router.push('/admin')}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 transition-colors font-handwriting text-sm"
+                  className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 transition-colors font-handwriting text-xs sm:text-sm"
                   style={{ color: '#1e40af' }}
                 >
-                  <Trophy className="w-4 h-4" />
-                  My Quizzes
+                  <Trophy className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">My Quizzes</span>
+                  <span className="sm:hidden">Admin</span>
                 </button>
                 <WalletConnectButton />
                 <button 
-                  onClick={() => window.history.back()}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors font-handwriting text-sm"
-                  style={{ color: '#476520' }}
+                  onClick={() => router.push('/')}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white hover:text-gray-100"
+                  title="Go to Home"
                 >
-                  <Home className="w-4 h-4" />
-                  Back
+                  <Home className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -1146,7 +1153,7 @@ export default function SnarkelCreationPage() {
             <div className="flex flex-col lg:flex-row">
               {/* Vertical Sidebar - Mobile first, then desktop */}
               <div className="lg:w-64 bg-gradient-to-b from-gray-50 to-white border-b lg:border-b-0 lg:border-r border-gray-200">
-                <div className="p-4 space-y-2">
+                <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
                   {tabs.map((tab, index) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
@@ -1159,7 +1166,7 @@ export default function SnarkelCreationPage() {
                         key={tab.id}
                         onClick={() => canAccess ? setActiveTab(tab.id) : null}
                         disabled={!canAccess}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-handwriting font-medium rounded-xl transition-all transform hover:scale-105 ${
+                        className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-handwriting font-medium rounded-xl transition-all transform hover:scale-105 ${
                           isActive
                             ? 'text-white bg-gradient-to-r from-purple-500 to-blue-500 shadow-md scale-105'
                             : isCompleted
@@ -1169,15 +1176,15 @@ export default function SnarkelCreationPage() {
                             : 'text-gray-400 bg-gray-100 cursor-not-allowed opacity-60'
                         }`}
                       >
-                        <Icon size={18} />
-                        <span className="flex-1 text-left">{tab.label}</span>
+                        <Icon size={16} className="sm:w-[18px] sm:h-[18px]" />
+                        <span className="flex-1 text-left truncate">{tab.label}</span>
                         {isCompleted && (
-                          <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-white text-xs">✓</span>
                           </div>
                         )}
                         {!isCompleted && !canAccess && (
-                          <div className="w-5 h-5 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0">
+                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-white text-xs">🔒</span>
                           </div>
                         )}
@@ -1191,48 +1198,48 @@ export default function SnarkelCreationPage() {
               <div className="flex-1">
                 {/* Questions Tab - Horizontal Navigation */}
                 {activeTab === 'questions' && snarkel.questions.length > 0 && (
-                  <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <span className="font-handwriting font-bold text-sm text-gray-700">Questions:</span>
+                  <div className="border-b border-gray-200 bg-gray-50 px-2 sm:px-4 py-2 sm:py-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <span className="font-handwriting font-bold text-xs sm:text-sm text-gray-700">Questions:</span>
                       
                       {/* Question navigation pills */}
-                      <div className="flex overflow-x-auto gap-2 flex-1">
+                      <div className="flex overflow-x-auto gap-1 sm:gap-2 flex-1 pb-1 sm:pb-0">
                         {snarkel.questions.map((question, index) => (
                           <button
                             key={question.id}
                             onClick={() => setActiveQuestionIndex(index)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-handwriting font-medium whitespace-nowrap transition-all transform hover:scale-105 ${
+                            className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-handwriting font-medium whitespace-nowrap transition-all transform hover:scale-105 flex-shrink-0 ${
                               activeQuestionIndex === index
                                 ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-md scale-105'
                                 : 'bg-white text-gray-600 hover:bg-green-50 hover:text-green-600 shadow-sm'
                             }`}
                           >
-                            <span className="w-4 h-4 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-xs">
+                            <span className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-xs">
                               {index + 1}
                             </span>
-                            <span className="max-w-20 truncate">
-                              {question.text || `Question ${index + 1}`}
+                            <span className="max-w-16 sm:max-w-20 truncate">
+                              {question.text || `Q${index + 1}`}
                             </span>
-                            {question.text && <Edit3 size={10} className="opacity-60" />}
+                            {question.text && <Edit3 size={8} className="sm:w-[10px] sm:h-[10px] opacity-60" />}
                           </button>
                         ))}
                       </div>
 
                       {/* Navigation arrows */}
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 justify-center sm:justify-start">
                         <button
                           onClick={() => setActiveQuestionIndex(Math.max(0, activeQuestionIndex - 1))}
                           disabled={activeQuestionIndex === 0}
-                          className="p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="p-1 sm:p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                          <ArrowLeft size={14} />
+                          <ArrowLeft size={12} className="sm:w-[14px] sm:h-[14px]" />
                         </button>
                         <button
                           onClick={() => setActiveQuestionIndex(Math.min(snarkel.questions.length - 1, activeQuestionIndex + 1))}
                           disabled={activeQuestionIndex === snarkel.questions.length - 1}
-                          className="p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="p-1 sm:p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                          <ArrowRight size={14} />
+                          <ArrowRight size={12} className="sm:w-[14px] sm:h-[14px]" />
                         </button>
                       </div>
                     </div>
@@ -1240,7 +1247,7 @@ export default function SnarkelCreationPage() {
                 )}
 
                 {/* Tab Content - more compact */}
-                <div className="p-4">
+                <div className="p-2 sm:p-4">
                   {activeTab === 'details' && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

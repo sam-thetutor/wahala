@@ -18,7 +18,8 @@ import {
   User,
   Brain,
   Lightbulb,
-  HelpCircle
+  HelpCircle,
+  Home
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { FarcasterUI } from '@/components/FarcasterUI';
@@ -57,89 +58,108 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
 
   return (
     <div 
-      className="compact-quiz-card playful-hover bg-white rounded-3xl p-4 border border-blue-200 hover:border-blue-400 glassmorphism"
+      className="group relative bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-200 hover:border-blue-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex items-center justify-between h-full">
-        <div className="flex-1 min-w-0">
-          {/* Title */}
-          <h3 className="text-lg font-semibold text-blue-900 mb-1 truncate">
-            {quiz.title}
-          </h3>
+      {/* Gradient border on hover */}
+      <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      
+      <div className="relative z-10">
+        <div className="flex flex-col gap-4">
+          {/* Header with category and difficulty */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              {/* Title */}
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
+                {quiz.title}
+              </h3>
+              
+              {/* Description */}
+              <p className="text-sm sm:text-base text-gray-600 line-clamp-2 leading-relaxed">
+                {quiz.description}
+              </p>
+            </div>
+            
+            {/* Category and Difficulty */}
+            <div className="flex flex-col items-end gap-2 ml-3">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                {quiz.category}
+              </span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 border border-gray-200">
+                <span className="text-sm">{difficultyIcons[quiz.difficulty]}</span>
+                <span className={`text-xs font-semibold ${difficultyColors[quiz.difficulty]}`}>
+                  {quiz.difficulty}
+                </span>
+              </div>
+            </div>
+          </div>
           
-          {/* Description */}
-          <p className="text-sm text-gray-600 truncate mb-2">
-            {quiz.description}
-          </p>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-3 py-3 border-t border-gray-100">
+            <div className="text-center">
+              <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 bg-blue-50 rounded-lg">
+                <Users className="w-4 h-4 text-blue-600" />
+              </div>
+              <p className="text-xs text-gray-500 mb-1">Participants</p>
+              <p className="text-sm font-semibold text-gray-900">{quiz.participants}</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 bg-green-50 rounded-lg">
+                <Clock className="w-4 h-4 text-green-600" />
+              </div>
+              <p className="text-xs text-gray-500 mb-1">Duration</p>
+              <p className="text-sm font-semibold text-gray-900">{quiz.duration}</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 bg-emerald-50 rounded-lg">
+                <Award className="w-4 h-4 text-emerald-600" />
+              </div>
+              <p className="text-xs text-gray-500 mb-1">Reward</p>
+              <p className="text-sm font-semibold text-gray-900">{quiz.reward}</p>
+            </div>
+          </div>
           
-          {/* Stats row */}
-          <div className="flex items-center gap-4 text-xs text-gray-500">
-            <div className="flex items-center gap-1">
-              <Users className="w-3 h-3 flex-shrink-0 text-blue-600" />
-              <span>{quiz.participants}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock className="w-3 h-3 flex-shrink-0 text-blue-600" />
-              <span>{quiz.duration}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Award className="w-3 h-3 flex-shrink-0 text-emerald-500" />
-              <span className="font-medium">{quiz.reward}</span>
-            </div>
+          {/* Action Row */}
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
             {/* Leaderboard link */}
             {quiz.snarkelCode && (
-              <div className="flex items-center gap-1">
-                <Link 
-                  href={`/quiz/${quiz.snarkelCode}/leaderboard`}
-                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors"
-                >
-                  <Trophy className="w-3 h-3" />
-                  <span className="hidden sm:inline">Leaderboard</span>
-                  <span className="sm:hidden">LB</span>
-                </Link>
-              </div>
+              <Link 
+                href={`/quiz/${quiz.snarkelCode}/leaderboard`}
+                className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors"
+              >
+                <Trophy className="w-4 h-4" />
+                <span className="hidden sm:inline">View Results</span>
+                <span className="sm:hidden">Results</span>
+              </Link>
+            )}
+            
+            {/* Join button */}
+            {quiz.snarkelCode ? (
+              <Link href={`/join?code=${quiz.snarkelCode}`}>
+                <button className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 sm:px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                  <Play className="w-4 h-4" />
+                  <span className="text-sm">
+                    {isConnected ? 'Join Quiz' : 'Connect & Join'}
+                  </span>
+                </button>
+              </Link>
+            ) : (
+              <button className="inline-flex items-center gap-2 bg-gray-400 text-white px-4 sm:px-6 py-2.5 rounded-xl font-semibold text-sm cursor-not-allowed">
+                <Clock className="w-4 h-4" />
+                Coming Soon
+              </button>
             )}
           </div>
-        </div>
-        
-        <div className="flex items-center gap-3 ml-4">
-          {/* Category tag */}
-          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
-            {quiz.category}
-          </span>
-          
-          {/* Difficulty */}
-          <div className="flex items-center gap-1">
-            <span className="text-sm">{difficultyIcons[quiz.difficulty]}</span>
-            <span className={`text-xs font-medium ${difficultyColors[quiz.difficulty]}`}>
-              {quiz.difficulty}
-            </span>
-          </div>
-          
-          {/* Join button */}
-          {quiz.snarkelCode ? (
-            <Link href={`/join?code=${quiz.snarkelCode}`}>
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 animate-pulse-blue">
-                <span className="text-sm">
-                  {isConnected ? 'Join' : 'Connect'}
-                </span>
-              </button>
-            </Link>
-          ) : (
-            <button className="bg-gray-400 text-white px-4 py-2 rounded-xl cursor-not-allowed font-medium text-sm">
-              Soon
-            </button>
-          )}
-          
-          
         </div>
       </div>
       
       {/* Network badge if available */}
       {quiz.network && (
-        <div className="absolute top-2 right-2">
-          <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full border border-emerald-300">
+        <div className="absolute top-3 right-3">
+          <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-300 font-medium">
             <Sparkles className="w-3 h-3 flex-shrink-0" /> {quiz.network}
           </span>
         </div>
@@ -151,16 +171,23 @@ const FeaturedQuizCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
 // Action Bar Component
 const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-slate-500 shadow-2xl z-50 border-t-2 border-blue-500 rounded-t-3xl md:left-1/2 md:transform md:-translate-x-1/2 md:w-3/5">
-      <div className="p-3 sm:p-4">
-        <div className="flex items-center justify-center gap-2 sm:gap-4">
+    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-blue-600 via-blue-700 to-slate-600 shadow-2xl z-50 border-t-2 border-blue-400 rounded-t-3xl md:left-1/2 md:transform md:-translate-x-1/2 md:w-4/5 lg:w-3/5">
+      {/* Background pattern */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
+        <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12"></div>
+      </div>
+      
+      <div className="relative z-10 p-4 sm:p-5">
+        <div className="flex items-center justify-center gap-3 sm:gap-4 lg:gap-6">
           {/* Join a Snarkel */}
           <div className="relative flex-1 min-w-0">
             <Link href="/join">
-              <div className="bg-white shadow-lg rounded-2xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
-                <span className="font-handwriting text-xs sm:text-sm md:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate text-blue-700">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-full border-2 border-blue-400 bg-blue-100 flex-shrink-0"></div>
-                  <span className="hidden sm:inline">Join a Snarkel</span>
+              <div className="group bg-white shadow-lg hover:shadow-xl rounded-2xl p-3 sm:p-4 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <span className="font-handwriting text-sm sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 sm:gap-3 relative z-10 truncate text-blue-700 font-semibold">
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 rounded-full border-2 border-blue-400 bg-blue-100 flex-shrink-0 group-hover:bg-blue-200 transition-colors"></div>
+                  <span className="hidden sm:inline">Join a Quiz</span>
                   <span className="sm:hidden">Join</span>
                 </span>
               </div>
@@ -170,11 +197,12 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
           {/* Host a Snarkel */}
           <div className="relative flex-1 min-w-0">
             <Link href="/create">
-              <div className="bg-white shadow-lg rounded-2xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
-                <span className="font-handwriting text-xs sm:text-sm md:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate text-blue-700">
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
-                  <span className="hidden sm:inline">Host a Snarkel</span>
-                  <span className="sm:hidden">Host</span>
+              <div className="group bg-white shadow-lg hover:shadow-xl rounded-2xl p-3 sm:p-4 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <span className="font-handwriting text-sm sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 sm:gap-3 relative z-10 truncate text-blue-700 font-semibold">
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-600" />
+                  <span className="hidden sm:inline">Create Quiz</span>
+                  <span className="sm:hidden">Create</span>
                 </span>
               </div>
             </Link>
@@ -183,9 +211,10 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
           {/* Profile */}
           <div className="relative flex-1 min-w-0">
             <Link href="/profile">
-              <div className="bg-white shadow-lg rounded-2xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
-                <span className="font-handwriting text-xs sm:text-sm md:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate text-blue-700">
-                  <User className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
+              <div className="group bg-white shadow-lg hover:shadow-xl rounded-2xl p-3 sm:p-4 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <span className="font-handwriting text-sm sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 sm:gap-3 relative z-10 truncate text-blue-700 font-semibold">
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-600" />
                   <span className="hidden sm:inline">Profile</span>
                   <span className="sm:hidden">Profile</span>
                 </span>
@@ -379,26 +408,65 @@ export default function HomePage() {
         {/* Mobile Layout */}
         {isMobile ? (
           <div className="relative z-10 min-h-screen p-4 sm:p-6 pb-28 flex flex-col overflow-x-hidden">
-            {/* Mobile Wallet Connect Button - Top Right */}
-            <div className="absolute top-4 right-4 z-50">
-              <WalletConnectButton />
+            {/* Mobile Navigation Bar */}
+            <div className="flex items-center justify-between mb-6 px-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Gamepad2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="font-handwriting text-xl font-bold text-blue-900">Snarkels</h1>
+                  <p className="text-xs text-gray-600 -mt-1">Interactive Quizzes</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/create"
+                  className="p-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl transition-all duration-300 text-white shadow-lg hover:shadow-xl transform hover:scale-105"
+                  title="Create Quiz"
+                >
+                  <Plus className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/admin"
+                  className="p-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl transition-all duration-300 text-white shadow-lg hover:shadow-xl transform hover:scale-105"
+                  title="My Quizzes"
+                >
+                  <Trophy className="w-4 h-4" />
+                </Link>
+                <WalletConnectButton />
+              </div>
             </div>
             
             {/* Mobile Header */}
-            <div className={`text-center mb-6 sm:mb-8 transition-all duration-1500 ${
+            <div className={`text-center mb-8 sm:mb-10 transition-all duration-1500 ${
               isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}>
-              <div className="bg-gradient-to-r from-blue-600 to-slate-500 shadow-2xl rounded-3xl p-4 sm:p-6 relative overflow-hidden mx-auto max-w-sm text-white">
+              <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-slate-600 shadow-2xl rounded-3xl p-6 sm:p-8 relative overflow-hidden mx-auto max-w-md text-white">
+                {/* Background pattern */}
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
+                  <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12"></div>
+                </div>
+                
                 <div className="relative z-10">
-                  <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4">
-                    <Gamepad2 className="w-10 h-10 sm:w-12 sm:h-12 animate-bounce-slow flex-shrink-0 text-blue-100" />
-                    <h1 className="font-handwriting text-3xl sm:text-4xl truncate text-white">
+                  <div className="flex items-center justify-center gap-4 sm:gap-5 mb-4 sm:mb-5">
+                    <div className="relative">
+                      <Gamepad2 className="w-12 h-12 sm:w-16 sm:h-16 animate-bounce-slow flex-shrink-0 text-blue-100" />
+                      <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full animate-ping bg-yellow-400"></div>
+                    </div>
+                    <h1 className="font-handwriting text-4xl sm:text-5xl font-bold text-white drop-shadow-lg">
                       Snarkels
                     </h1>
                   </div>
-                  <p className="font-handwriting text-base sm:text-lg px-2 text-slate-200">
-                    Interactive Quizzes
+                  <p className="font-handwriting text-lg sm:text-xl px-2 text-blue-100 font-medium">
+                    Interactive Web3 Quizzes
                   </p>
+                  <div className="mt-4 flex items-center justify-center gap-2 text-sm text-blue-200">
+                    <span>🎯</span>
+                    <span>Learn & Earn</span>
+                    <span>🚀</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -408,13 +476,21 @@ export default function HomePage() {
               isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
             }`}>
               {/* Section Header */}
-              <div className="text-center mb-4 sm:mb-6 px-2">
-                <h2 className="font-handwriting text-2xl sm:text-3xl mb-2 text-blue-900">
+              <div className="text-center mb-6 sm:mb-8 px-2">
+                <div className="inline-flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                </div>
+                <h2 className="font-handwriting text-3xl sm:text-4xl font-bold text-blue-900 mb-3">
                   Featured Quizzes
                 </h2>
-                <div className="flex justify-center items-center gap-2 text-xs sm:text-sm text-gray-600">
-                  <span>Scroll to explore</span>
-                  <ArrowDown className="w-3 h-3 sm:w-4 sm:h-4 animate-bounce text-blue-600" />
+                <p className="text-gray-600 text-sm sm:text-base mb-4 max-w-md mx-auto">
+                  Discover amazing challenges and test your knowledge
+                </p>
+                <div className="flex justify-center items-center gap-2 text-sm text-gray-500">
+                  <span className="font-medium">Scroll to explore</span>
+                  <ArrowDown className="w-4 h-4 animate-bounce text-blue-600" />
                 </div>
               </div>
               
@@ -474,29 +550,60 @@ export default function HomePage() {
         ) : (
           /* Desktop Layout */
           <div className="relative z-10 min-h-screen p-8 lg:p-16 pb-24">
+            {/* Desktop Navigation Bar - Top Right */}
+            <div className="absolute top-8 right-8 lg:top-16 lg:right-16 z-50 flex items-center gap-4">
+              <Link
+                href="/create"
+                className="group p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl transition-all duration-300 text-white hover:scale-105 transform shadow-lg hover:shadow-xl"
+                title="Create Quiz"
+              >
+                <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+              </Link>
+              <Link
+                href="/admin"
+                className="group p-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl transition-all duration-300 text-white hover:scale-105 transform shadow-lg hover:shadow-xl"
+                title="My Quizzes"
+              >
+                <Trophy className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+              </Link>
+              <WalletConnectButton />
+            </div>
+
             {/* Desktop Header - positioned to avoid overlap */}
-            <div className={`absolute top-8 left-8 lg:top-16 lg:left-20 max-w-md transition-all duration-1500 ${
+            <div className={`absolute top-8 left-8 lg:top-16 lg:left-20 max-w-lg transition-all duration-1500 ${
               isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}>
-              <div className="bg-gradient-to-r from-blue-600 to-slate-500 shadow-2xl rounded-3xl p-8 transform -rotate-1 hover:rotate-0 transition-all duration-500 relative border-l-4 border-blue-400 overflow-hidden text-white">
-                {/* Pin effect */}
+              <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-slate-600 shadow-2xl rounded-3xl p-8 lg:p-10 transform -rotate-1 hover:rotate-0 transition-all duration-500 relative border-l-4 border-blue-400 overflow-hidden text-white">
+                {/* Pin effects */}
                 <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full shadow-lg border-2 border-white"></div>
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full"></div>
+                <div className="absolute -bottom-2 -left-2 w-5 h-5 bg-purple-500 rounded-full shadow-lg border-2 border-white"></div>
+                
+                {/* Background pattern */}
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full translate-x-16 -translate-y-16"></div>
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -translate-x-12 translate-y-12"></div>
+                </div>
                 
                 <div className="relative z-10">
-                  <div className="flex items-start gap-6">
+                  <div className="flex items-start gap-6 lg:gap-8">
                     <div className="relative">
-                      <Gamepad2 className="w-16 h-16 animate-bounce-slow text-blue-100" />
-                      <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full animate-ping bg-blue-200"></div>
+                      <Gamepad2 className="w-16 h-16 lg:w-20 lg:h-20 animate-bounce-slow text-blue-100" />
+                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full animate-ping bg-yellow-400"></div>
                     </div>
                     
                     <div>
-                      <h1 className="font-handwriting text-5xl lg:text-6xl mb-3 transform hover:scale-105 transition-transform duration-500 text-white">
+                      <h1 className="font-handwriting text-5xl lg:text-6xl xl:text-7xl mb-3 transform hover:scale-105 transition-transform duration-500 text-white font-bold drop-shadow-lg">
                         Snarkels
                       </h1>
-                      <p className="font-handwriting text-lg lg:text-xl max-w-sm text-slate-200">
-                        ~ Interactive Quizzes ~
+                      <p className="font-handwriting text-lg lg:text-xl xl:text-2xl max-w-sm text-blue-100 font-medium">
+                        Interactive Web3 Quizzes
                       </p>
+                      <div className="mt-4 flex items-center gap-3 text-sm text-blue-200">
+                        <span>🎯</span>
+                        <span>Learn & Earn</span>
+                        <span>🚀</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -507,40 +614,48 @@ export default function HomePage() {
             <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-1500 delay-700 ${
               isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
             }`}>
-              <div className="text-center mb-8">
-                <h2 className="font-handwriting text-4xl lg:text-5xl mb-4 text-blue-900">
+              <div className="text-center mb-10">
+                <div className="inline-flex items-center gap-3 mb-4">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                </div>
+                <h2 className="font-handwriting text-4xl lg:text-5xl xl:text-6xl font-bold text-blue-900 mb-4">
                   Featured Quizzes
                 </h2>
-                <div className="flex justify-center items-center gap-2 text-lg text-gray-600">
-                  <span className="font-handwriting">Discover amazing challenges</span>
+                <p className="text-gray-600 text-lg lg:text-xl mb-6 max-w-2xl mx-auto">
+                  Discover amazing challenges and test your knowledge with our curated selection
+                </p>
+                <div className="flex justify-center items-center gap-3 text-lg text-gray-600">
+                  <span className="font-handwriting font-medium">Scroll to explore</span>
                   <ArrowDown className="w-6 h-6 animate-bounce text-blue-600" />
                 </div>
               </div>
               
               {/* Quiz Cards Grid */}
-              <div className="grid grid-cols-2 gap-6 max-w-4xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl">
                 {loadingQuizzes ? (
                   // Loading state
-                  <div className="col-span-2 grid grid-cols-2 gap-6">
+                  <div className="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="bg-white shadow-2xl rounded-3xl p-6 animate-pulse border border-blue-200">
-                        <div className="h-4 bg-blue-200 rounded mb-4"></div>
+                      <div key={i} className="bg-white shadow-2xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 animate-pulse border border-blue-200">
+                        <div className="h-4 bg-blue-200 rounded mb-3 sm:mb-4"></div>
                         <div className="h-3 bg-blue-200 rounded mb-2"></div>
-                        <div className="h-3 bg-blue-200 rounded mb-4 w-3/4"></div>
+                        <div className="h-3 bg-blue-200 rounded mb-3 sm:mb-4 w-3/4"></div>
                         <div className="h-8 bg-blue-200 rounded"></div>
                       </div>
                     ))}
                   </div>
                 ) : quizError ? (
                   // Error state
-                  <div className="col-span-2 text-center py-8">
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-                      <p className="font-handwriting text-lg text-amber-800">
+                  <div className="col-span-2 text-center py-6 sm:py-8">
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-6">
+                      <p className="font-handwriting text-base sm:text-lg text-amber-800">
                         {quizError}
                       </p>
                       <button 
                         onClick={fetchFeaturedQuizzes}
-                        className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                        className="mt-3 sm:mt-4 px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm sm:text-base"
                       >
                         Try Again
                       </button>
@@ -548,12 +663,12 @@ export default function HomePage() {
                   </div>
                 ) : featuredQuizzes.length === 0 ? (
                   // Empty state
-                  <div className="col-span-2 text-center py-8">
-                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
-                      <p className="font-handwriting text-lg text-blue-800">
+                  <div className="col-span-2 text-center py-6 sm:py-8">
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-6">
+                      <p className="font-handwriting text-base sm:text-lg text-blue-800">
                         No featured quizzes available yet
                       </p>
-                      <p className="text-sm mt-2 text-blue-600">
+                      <p className="text-xs sm:text-sm mt-2 text-blue-600">
                         Check back soon for new challenges!
                       </p>
                     </div>

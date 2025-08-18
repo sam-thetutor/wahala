@@ -9,6 +9,8 @@ export async function GET(
 ) {
   try {
     const { snarkelId } = await params;
+    const { searchParams } = new URL(request.url);
+    const walletAddress = searchParams.get('walletAddress');
 
     if (!snarkelId) {
       return NextResponse.json(
@@ -17,7 +19,7 @@ export async function GET(
       );
     }
 
-    // Fetch quiz information
+    // Fetch quiz information with rewards and creator
     const quiz = await prisma.snarkel.findFirst({
       where: { 
         OR: [
@@ -34,10 +36,44 @@ export async function GET(
         isCompleted: true,
         completedAt: true,
         basePointsPerQuestion: true,
+        rewardsEnabled: true,
+        onchainSessionId: true,
+        creator: {
+          select: {
+            id: true,
+            address: true,
+            name: true
+          }
+        },
         questions: {
           select: {
             id: true,
-            points: true
+            text: true,
+            points: true,
+            timeLimit: true
+          },
+          orderBy: {
+            order: 'asc'
+          }
+        },
+        rewards: {
+          where: {
+            isDistributed: false
+          },
+          select: {
+            id: true,
+            tokenAddress: true,
+            tokenSymbol: true,
+            tokenName: true,
+            totalRewardPool: true,
+            isDistributed: true,
+            distributedAt: true,
+            totalWinners: true,
+            rewardAllParticipants: true,
+            rewardAmounts: true,
+            minParticipants: true,
+            chainId: true,
+            network: true
           }
         }
       }
@@ -56,7 +92,7 @@ export async function GET(
       maxPossibleScore = quiz.questions.reduce((total: number, question: { points: number }) => total + question.points, 0);
     }
 
-    // Fetch all submissions for this quiz
+    // Fetch all submissions for this quiz with detailed answer information
     const submissions = await prisma.submission.findMany({
       where: {
         snarkelId: quiz.id,
@@ -72,9 +108,27 @@ export async function GET(
         },
         answers: {
           select: {
+            id: true,
+            questionId: true,
             isCorrect: true,
             timeToAnswer: true,
-            pointsEarned: true
+            pointsEarned: true,
+            selectedOption: true,
+            question: {
+              select: {
+                id: true,
+                text: true,
+                points: true,
+                timeLimit: true,
+                options: {
+                  select: {
+                    id: true,
+                    text: true,
+                    isCorrect: true
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -83,8 +137,8 @@ export async function GET(
       }
     });
 
-    // Process submissions to create leaderboard
-    const leaderboard = submissions.map((submission: any, index: number) => {
+    // Process submissions to create enhanced leaderboard
+    const leaderboard = submissions.map((submission: any, index) => {
       const correctAnswers = submission.answers.filter((answer: any) => answer.isCorrect).length;
       const totalQuestions = submission.answers.length;
       
@@ -107,6 +161,19 @@ export async function GET(
         }
       }
 
+      // Create detailed question breakdown
+      const questionBreakdown = submission.answers.map((answer: any) => ({
+        questionId: answer.questionId,
+        questionText: answer.question?.text || 'Unknown Question',
+        isCorrect: answer.isCorrect,
+        pointsEarned: answer.pointsEarned || 0,
+        timeToAnswer: answer.timeToAnswer,
+        timeLimit: answer.question?.timeLimit || 0,
+        selectedOption: answer.selectedOption,
+        correctOption: answer.question?.options?.find((opt: any) => opt.isCorrect)?.text || 'Unknown',
+        maxPoints: answer.question?.points || 0
+      }));
+
       return {
         userId: submission.user.id,
         name: submission.user.name || submission.user.address.slice(0, 6) + '...' + submission.user.address.slice(-4),
@@ -117,7 +184,9 @@ export async function GET(
         totalQuestions,
         correctAnswers,
         averageTimePerQuestion,
-        completedAt: submission.completedAt.toISOString()
+        completedAt: submission.completedAt.toISOString(),
+        questionBreakdown,
+        accuracy: totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0
       };
     });
 
@@ -129,7 +198,28 @@ export async function GET(
       }
     });
 
-    // Prepare quiz info
+    // Check if connected wallet is admin (quiz creator)
+    let isAdmin = false;
+    let adminDetails = null;
+    
+    if (walletAddress) {
+      isAdmin = quiz.creator.address.toLowerCase() === walletAddress.toLowerCase();
+      
+      if (isAdmin) {
+        adminDetails = {
+          isQuizCreator: true,
+          creatorAddress: quiz.creator.address,
+          creatorName: quiz.creator.name
+        };
+      }
+    }
+
+    // Check if rewards are available and not distributed
+    const hasRewards = quiz.rewardsEnabled && quiz.rewards.length > 0;
+    const undistributedRewards = quiz.rewards.filter((reward: any) => !reward.isDistributed);
+    const canDistributeRewards = isAdmin && hasRewards && undistributedRewards.length > 0;
+
+    // Prepare quiz info with enhanced data
     const quizInfo = {
       id: quiz.id,
       title: quiz.title,
@@ -138,13 +228,21 @@ export async function GET(
       maxPossibleScore,
       totalParticipants,
       isCompleted: quiz.isCompleted,
-      completedAt: quiz.completedAt?.toISOString()
+      completedAt: quiz.completedAt?.toISOString(),
+      hasRewards,
+      rewards: quiz.rewards,
+      canDistributeRewards,
+      onchainSessionId: quiz.onchainSessionId,
+      totalQuestions: quiz.questions.length,
+      questions: quiz.questions
     };
 
     return NextResponse.json({
       success: true,
       leaderboard,
-      quizInfo
+      quizInfo,
+      isAdmin,
+      adminDetails
     });
 
   } catch (error) {
