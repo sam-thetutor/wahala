@@ -140,7 +140,9 @@ export default function QuizLeaderboardPage() {
     distributeRewards, 
     fallbackDistributeRewards,
     contractState,
-    areRewardsDistributed
+    areRewardsDistributed,
+    getExpectedRewardToken,
+    getExpectedRewardAmount
   } = useQuizContract(8453); // Use Base chain for now
 
   useEffect(() => {
@@ -277,16 +279,17 @@ export default function QuizLeaderboardPage() {
     
     try {
       setDistributingRewards(true);
-      setRewardDistributionStatus('Starting equitable reward distribution...');
-      
-      // Get the first reward to distribute
-      const firstReward = quizInfo.rewards[0];
-      if (!firstReward) {
-        throw new Error('No rewards configured for this quiz');
-      }
+      setRewardDistributionStatus('Starting quadratic reward distribution using database leaderboard...');
       
       // Get session ID from quiz info
       const sessionId = parseInt(quizInfo.onchainSessionId || '1');
+      if (!sessionId) {
+        throw new Error('No on-chain session ID found');
+      }
+      
+      // QUERY DATABASE FOR LEADERBOARD POINTS
+      console.log('📊 Database Leaderboard Data:', leaderboard);
+      console.log('📊 Total participants in database:', leaderboard.length);
       
       // Filter out participants with 0 score and sort by score (highest first)
       const validParticipants = leaderboard
@@ -294,46 +297,91 @@ export default function QuizLeaderboardPage() {
         .sort((a, b) => b.score - a.score);
       
       if (validParticipants.length === 0) {
-        throw new Error('No participants with valid scores found');
+        throw new Error('No participants with valid scores found in database');
       }
       
-      // Calculate total points across all participants
+      console.log('✅ Valid participants with scores > 0:', validParticipants.length);
+      console.log('📈 Participant scores from database:', validParticipants.map(p => ({ name: p.name, score: p.score, wallet: p.walletAddress })));
+      
+      // Try to get reward info from database first, fallback to contract if needed
+      let tokenAddress: string;
+      let totalRewardPool: string;
+      
+      if (quizInfo.rewards && quizInfo.rewards.length > 0) {
+        // Use database reward info
+        const firstReward = quizInfo.rewards[0];
+        tokenAddress = firstReward.tokenAddress;
+        totalRewardPool = firstReward.totalRewardPool;
+        console.log('Using database reward info:', { tokenAddress, totalRewardPool });
+      } else {
+        // Fallback: try to get reward info from contract
+        try {
+          const expectedToken = await getExpectedRewardToken(sessionId);
+          const expectedAmount = await getExpectedRewardAmount(sessionId);
+          
+          if (expectedToken === '0x0000000000000000000000000000000000000000') {
+            throw new Error('No reward token configured on-chain for this session');
+          }
+          
+          tokenAddress = expectedToken;
+          totalRewardPool = expectedAmount;
+          console.log('Using contract reward info:', { tokenAddress, totalRewardPool });
+        } catch (contractError) {
+          console.error('Failed to get contract reward info:', contractError);
+          throw new Error('No rewards configured in database or on-chain. Please configure rewards first.');
+        }
+      }
+      
+      // QUADRATIC CALCULATIONS USING DATABASE POINTS
+      console.log('🧮 Starting quadratic reward calculations...');
+      
+      // Calculate total points across all participants from database
       const totalPoints = validParticipants.reduce((sum, entry) => sum + entry.score, 0);
+      console.log('📊 Total points from database:', totalPoints);
       
       // Calculate equitable rewards based on score proportion (quadratic distribution)
       const winners = validParticipants.map(entry => entry.walletAddress as `0x${string}`);
       const amounts = validParticipants.map(entry => {
-        // Calculate each participant's share based on their score
+        // Calculate each participant's share based on their score from database
         const share = entry.score / totalPoints;
         // Convert to the token's decimal precision (assuming 18 decimals like most ERC20)
-        const rewardAmount = (parseFloat(firstReward.totalRewardPool) * share).toFixed(18);
+        const rewardAmount = (parseFloat(totalRewardPool) * share).toFixed(18);
+        
+        console.log(`🎯 ${entry.name}: Score ${entry.score}, Share ${(share * 100).toFixed(2)}%, Reward ${rewardAmount}`);
+        
         return rewardAmount;
       });
       
-      console.log('Equitable reward distribution for session:', sessionId, 'token:', firstReward.tokenAddress);
-      console.log('Total participants:', validParticipants.length, 'Total points:', totalPoints);
-      console.log('Winners:', winners);
-      console.log('Amounts:', amounts);
+      console.log('✅ QUADRATIC CALCULATIONS COMPLETE');
+      console.log('🎯 Final distribution parameters:');
+      console.log('  - Session ID:', sessionId);
+      console.log('  - Token Address:', tokenAddress);
+      console.log('  - Total Reward Pool:', totalRewardPool);
+      console.log('  - Winners (from database):', winners);
+      console.log('  - Amounts (calculated):', amounts);
+      
+      // SUBMIT PARAMS WHEN CALLING FALLBACK DISTRIBUTE REWARDS
+      console.log('🚀 Calling fallbackDistributeRewards with calculated parameters...');
       
       // Call the smart contract fallbackDistributeRewards function
       const result = await fallbackDistributeRewards({
         sessionId: sessionId,
-        tokenAddress: firstReward.tokenAddress as `0x${string}`,
+        tokenAddress: tokenAddress as `0x${string}`,
         winners: winners,
         amounts: amounts
       });
       
       if (result.success) {
-        setRewardDistributionStatus(`Equitable rewards distributed successfully! Transaction: ${result.transactionHash}`);
+        setRewardDistributionStatus(`Quadratic rewards distributed successfully! Transaction: ${result.transactionHash}`);
         // Refresh leaderboard to show updated reward status
         setTimeout(() => {
           fetchLeaderboard();
         }, 2000);
       } else {
-        throw new Error(result.error || 'Equitable reward distribution failed');
+        throw new Error(result.error || 'Quadratic reward distribution failed');
       }
     } catch (error) {
-      console.error('Error distributing equitable rewards:', error);
+      console.error('Error distributing quadratic rewards:', error);
       setRewardDistributionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setTimeout(() => {
@@ -594,31 +642,36 @@ export default function QuizLeaderboardPage() {
                 <h3 className="text-lg font-semibold text-gray-800">Quiz Rewards</h3>
               </div>
               {isAdmin && !rewardsDistributed && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleDistributeRewards}
-                    disabled={distributingRewards}
-                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm sm:text-base"
-                  >
-                    {distributingRewards ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Zap className="w-4 h-4" />
-                    )}
-                    {distributingRewards ? 'Distributing...' : 'Distribute Rewards'}
-                  </button>
-                  <button
-                    onClick={handleFallbackDistributeRewards}
-                    disabled={distributingRewards}
-                    className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm sm:text-base"
-                  >
-                    {distributingRewards ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <AlertTriangle className="w-4 h-4" />
-                    )}
-                    {distributingRewards ? 'Distributing...' : 'Equitable Distribute'}
-                  </button>
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDistributeRewards}
+                      disabled={distributingRewards}
+                      className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm sm:text-base"
+                    >
+                      {distributingRewards ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Zap className="w-4 h-4" />
+                      )}
+                      {distributingRewards ? 'Distributing...' : 'Distribute Rewards'}
+                    </button>
+                    <button
+                      onClick={handleFallbackDistributeRewards}
+                      disabled={distributingRewards}
+                      className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm sm:text-base"
+                    >
+                      {distributingRewards ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4" />
+                      )}
+                      {distributingRewards ? 'Distributing...' : 'Fallback Distribute'}
+                    </button>
+                  </div>
+                  <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded-lg">
+                    <strong>Fallback Distribute:</strong> Uses connected wallet and contract data to distribute rewards even when database rewards aren't configured. Automatically calculates equitable distribution based on participant scores.
+                  </div>
                 </div>
               )}
               {isAdmin && rewardsDistributed && (
