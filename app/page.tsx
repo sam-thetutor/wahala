@@ -255,7 +255,7 @@ export default function HomePage() {
               {/* Play Button */}
               <div className="text-center px-2">
                 <Link
-                  href="/featured"
+                  href="/join"
                   className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-black text-lg text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-blue-400/80 to-purple-500/80 hover:from-blue-300/90 hover:to-purple-400/90 overflow-hidden group"
                 >
                   <span className="font-handwriting">Play a Snarkel</span>
@@ -263,7 +263,7 @@ export default function HomePage() {
                 </Link>
                 
                 {/* Clickable reference text below button */}
-                <Link href="/featured" className="block mt-4">
+                <Link href="/join" className="block mt-4">
                   <p className="text-gray-500 text-sm font-handwriting hover:text-blue-600 transition-colors cursor-pointer underline">
                     explore featured snarkels
                   </p>
@@ -301,7 +301,7 @@ export default function HomePage() {
               {/* Play Button */}
               <div className="text-center">
                 <Link
-                  href="/featured"
+                  href="/join"
                   className="inline-flex items-center justify-center gap-3 px-12 py-4 rounded-xl font-black text-2xl text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-blue-400/80 to-purple-500/80 hover:from-blue-300/90 hover:to-purple-400/90 overflow-hidden group"
                 >
                   <span className="font-handwriting">Play a Snarkel</span>
@@ -309,7 +309,7 @@ export default function HomePage() {
                 </Link>
                 
                 {/* Clickable reference text below button */}
-                <Link href="/featured" className="block mt-6">
+                <Link href="/join" className="block mt-6">
                   <p className="text-gray-500 text-base font-handwriting hover:text-blue-600 transition-colors cursor-pointer underline">
                     explore featured snarkels
                   </p>
