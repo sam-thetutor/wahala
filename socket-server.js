@@ -10,18 +10,21 @@ const io = new Server(httpServer, {
     origin: "*", // Allow all origins
     methods: ["GET", "POST"]
   },
-  // Add better connection handling
+  // Optimized connection handling
   pingTimeout: 60000,
   pingInterval: 25000,
   upgradeTimeout: 10000,
   allowUpgrades: true,
-  transports: ['websocket', 'polling'],
-  // Add connection error handling
+  transports: ['websocket'], // Remove polling to prevent connection switching
+  // Improved connection settings
   connectTimeout: 45000,
   maxHttpBufferSize: 1e6,
-  // Add heartbeat mechanism
-  heartbeat: true
+  // Remove heartbeat as it's not a valid Socket.IO option
 });
+
+// Track active connections to prevent duplicates
+const activeConnections = new Map(); // roomId -> Map(walletAddress -> socketId)
+const socketToUser = new Map(); // socketId -> { roomId, walletAddress, userId }
 
 // Add health check endpoint
 httpServer.on('request', (req, res) => {
@@ -31,6 +34,7 @@ httpServer.on('request', (req, res) => {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       connections: io.engine.clientsCount,
+      activeConnections: activeConnections.size,
       uptime: process.uptime()
     }));
   }
@@ -42,6 +46,122 @@ const activeRooms = new Map();
 // Store question answers and scores for each room
 const questionAnswers = new Map(); // roomId -> Map(questionId -> answers)
 const roomScores = new Map(); // roomId -> Map(userId -> score)
+
+// Helper function to check if user is already connected to a room
+function isUserAlreadyConnected(roomId, walletAddress) {
+  const roomConnections = activeConnections.get(roomId);
+  if (!roomConnections) return false;
+  
+  const existingSocketId = roomConnections.get(walletAddress);
+  if (!existingSocketId) return false;
+  
+  // Check if the existing socket is still connected
+  const existingSocket = io.sockets.sockets.get(existingSocketId);
+  return existingSocket && existingSocket.connected;
+}
+
+// Helper function to add connection tracking
+function addConnectionTracking(roomId, walletAddress, socketId, userId) {
+  if (!activeConnections.has(roomId)) {
+    activeConnections.set(roomId, new Map());
+  }
+  
+  const roomConnections = activeConnections.get(roomId);
+  roomConnections.set(walletAddress, socketId);
+  
+  socketToUser.set(socketId, { roomId, walletAddress, userId });
+}
+
+// Helper function to remove connection tracking
+function removeConnectionTracking(socketId) {
+  const userInfo = socketToUser.get(socketId);
+  if (!userInfo) return;
+  
+  const { roomId, walletAddress } = userInfo;
+  
+  // Remove from active connections
+  const roomConnections = activeConnections.get(roomId);
+  if (roomConnections) {
+    roomConnections.delete(walletAddress);
+    
+    // Clean up empty room connections
+    if (roomConnections.size === 0) {
+      activeConnections.delete(roomId);
+    }
+  }
+  
+  // Remove from socket mapping
+  socketToUser.delete(socketId);
+}
+
+// Helper function to get participant info safely
+async function getParticipantInfo(roomId, userId) {
+  try {
+    const participant = await prisma.roomParticipant.findFirst({
+      where: {
+        roomId,
+        userId
+      }
+    });
+    return participant;
+  } catch (error) {
+    console.error('Error getting participant info:', error);
+    return null;
+  }
+}
+
+// Helper function to safely disconnect a socket
+function safeDisconnect(socket, reason, message) {
+  try {
+    if (socket && socket.connected) {
+      socket.emit('connectionRejected', { reason, message });
+      socket.disconnect(true);
+    }
+  } catch (error) {
+    console.error('Error during safe disconnect:', error);
+  }
+}
+
+// Helper function to check if room is still valid
+async function isRoomValid(roomId) {
+  try {
+    const room = await prisma.room.findUnique({
+      where: { id: roomId }
+    });
+    return room && room.isActive && !room.isFinished;
+  } catch (error) {
+    console.error('Error checking room validity:', error);
+    return false;
+  }
+}
+
+// Helper function to cleanup stale connections
+function cleanupStaleConnections() {
+  try {
+    for (const [roomId, roomConnections] of activeConnections.entries()) {
+      for (const [walletAddress, socketId] of roomConnections.entries()) {
+        const socket = io.sockets.sockets.get(socketId);
+        if (!socket || !socket.connected) {
+          console.log(`Cleaning up stale connection: ${socketId} for ${walletAddress} in room ${roomId}`);
+          roomConnections.delete(walletAddress);
+          
+          // Clean up socket mapping
+          socketToUser.delete(socketId);
+        }
+      }
+      
+      // Clean up empty room connections
+      if (roomConnections.size === 0) {
+        activeConnections.delete(roomId);
+      }
+    }
+  } catch (error) {
+    console.error('Error during connection cleanup:', error);
+  }
+}
+
+// Run cleanup every 30 seconds
+setInterval(cleanupStaleConnections, 30000);
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -61,9 +181,143 @@ io.on('connection', (socket) => {
     return;
   }
 
-  // Join the room
-  socket.join(roomId);
-  console.log(`User ${walletAddress} joined room ${roomId}`);
+  // Log connection attempt
+  console.log(`Connection attempt: ${socket.id} for ${walletAddress} to room ${roomId}`);
+
+  // Validate room exists and user has access
+  socket.on('validateConnection', async (callback) => {
+    try {
+      // Check if room is still valid
+      if (!(await isRoomValid(roomId))) {
+        console.log(`Room ${roomId} is no longer valid during manual validation`);
+        safeDisconnect(socket, 'Room invalid', 'This room is no longer available. It may have been closed or finished.');
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { address: walletAddress.toLowerCase() }
+      });
+
+      if (!user) {
+        console.log(`User not found: ${walletAddress}`);
+        safeDisconnect(socket, 'User not found', 'User account not found. Please refresh and try again.');
+        return;
+      }
+
+      // Check if user is a participant in this room
+      const participant = await getParticipantInfo(roomId, user.id);
+      if (!participant) {
+        console.log(`User ${walletAddress} not a participant in room ${roomId}`);
+        safeDisconnect(socket, 'Not a participant', 'You are not a participant in this room. Please join the room first.');
+        return;
+      }
+
+      // Double-check that user isn't already connected
+      if (isUserAlreadyConnected(roomId, walletAddress)) {
+        console.log(`User ${walletAddress} already connected to room ${roomId} during manual validation`);
+        safeDisconnect(socket, 'Already connected', 'You are already connected to this room from another tab or device.');
+        return;
+      }
+
+      // Add connection tracking
+      addConnectionTracking(roomId, walletAddress, socket.id, user.id);
+      
+      // Join the room
+      socket.join(roomId);
+      console.log(`User ${walletAddress} manually joined room ${roomId} (socket: ${socket.id})`);
+
+      // Notify other participants about the new join
+      socket.to(roomId).emit('participantJoined', {
+        walletAddress,
+        timestamp: new Date().toISOString()
+      });
+
+      // Emit room stats update when user joins
+      emitRoomStatsUpdate(roomId);
+
+      // Send connection success confirmation
+      if (callback && typeof callback === 'function') {
+        callback({ success: true, participant });
+      }
+
+    } catch (error) {
+      console.error('Error validating connection:', error);
+      safeDisconnect(socket, 'Validation error', 'Error validating your connection. Please try again.');
+    }
+  });
+
+  // Auto-validate connection after a short delay to allow client to set up
+  setTimeout(async () => {
+    try {
+      // Check if socket is still connected
+      if (!socket.connected) {
+        console.log(`Socket ${socket.id} disconnected before auto-validation could complete`);
+        return;
+      }
+
+      // Check if room is still valid
+      if (!(await isRoomValid(roomId))) {
+        console.log(`Room ${roomId} is no longer valid during auto-validation`);
+        safeDisconnect(socket, 'Room invalid', 'This room is no longer available. It may have been closed or finished.');
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { address: walletAddress.toLowerCase() }
+      });
+
+      if (!user) {
+        console.log(`User not found during auto-validation: ${walletAddress}`);
+        safeDisconnect(socket, 'User not found', 'User account not found. Please refresh and try again.');
+        return;
+      }
+
+      // Check if user is a participant in this room
+      const participant = await getParticipantInfo(roomId, user.id);
+      if (!participant) {
+        console.log(`User ${walletAddress} not a participant in room ${roomId} during auto-validation`);
+        safeDisconnect(socket, 'Not a participant', 'You are not a participant in this room. Please join the room first.');
+        return;
+      }
+
+      // Double-check that user isn't already connected
+      if (isUserAlreadyConnected(roomId, walletAddress)) {
+        console.log(`User ${walletAddress} already connected to room ${roomId} during auto-validation`);
+        safeDisconnect(socket, 'Already connected', 'You are already connected to this room from another tab or device.');
+        return;
+      }
+
+      // Add connection tracking
+      addConnectionTracking(roomId, walletAddress, socket.id, user.id);
+      
+      // Join the room
+      socket.join(roomId);
+      console.log(`User ${walletAddress} auto-joined room ${roomId} (socket: ${socket.id})`);
+
+      // Notify other participants about the new join
+      socket.to(roomId).emit('participantJoined', {
+        walletAddress,
+        timestamp: new Date().toISOString()
+      });
+
+      // Emit room stats update when user joins
+      emitRoomStatsUpdate(roomId);
+
+      // Emit connection validated event
+      socket.emit('connectionValidated', { 
+        success: true, 
+        participant,
+        roomId,
+        walletAddress
+      });
+
+    } catch (error) {
+      console.error('Error during auto-validation:', error);
+      if (socket.connected) {
+        safeDisconnect(socket, 'Validation error', 'Error validating your connection. Please try again.');
+      }
+    }
+  }, 1000); // 1 second delay to allow client setup
 
   // Add connection monitoring
   socket.on('error', (error) => {
@@ -71,12 +325,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', (reason) => {
-    console.log(`User ${walletAddress} disconnected from room ${roomId}, reason: ${reason}`);
-    
-    // Clean up any room-specific data if needed
-    if (reason === 'io server disconnect') {
-      // Server initiated disconnect
-      console.log('Server initiated disconnect');
+    const userInfo = socketToUser.get(socket.id);
+    if (userInfo) {
+      const { roomId, walletAddress } = userInfo;
+      console.log(`User ${walletAddress} disconnected from room ${roomId}, reason: ${reason}`);
+      
+      // Remove connection tracking
+      removeConnectionTracking(socket.id);
+      
+      // Clean up any room-specific data if needed
+      if (reason === 'io server disconnect') {
+        // Server initiated disconnect
+        console.log('Server initiated disconnect');
+      }
     }
   });
 
@@ -90,43 +351,31 @@ io.on('connection', (socket) => {
     console.error(`Connection error for ${socket.id}:`, error);
   });
 
-  // Notify other participants about the new join
-  socket.to(roomId).emit('participantJoined', {
-    walletAddress,
-    timestamp: new Date().toISOString()
-  });
-
-  // Emit room stats update when user joins
-  emitRoomStatsUpdate(roomId);
-
   // Handle ready toggle
   socket.on('toggleReady', async () => {
     try {
-      // Update participant ready status in database
-      const user = await prisma.user.findUnique({
-        where: { address: walletAddress.toLowerCase() }
-      });
+      const userInfo = socketToUser.get(socket.id);
+      if (!userInfo) {
+        console.log('Socket not found in tracking, ignoring toggleReady');
+        return;
+      }
 
-      if (user) {
-        const participant = await prisma.roomParticipant.findFirst({
-          where: {
-            roomId,
-            userId: user.id
-          }
+      const { roomId, userId } = userInfo;
+      
+      // Update participant ready status in database
+      const participant = await getParticipantInfo(roomId, userId);
+
+      if (participant) {
+        await prisma.roomParticipant.update({
+          where: { id: participant.id },
+          data: { isReady: !participant.isReady }
         });
 
-        if (participant) {
-          await prisma.roomParticipant.update({
-            where: { id: participant.id },
-            data: { isReady: !participant.isReady }
-          });
-
-          // Notify all clients in the room
-          socket.to(roomId).emit('participantReady', participant.id);
-          
-          // Emit room stats update
-          emitRoomStatsUpdate(roomId);
-        }
+        // Notify all clients in the room
+        socket.to(roomId).emit('participantReady', participant.id);
+        
+        // Emit room stats update
+        emitRoomStatsUpdate(roomId);
       }
     } catch (error) {
       console.error('Error toggling ready status:', error);
@@ -141,46 +390,40 @@ io.on('connection', (socket) => {
       const { countdownTime = 5 } = data || {};
       console.log('Countdown time:', countdownTime);
       
+      const userInfo = socketToUser.get(socket.id);
+      if (!userInfo) {
+        console.log('Socket not found in tracking, ignoring startGame');
+        return;
+      }
+
+      const { roomId, userId } = userInfo;
+      
       // Verify user is admin
-      const user = await prisma.user.findUnique({
-        where: { address: walletAddress.toLowerCase() }
-      });
+      const participant = await getParticipantInfo(roomId, userId);
 
-      if (user) {
-        const participant = await prisma.roomParticipant.findFirst({
-          where: {
-            roomId,
-            userId: user.id,
-            isAdmin: true
+      if (participant && participant.isAdmin) {
+        console.log('Admin verified, emitting gameStarting event');
+        // Emit gameStarting event to show countdown
+        io.to(roomId).emit('gameStarting', countdownTime);
+        console.log('gameStarting event emitted with countdown:', countdownTime);
+        
+        // Start countdown with custom time
+        let countdown = countdownTime || 10;
+        console.log('Starting countdown from:', countdown);
+        
+        const countdownInterval = setInterval(() => {
+          console.log('Countdown update:', countdown);
+          io.to(roomId).emit('countdownUpdate', countdown);
+          countdown--;
+
+          if (countdown < 0) {
+            console.log('Countdown finished, starting quiz');
+            clearInterval(countdownInterval);
+            startQuiz(roomId);
           }
-        });
-
-        if (participant) {
-          console.log('Admin verified, emitting gameStarting event');
-          // Emit gameStarting event to show countdown
-          io.to(roomId).emit('gameStarting', countdownTime);
-          console.log('gameStarting event emitted with countdown:', countdownTime);
-          
-          // Start countdown with custom time
-          let countdown = countdownTime || 10;
-          console.log('Starting countdown from:', countdown);
-          
-          const countdownInterval = setInterval(() => {
-            console.log('Countdown update:', countdown);
-            io.to(roomId).emit('countdownUpdate', countdown);
-            countdown--;
-
-            if (countdown < 0) {
-              console.log('Countdown finished, starting quiz');
-              clearInterval(countdownInterval);
-              startQuiz(roomId);
-            }
-          }, 1000);
-        } else {
-          console.log('User is not admin');
-        }
+        }, 1000);
       } else {
-        console.log('User not found');
+        console.log('User is not admin');
       }
       
       console.log('=== startGame event processed ===');
@@ -194,24 +437,20 @@ io.on('connection', (socket) => {
     try {
       const { message, timestamp } = data;
       
+      const userInfo = socketToUser.get(socket.id);
+      if (!userInfo) {
+        console.log('Socket not found in tracking, ignoring sendAdminMessage');
+        return;
+      }
+
+      const { roomId, userId } = userInfo;
+      
       // Verify user is admin
-      const user = await prisma.user.findUnique({
-        where: { address: walletAddress.toLowerCase() }
-      });
+      const participant = await getParticipantInfo(roomId, userId);
 
-      if (user) {
-        const participant = await prisma.roomParticipant.findFirst({
-          where: {
-            roomId,
-            userId: user.id,
-            isAdmin: true
-          }
-        });
-
-        if (participant && message) {
-          // Broadcast message to all clients in room
-          io.to(roomId).emit('adminMessageReceived', { message, timestamp });
-        }
+      if (participant && participant.isAdmin && message) {
+        // Broadcast message to all clients in room
+        io.to(roomId).emit('adminMessageReceived', { message, timestamp });
       }
     } catch (error) {
       console.error('Error sending admin message:', error);
@@ -224,35 +463,29 @@ io.on('connection', (socket) => {
       console.log('Received sendMessage event:', data);
       const { message } = data;
       
+      const userInfo = socketToUser.get(socket.id);
+      if (!userInfo) {
+        console.log('Socket not found in tracking, ignoring sendMessage');
+        return;
+      }
+
+      const { roomId, userId } = userInfo;
+      
       // Verify user is admin
-      const user = await prisma.user.findUnique({
-        where: { address: walletAddress.toLowerCase() }
-      });
+      const participant = await getParticipantInfo(roomId, userId);
 
-      console.log('User found:', user ? user.address : 'not found');
+      console.log('Participant found:', participant ? { isAdmin: participant.isAdmin, userId: participant.userId } : 'not found');
 
-      if (user) {
-        const participant = await prisma.roomParticipant.findFirst({
-          where: {
-            roomId,
-            userId: user.id,
-            isAdmin: true
-          }
+      if (participant && participant.isAdmin && message) {
+        console.log('Broadcasting message to room:', roomId, 'Message:', message);
+        // Broadcast message to all clients in room
+        io.to(roomId).emit('adminMessageReceived', { 
+          message, 
+          timestamp: new Date().toISOString() 
         });
-
-        console.log('Participant found:', participant ? { isAdmin: participant.isAdmin, userId: participant.userId } : 'not found');
-
-        if (participant && message) {
-          console.log('Broadcasting message to room:', roomId, 'Message:', message);
-          // Broadcast message to all clients in room
-          io.to(roomId).emit('adminMessageReceived', { 
-            message, 
-            timestamp: new Date().toISOString() 
-          });
-          console.log('Message broadcasted successfully');
-        } else {
-          console.log('Message not sent - participant not admin or message empty');
-        }
+        console.log('Message broadcasted successfully');
+      } else {
+        console.log('Message not sent - participant not admin or message empty');
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -287,75 +520,83 @@ io.on('connection', (socket) => {
   socket.on('submitAnswer', async (data) => {
     try {
       const { questionId, answerId, timeLeft } = data;
-      const user = await prisma.user.findUnique({
-        where: { address: walletAddress.toLowerCase() }
+      
+      const userInfo = socketToUser.get(socket.id);
+      if (!userInfo) {
+        console.log('Socket not found in tracking, ignoring submitAnswer');
+        return;
+      }
+
+      const { roomId, userId } = userInfo;
+      
+      // Get the question to check if answer is correct
+      const question = await prisma.question.findUnique({
+        where: { id: questionId },
+        include: {
+          options: true,
+          snarkel: true
+        }
       });
 
-      if (user) {
-        // Get the question to check if answer is correct
-        const question = await prisma.question.findUnique({
-          where: { id: questionId },
-          include: {
-            options: true,
-            snarkel: true
-          }
-        });
-
-        if (!question) {
-          console.error('Question not found:', questionId);
-          return;
-        }
-
-        // Find the selected option
-        const selectedOption = question.options.find(opt => opt.id === answerId);
-        const isCorrect = selectedOption ? selectedOption.isCorrect : false;
-
-        // Calculate score using quadratic formula
-        const basePoints = question.snarkel.basePointsPerQuestion || 100;
-        const maxTime = question.timeLimit;
-        const timeUsed = maxTime - timeLeft;
-        const timeRatio = timeUsed / maxTime;
-        
-        // Quadratic scoring: faster answers get exponentially more points
-        // Formula: basePoints * (1 - timeRatio^2)
-        const score = isCorrect ? Math.round(basePoints * (1 - Math.pow(timeRatio, 2))) : 0;
-
-        // Store the answer
-        if (!questionAnswers.has(roomId)) {
-          questionAnswers.set(roomId, new Map());
-        }
-        const roomQuestionAnswers = questionAnswers.get(roomId);
-        if (!roomQuestionAnswers.has(questionId)) {
-          roomQuestionAnswers.set(questionId, { answers: [] });
-        }
-
-        const questionData = roomQuestionAnswers.get(questionId);
-        questionData.answers.push({
-          userId: user.id,
-          answerId,
-          isCorrect,
-          points: score,
-          timeLeft
-        });
-
-        // Update room scores
-        if (!roomScores.has(roomId)) {
-          roomScores.set(roomId, new Map());
-        }
-        const userScores = roomScores.get(roomId);
-        const currentScore = userScores.get(user.id) || 0;
-        userScores.set(user.id, currentScore + score);
-
-        console.log(`User ${user.address} submitted answer for question ${questionId}: ${isCorrect ? 'Correct' : 'Incorrect'} (+${score} points)`);
-        
-        // Emit answer submitted event
-        socket.to(roomId).emit('answerSubmitted', {
-          userId: user.id,
-          questionId,
-          isCorrect,
-          points: score
-        });
+      if (!question) {
+        console.error('Question not found:', questionId);
+        return;
       }
+
+      // Find the selected option
+      const selectedOption = question.options.find(opt => opt.id === answerId);
+      const isCorrect = selectedOption ? selectedOption.isCorrect : false;
+
+      // Calculate score using quadratic formula
+      const basePoints = question.snarkel.basePointsPerQuestion || 100;
+      const maxTime = question.timeLimit;
+      const timeUsed = maxTime - timeLeft;
+      const timeRatio = timeUsed / maxTime;
+      
+      // Quadratic scoring: faster answers get exponentially more points
+      // Formula: basePoints * (1 - timeRatio^2)
+      const score = isCorrect ? Math.round(basePoints * (1 - Math.pow(timeRatio, 2))) : 0;
+
+      // Store the answer
+      if (!questionAnswers.has(roomId)) {
+        questionAnswers.set(roomId, new Map());
+      }
+      const roomQuestionAnswers = questionAnswers.get(roomId);
+      if (!roomQuestionAnswers.has(questionId)) {
+        roomQuestionAnswers.set(questionId, { answers: [] });
+      }
+
+      const questionData = roomQuestionAnswers.get(questionId);
+      questionData.answers.push({
+        userId,
+        answerId,
+        isCorrect,
+        points: score,
+        timeLeft
+      });
+
+      // Update room scores
+      if (!roomScores.has(roomId)) {
+        roomScores.set(roomId, new Map());
+      }
+      const userScores = roomScores.get(roomId);
+      const currentScore = userScores.get(userId) || 0;
+      userScores.set(userId, currentScore + score);
+
+      // Get user info for logging
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+      
+      console.log(`User ${user ? user.address : userId} submitted answer for question ${questionId}: ${isCorrect ? 'Correct' : 'Incorrect'} (+${score} points)`);
+      
+      // Emit answer submitted event
+      socket.to(roomId).emit('answerSubmitted', {
+        userId,
+        questionId,
+        isCorrect,
+        points: score
+      });
     } catch (error) {
       console.error('Error submitting answer:', error);
     }
@@ -363,89 +604,94 @@ io.on('connection', (socket) => {
 
   // Handle disconnect
   socket.on('disconnect', async () => {
+    const userInfo = socketToUser.get(socket.id);
+    if (!userInfo) {
+      console.log('Socket not found in tracking during disconnect');
+      return;
+    }
+
+    const { roomId, walletAddress, userId } = userInfo;
     console.log(`User ${walletAddress} disconnected from room ${roomId}`);
     
     try {
+      // Remove connection tracking first
+      removeConnectionTracking(socket.id);
+      
+      // Check if room is still valid before proceeding
+      if (!(await isRoomValid(roomId))) {
+        console.log(`Room ${roomId} is no longer valid, skipping participant cleanup`);
+        return;
+      }
+      
       // Update participant count
-      const user = await prisma.user.findUnique({
-        where: { address: walletAddress.toLowerCase() }
-      });
+      const participant = await getParticipantInfo(roomId, userId);
 
-      if (user) {
-        const participant = await prisma.roomParticipant.findFirst({
-          where: {
-            roomId,
-            userId: user.id
+      if (participant) {
+        try {
+          await prisma.roomParticipant.delete({
+            where: { id: participant.id }
+          });
+        } catch (error) {
+          // Participant might have already been deleted, just log and continue
+          console.log(`Participant ${participant.id} already removed or not found`);
+        }
+
+        // Update room participant count
+        await prisma.room.update({
+          where: { id: roomId },
+          data: {
+            currentParticipants: {
+              decrement: 1
+            }
           }
         });
 
-        if (participant) {
-          try {
-            await prisma.roomParticipant.delete({
-              where: { id: participant.id }
-            });
-          } catch (error) {
-            // Participant might have already been deleted, just log and continue
-            console.log(`Participant ${participant.id} already removed or not found`);
-          }
+        // Remove from scoring system
+        if (roomScores.has(roomId)) {
+          const userScores = roomScores.get(roomId);
+          userScores.delete(userId);
+        }
 
-          // Update room participant count
+        // Remove from current question answers if quiz is active
+        if (questionAnswers.has(roomId)) {
+          const roomQuestionAnswers = questionAnswers.get(roomId);
+          roomQuestionAnswers.forEach((questionData, questionId) => {
+            questionData.answers = questionData.answers.filter(answer => answer.userId !== userId);
+          });
+        }
+
+        // Notify other participants
+        socket.to(roomId).emit('participantLeft', participant.id);
+        
+        // Emit room stats update
+        emitRoomStatsUpdate(roomId);
+        
+        // Check if room is now empty and end quiz if needed
+        const remainingParticipants = await prisma.roomParticipant.count({
+          where: { roomId }
+        });
+        
+        if (remainingParticipants === 0) {
+          console.log(`Room ${roomId} is now empty, closing room`);
+          // Clean up any active quiz state
+          questionAnswers.delete(roomId);
+          roomScores.delete(roomId);
+          
+          // Close the room (mark as inactive and finished)
           await prisma.room.update({
             where: { id: roomId },
             data: {
-              currentParticipants: {
-                decrement: 1
-              }
+              isStarted: false,
+              isWaiting: false,
+              isFinished: true,
+              isActive: false,
+              currentParticipants: 0,
+              endTime: new Date()
             }
           });
-
-          // Remove from scoring system
-          if (roomScores.has(roomId)) {
-            const userScores = roomScores.get(roomId);
-            userScores.delete(user.id);
-          }
-
-          // Remove from current question answers if quiz is active
-          if (questionAnswers.has(roomId)) {
-            const roomQuestionAnswers = questionAnswers.get(roomId);
-            roomQuestionAnswers.forEach((questionData, questionId) => {
-              questionData.answers = questionData.answers.filter(answer => answer.userId !== user.id);
-            });
-          }
-
-          // Notify other participants
-          socket.to(roomId).emit('participantLeft', participant.id);
           
-          // Emit room stats update
-          emitRoomStatsUpdate(roomId);
-          
-          // Check if room is now empty and end quiz if needed
-          const remainingParticipants = await prisma.roomParticipant.count({
-            where: { roomId }
-          });
-          
-          if (remainingParticipants === 0) {
-            console.log(`Room ${roomId} is now empty, closing room`);
-            // Clean up any active quiz state
-            questionAnswers.delete(roomId);
-            roomScores.delete(roomId);
-            
-            // Close the room (mark as inactive and finished)
-            await prisma.room.update({
-              where: { id: roomId },
-              data: {
-                isStarted: false,
-                isWaiting: false,
-                isFinished: true,
-                isActive: false,
-                currentParticipants: 0,
-                endTime: new Date()
-              }
-            });
-            
-            // Notify remaining clients (if any)
-            io.to(roomId).emit('roomEmpty');
-          }
+          // Notify remaining clients (if any)
+          io.to(roomId).emit('roomEmpty');
         }
       }
     } catch (error) {
