@@ -361,21 +361,44 @@ io.on('connection', (socket) => {
       }
 
       const { roomId, userId } = userInfo;
+      console.log(`toggleReady event received from user ${userId} in room ${roomId}`);
       
       // Update participant ready status in database
       const participant = await getParticipantInfo(roomId, userId);
 
       if (participant) {
+        // Toggle the ready status
+        const newReadyStatus = !participant.isReady;
+        console.log(`Toggling ready status for participant ${participant.id} from ${participant.isReady} to ${newReadyStatus}`);
+        
         await prisma.roomParticipant.update({
           where: { id: participant.id },
-          data: { isReady: !participant.isReady }
+          data: { isReady: newReadyStatus }
         });
 
-        // Notify all clients in the room
+        // Get updated participant info
+        const updatedParticipant = await getParticipantInfo(roomId, userId);
+        console.log(`Updated participant ready status in database:`, updatedParticipant);
+        
+        // Emit participant ready update to ALL clients in the room (including sender)
+        console.log(`Emitting participantReadyUpdated to room ${roomId} for participant ${participant.id}`);
+        io.to(roomId).emit('participantReadyUpdated', {
+          participantId: participant.id,
+          isReady: newReadyStatus,
+          userId: userId
+        });
+        
+        // Also emit the specific participant ready event for backward compatibility
+        console.log(`Emitting participantReady to other clients in room ${roomId}`);
         socket.to(roomId).emit('participantReady', participant.id);
         
-        // Emit room stats update
+        // Emit room stats update to refresh all client data
+        console.log(`Emitting roomStatsUpdate to room ${roomId}`);
         emitRoomStatsUpdate(roomId);
+        
+        console.log(`User ${userId} toggled ready status to: ${newReadyStatus} - all events emitted`);
+      } else {
+        console.log(`Participant not found for user ${userId} in room ${roomId}`);
       }
     } catch (error) {
       console.error('Error toggling ready status:', error);

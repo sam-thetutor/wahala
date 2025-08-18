@@ -493,6 +493,33 @@ export default function QuizRoomPage() {
       );
     });
 
+    newSocket.on('participantReadyUpdated', (data: { participantId: string, isReady: boolean, userId: string }) => {
+      console.log('Received participantReadyUpdated:', data);
+      console.log('Current participants before update:', participants);
+      
+      // Update participants list with the new ready status
+      setParticipants(prev => {
+        const updated = prev.map(p => p.id === data.participantId ? { ...p, isReady: data.isReady } : p);
+        console.log('Participants after update:', updated);
+        return updated;
+      });
+      
+      // Update animated tabs
+      setParticipantTabs(prev => 
+        prev.map(p => p.id === data.participantId ? { ...p, isReady: data.isReady } : p)
+      );
+      
+      // If this is the current user, update their ready status
+      // Find the current user's participant by comparing wallet address
+      const currentParticipant = participants.find(p => p.user.address.toLowerCase() === address?.toLowerCase());
+      if (currentParticipant && currentParticipant.id === data.participantId) {
+        setIsReady(data.isReady);
+        console.log(`Current user ready status updated to: ${data.isReady}`);
+      }
+      
+      console.log(`Participant ${data.participantId} ready status updated to: ${data.isReady}`);
+    });
+
     newSocket.on('roomStatsUpdate', (data: any) => {
       // Update room stats
       setRoom(prev => prev ? {
@@ -504,8 +531,31 @@ export default function QuizRoomPage() {
         isWaiting: data.isWaiting
       } : null);
       
-      // Update participants list
-      setParticipants(data.participants);
+      // Update participants list by merging with existing data to preserve individual updates
+      setParticipants(prev => {
+        if (!data.participants || !Array.isArray(data.participants)) {
+          return prev;
+        }
+        
+        // Create a map of existing participants by ID to preserve any local updates
+        const existingParticipantsMap = new Map(prev.map(p => [p.id, p]));
+        
+        // Merge with new data, preserving existing ready status if it's more recent
+        const mergedParticipants = data.participants.map((newParticipant: any) => {
+          const existing = existingParticipantsMap.get(newParticipant.id);
+          if (existing) {
+            // Keep existing participant data but update other fields
+            return {
+              ...newParticipant,
+              // Preserve existing ready status if it was recently updated
+              isReady: existing.isReady !== undefined ? existing.isReady : newParticipant.isReady
+            };
+          }
+          return newParticipant;
+        });
+        
+        return mergedParticipants;
+      });
       
       // Update participant tabs for TV display
       setParticipantTabs(data.participants.map((p: any) => ({
@@ -517,7 +567,7 @@ export default function QuizRoomPage() {
       })));
       
       // Log stats update
-      console.log('Stats updated');
+      console.log('Stats updated with merged participant data');
     });
 
     newSocket.on('participantJoined', (data: { walletAddress: string, timestamp: string }) => {
@@ -768,8 +818,10 @@ export default function QuizRoomPage() {
     }
     
     if (socket) {
+      console.log('Emitting toggleReady event');
       socket.emit('toggleReady');
-      setIsReady(!isReady);
+      // Don't update local state immediately - wait for server response
+      // setIsReady(!isReady); // This line is removed
     }
   };
 
