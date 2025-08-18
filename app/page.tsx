@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Play, 
   Users, 
@@ -29,6 +30,14 @@ import { sdk } from '@farcaster/miniapp-sdk';
 
 // Action Bar Component
 const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
+  const router = useRouter();
+  
+  const handleWalletClick = () => {
+    if (isConnected) {
+      router.push('/admin');
+    }
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-blue-600 via-blue-700 to-slate-600 shadow-2xl z-50 border-t-2 border-blue-400 rounded-t-3xl md:left-1/2 md:transform md:-translate-x-1/2 md:w-4/5 lg:w-3/5">
       {/* Background pattern */}
@@ -37,15 +46,15 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
         <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12"></div>
       </div>
       
-      <div className="relative z-10 p-4 sm:p-5">
-        <div className="flex items-center justify-center gap-3 sm:gap-4 lg:gap-6">
+      <div className="relative z-10 p-3 sm:p-4">
+        <div className="flex items-center justify-center gap-2 sm:gap-3 lg:gap-4">
           {/* Join a Snarkel */}
           <div className="relative flex-1 min-w-0">
             <Link href="/join">
-              <div className="group bg-white shadow-lg hover:shadow-xl rounded-2xl p-3 sm:p-4 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
+              <div className="group bg-white shadow-lg hover:shadow-xl rounded-xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <span className="font-handwriting text-sm sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 sm:gap-3 relative z-10 truncate text-blue-700 font-semibold">
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 rounded-full border-2 border-blue-400 bg-blue-100 flex-shrink-0 group-hover:bg-blue-200 transition-colors"></div>
+                <span className="font-handwriting text-xs sm:text-sm lg:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate text-blue-700 font-semibold">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 rounded-full border-2 border-blue-400 bg-blue-100 flex-shrink-0 group-hover:bg-blue-200 transition-colors"></div>
                   <span className="hidden sm:inline">Join a Snarkel</span>
                   <span className="sm:hidden">Join</span>
                 </span>
@@ -56,10 +65,10 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
           {/* Host a Snarkel */}
           <div className="relative flex-1 min-w-0">
             <Link href="/create">
-              <div className="group bg-white shadow-lg hover:shadow-xl rounded-2xl p-3 sm:p-4 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
+              <div className="group bg-white shadow-lg hover:shadow-xl rounded-xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <span className="font-handwriting text-sm sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 sm:gap-3 relative z-10 truncate text-blue-700 font-semibold">
-                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-600" />
+                <span className="font-handwriting text-xs sm:text-sm lg:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate text-blue-700 font-semibold">
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-blue-600" />
                   <span className="hidden sm:inline">Create Snarkel</span>
                   <span className="sm:hidden">Create</span>
                 </span>
@@ -70,10 +79,10 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
           {/* Profile */}
           <div className="relative flex-1 min-w-0">
             <Link href="/profile">
-              <div className="group bg-white shadow-lg hover:shadow-xl rounded-2xl p-3 sm:p-4 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
+              <div className="group bg-white shadow-lg hover:shadow-xl rounded-xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <span className="font-handwriting text-sm sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 sm:gap-3 relative z-10 truncate text-blue-700 font-semibold">
-                  <User className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-600" />
+                <span className="font-handwriting text-xs sm:text-sm lg:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate text-blue-700 font-semibold">
+                  <User className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-blue-600" />
                   <span className="hidden sm:inline">Profile</span>
                   <span className="sm:hidden">Profile</span>
                 </span>
@@ -81,9 +90,24 @@ const ActionBar = ({ isConnected }: { isConnected: boolean }) => {
             </Link>
           </div>
           
-          {/* Wallet Connect */}
+          {/* Wallet Connect - Clickable to go to admin when connected */}
           <div className="flex-shrink-0">
-            <WalletConnectButton />
+            {isConnected ? (
+              <button
+                onClick={handleWalletClick}
+                className="group bg-white shadow-lg hover:shadow-xl rounded-xl p-2 sm:p-3 transform hover:scale-105 transition-all duration-300 border-2 border-blue-400 relative overflow-hidden"
+                title="Go to Admin Dashboard"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-green-50 to-green-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <span className="font-handwriting text-xs sm:text-sm lg:text-base text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-2 relative z-10 truncate text-green-700 font-semibold">
+                  <Trophy className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-green-600" />
+                  <span className="hidden sm:inline">Admin</span>
+                  <span className="sm:hidden">Admin</span>
+                </span>
+              </button>
+            ) : (
+              <WalletConnectButton />
+            )}
           </div>
         </div>
       </div>
@@ -210,8 +234,8 @@ export default function HomePage() {
 
         {/* Main Content */}
         <div className="relative z-10 min-h-screen p-4 sm:p-6 pb-28 flex flex-col">
-          {/* Header */}
-          <div className="text-center mb-8 sm:mb-12">
+          {/* Header - Hidden on mobile */}
+          <div className="hidden sm:block text-center mb-8 sm:mb-12">
             <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl shadow-lg mb-4">
               <Gamepad2 className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
             </div>
@@ -240,7 +264,7 @@ export default function HomePage() {
               className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-2xl font-handwriting text-xl font-bold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
             >
               <Play className="w-6 h-6" />
-              Play Now
+              Play a Snarkel
             </Link>
           </div>
 
@@ -260,7 +284,7 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mb-4">
                 <Users className="w-6 h-6 text-white" />
               </div>
-              <h3 className="font-handwriting text-lg font-bold text-gray-900 mb-2">Join</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Join</h3>
               <p className="text-gray-600 text-sm">Enter real-time quiz battles</p>
             </div>
 
@@ -269,7 +293,7 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mb-4">
                 <Zap className="w-6 h-6 text-white" />
               </div>
-              <h3 className="font-handwriting text-lg font-bold text-gray-900 mb-2">Compete</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Compete</h3>
               <p className="text-gray-600 text-sm">Faster answers = more points</p>
             </div>
 
@@ -278,26 +302,30 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl flex items-center justify-center mb-4">
                 <Trophy className="w-6 h-6 text-white" />
               </div>
-              <h3 className="font-handwriting text-lg font-bold text-gray-900 mb-2">Win</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Win</h3>
               <p className="text-gray-600 text-sm">Climb leaderboards & earn rewards</p>
             </div>
           </div>
 
-          {/* Secondary Actions */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          {/* Single Action Button */}
+          <div className="text-center mb-8">
             <Link
               href="/create"
-              className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 rounded-xl font-handwriting font-medium shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-blue-300"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-2xl font-handwriting text-xl font-bold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-6 h-6" />
               Create a Snarkel
             </Link>
+          </div>
+
+          {/* Clickable Featured Link */}
+          <div className="text-center">
             <Link
               href="/featured"
-              className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 rounded-xl font-handwriting font-medium shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-blue-300"
+              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-lg hover:underline transition-colors"
             >
               <Star className="w-5 h-5" />
-              Browse Featured
+              Go to Featured Snarkels
             </Link>
           </div>
 
@@ -312,7 +340,7 @@ export default function HomePage() {
                   Connect Your Wallet
                 </h3>
                 <p className="text-gray-600 text-sm mb-4">
-                  Join the Web3 quiz revolution
+                  Join  Snarkel s
                 </p>
                 <WalletConnectButton />
               </div>
