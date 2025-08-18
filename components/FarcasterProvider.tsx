@@ -123,7 +123,7 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
       try {
         await sdk.actions.composeCast({
           text: "🎯 Just discovered Snarkels - a quiz platform with crypto rewards! Join me in some brain-bending challenges!",
-          embeds: ["https://snarkels.vercel.app"]
+          embeds: ["https://snarkels.lol"]
         })
       } catch (error) {
         console.error('Error sharing app:', error)

@@ -208,10 +208,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is the creator (admin) of the snarkel OR if it's a featured quiz
+    // Check if user is the creator (admin) of the snarkel OR if it's the first person joining a featured quiz (session starter)
     const isSnarkelCreator = snarkel.creator?.address?.toLowerCase() === walletAddress.toLowerCase();
     const isFeaturedQuiz = snarkel.isFeatured;
-    const isAdmin = isSnarkelCreator || isFeaturedQuiz;
+    const isFirstPersonJoiningFeatured = isFeaturedQuiz && (!room || room.currentParticipants === 0);
+    const isAdmin = isSnarkelCreator || isFirstPersonJoiningFeatured;
     
     console.log('Admin check:', {
       creatorAddress: snarkel.creator?.address,

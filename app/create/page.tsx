@@ -1063,12 +1063,12 @@ export default function SnarkelCreationPage() {
         ))}
       </div>
 
-      {/* Header - compact pinned board style */}
+      {/* Header - Mobile Optimized Pinned Board Style */}
       <div className={`relative z-10 transition-all duration-1000 ${
         isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
       }`}>
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="bg-white shadow-lg rounded-xl p-4 transform -rotate-1 hover:rotate-0 transition-all duration-500 relative border-l-3 border-purple-400 overflow-hidden">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="bg-white shadow-lg rounded-xl p-3 sm:p-4 transform -rotate-1 hover:rotate-0 transition-all duration-500 relative border-l-3 border-purple-400 overflow-hidden">
             {/* Pin effect */}
             <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-purple-500 rounded-full shadow-md border border-white"></div>
             <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-purple-600 rounded-full"></div>
@@ -1080,7 +1080,7 @@ export default function SnarkelCreationPage() {
                    backgroundSize: '12px 12px'
                  }}></div>
             
-            <div className="relative z-10 flex items-center justify-between">
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
               <div className="flex items-center gap-3">
                 <button 
                   onClick={() => window.history.back()}
@@ -1094,27 +1094,27 @@ export default function SnarkelCreationPage() {
                   <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-ping bg-yellow-400"></div>
                 </div>
                 <div>
-                  <h1 className="font-handwriting text-xl sm:text-2xl font-bold" style={{ color: '#476520' }}>
+                  <h1 className="font-handwriting text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: '#476520' }}>
                     Create New Snarkel
                   </h1>
                   <p className="font-handwriting text-xs sm:text-sm text-gray-600 mt-0.5">Design your Web3 quiz experience!</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-end">
                 <button 
                   onClick={() => router.push('/admin')}
-                  className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 transition-colors font-handwriting text-xs sm:text-sm"
+                  className="flex items-center gap-1 sm:gap-2 px-3 sm:px-3 py-2 sm:py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 transition-colors font-handwriting text-xs sm:text-sm min-h-[40px] sm:min-h-[32px]"
                   style={{ color: '#1e40af' }}
                 >
-                  <Trophy className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <Trophy className="w-4 h-4 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">My Quizzes</span>
                   <span className="sm:hidden">Admin</span>
                 </button>
                 <WalletConnectButton />
                 <button 
                   onClick={() => router.push('/')}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white hover:text-gray-100"
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white hover:text-gray-100 min-h-[40px] sm:min-h-[32px] flex items-center justify-center"
                   title="Go to Home"
                 >
                   <Home className="w-5 h-5" />
@@ -1125,7 +1125,7 @@ export default function SnarkelCreationPage() {
         </div>
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 py-6">
+      <div className="relative z-10 max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Mini App Context Display - Shows Mini App info when running as Mini App */}
         <MiniAppContextDisplay />
         
@@ -1173,7 +1173,7 @@ export default function SnarkelCreationPage() {
             <div className="flex flex-col lg:flex-row">
               {/* Vertical Sidebar - Mobile first, then desktop */}
               <div className="lg:w-64 bg-gradient-to-b from-gray-50 to-white border-b lg:border-b-0 lg:border-r border-gray-200">
-                <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
+                <div className="p-2 sm:p-4 space-y-2 sm:space-y-3">
                   {tabs.map((tab, index) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
@@ -1186,7 +1186,7 @@ export default function SnarkelCreationPage() {
                         key={tab.id}
                         onClick={() => canAccess ? setActiveTab(tab.id) : null}
                         disabled={!canAccess}
-                        className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-handwriting font-medium rounded-xl transition-all transform hover:scale-105 ${
+                        className={`w-full flex items-center gap-3 px-3 sm:px-4 py-3 sm:py-3 text-sm sm:text-base font-handwriting font-medium rounded-xl transition-all transform hover:scale-105 min-h-[48px] sm:min-h-[52px] ${
                           isActive
                             ? 'text-white bg-gradient-to-r from-purple-500 to-blue-500 shadow-md scale-105'
                             : isCompleted
@@ -1196,15 +1196,15 @@ export default function SnarkelCreationPage() {
                             : 'text-gray-400 bg-gray-100 cursor-not-allowed opacity-60'
                         }`}
                       >
-                        <Icon size={16} className="sm:w-[18px] sm:h-[18px]" />
+                        <Icon size={18} className="sm:w-[20px] sm:h-[20px] flex-shrink-0" />
                         <span className="flex-1 text-left truncate">{tab.label}</span>
                         {isCompleted && (
-                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-white text-xs">✓</span>
                           </div>
                         )}
                         {!isCompleted && !canAccess && (
-                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-white text-xs">🔒</span>
                           </div>
                         )}
@@ -1216,76 +1216,76 @@ export default function SnarkelCreationPage() {
 
               {/* Main Content Area */}
               <div className="flex-1">
-                {/* Questions Tab - Horizontal Navigation */}
+                {/* Questions Tab - Mobile Optimized Navigation */}
                 {activeTab === 'questions' && snarkel.questions.length > 0 && (
-                  <div className="border-b border-gray-200 bg-gray-50 px-2 sm:px-4 py-2 sm:py-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                      <span className="font-handwriting font-bold text-xs sm:text-sm text-gray-700">Questions:</span>
+                  <div className="border-b border-gray-200 bg-gray-50 px-3 sm:px-4 py-3 sm:py-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+                      <span className="font-handwriting font-bold text-sm sm:text-base text-gray-700">Questions:</span>
                       
-                      {/* Question navigation pills */}
-                      <div className="flex overflow-x-auto gap-1 sm:gap-2 flex-1 pb-1 sm:pb-0">
+                      {/* Question navigation pills - Mobile: Scrollable, Desktop: Normal */}
+                      <div className="flex overflow-x-auto gap-2 sm:gap-2 flex-1 pb-2 sm:pb-0 scrollbar-hide">
                         {snarkel.questions.map((question, index) => (
                           <button
                             key={question.id}
                             onClick={() => setActiveQuestionIndex(index)}
-                            className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-handwriting font-medium whitespace-nowrap transition-all transform hover:scale-105 flex-shrink-0 ${
+                            className={`flex items-center gap-2 px-3 sm:px-3 py-2 sm:py-1.5 rounded-full text-sm font-handwriting font-medium whitespace-nowrap transition-all transform hover:scale-105 flex-shrink-0 min-h-[40px] sm:min-h-[32px] ${
                               activeQuestionIndex === index
                                 ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-md scale-105'
                                 : 'bg-white text-gray-600 hover:bg-green-50 hover:text-green-600 shadow-sm'
                             }`}
                           >
-                            <span className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-xs">
+                            <span className="w-4 h-4 sm:w-4 sm:h-4 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-xs">
                               {index + 1}
                             </span>
-                            <span className="max-w-16 sm:max-w-20 truncate">
+                            <span className="max-w-20 sm:max-w-24 truncate">
                               {question.text || `Q${index + 1}`}
                             </span>
-                            {question.text && <Edit3 size={8} className="sm:w-[10px] sm:h-[10px] opacity-60" />}
+                            {question.text && <Edit3 size={10} className="sm:w-[10px] sm:h-[10px] opacity-60" />}
                           </button>
                         ))}
                       </div>
 
-                      {/* Navigation arrows */}
-                      <div className="flex gap-1 justify-center sm:justify-start">
+                      {/* Navigation arrows - Mobile: Larger touch targets */}
+                      <div className="flex gap-2 justify-center sm:justify-start">
                         <button
                           onClick={() => setActiveQuestionIndex(Math.max(0, activeQuestionIndex - 1))}
                           disabled={activeQuestionIndex === 0}
-                          className="p-1 sm:p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="p-2 sm:p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[40px] sm:min-h-[32px] flex items-center justify-center"
                         >
-                          <ArrowLeft size={12} className="sm:w-[14px] sm:h-[14px]" />
+                          <ArrowLeft size={16} className="sm:w-[14px] sm:h-[14px]" />
                         </button>
                         <button
                           onClick={() => setActiveQuestionIndex(Math.min(snarkel.questions.length - 1, activeQuestionIndex + 1))}
                           disabled={activeQuestionIndex === snarkel.questions.length - 1}
-                          className="p-1 sm:p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="p-2 sm:p-1.5 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[40px] sm:min-h-[32px] flex items-center justify-center"
                         >
-                          <ArrowRight size={12} className="sm:w-[14px] sm:h-[14px]" />
+                          <ArrowRight size={16} className="sm:w-[14px] sm:h-[14px]" />
                         </button>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Tab Content - more compact */}
-                <div className="p-2 sm:p-4">
+                {/* Tab Content - Mobile optimized padding */}
+                <div className="p-3 sm:p-4">
                   {activeTab === 'details' && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                          <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
                             🎯 Snarkel Title *
                           </label>
                           <input
                             type="text"
                             value={snarkel.title}
                             onChange={(e) => setSnarkel(prev => ({ ...prev, title: e.target.value }))}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting ${
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting text-base ${
                               validationErrors.title ? 'border-red-500 bg-red-50' : 'border-gray-300'
                             }`}
                             placeholder="Enter snarkel title..."
                           />
                           {validationErrors.title && (
-                            <p className="mt-1 text-sm text-red-600 font-handwriting flex items-center gap-1">
+                            <p className="mt-2 text-sm text-red-600 font-handwriting flex items-center gap-1">
                               <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-xs">!</span>
                               {validationErrors.title}
                             </p>
@@ -1293,14 +1293,14 @@ export default function SnarkelCreationPage() {
                         </div>
 
                         <div>
-                          <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                          <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
                             ⏱️ Max Questions
                           </label>
                           <input
                             type="number"
                             value={snarkel.maxQuestions}
                             onChange={(e) => setSnarkel(prev => ({ ...prev, maxQuestions: parseInt(e.target.value) || 0 }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting text-base"
                             min="1"
                             max="60"
                           />
@@ -1308,31 +1308,31 @@ export default function SnarkelCreationPage() {
                       </div>
 
                       <div>
-                        <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                        <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
                           📝 Description
                         </label>
                         <textarea
                           value={snarkel.description}
                           onChange={(e) => setSnarkel(prev => ({ ...prev, description: e.target.value }))}
-                          rows={2}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting"
+                          rows={3}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-handwriting text-base"
                           placeholder="Describe your snarkel..."
                         />
                       </div>
 
                       {/* Featured Quiz Section */}
-                      <div className="bg-gradient-to-r from-yellow-50 to-amber-100 p-4 rounded-lg border border-yellow-200">
-                        <div className="flex items-center gap-2 mb-3">
+                      <div className="bg-gradient-to-r from-yellow-50 to-amber-100 p-4 sm:p-5 rounded-lg border border-yellow-200">
+                        <div className="flex items-center gap-2 mb-4">
                           <Star className="w-5 h-5 text-yellow-600" />
-                          <h3 className="font-handwriting text-lg font-medium" style={{ color: '#476520' }}>
+                          <h3 className="font-handwriting text-lg sm:text-xl font-medium" style={{ color: '#476520' }}>
                             Featured Quiz Options
                           </h3>
                         </div>
                         
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           {/* Featured Toggle */}
                           <div className="flex items-center justify-between">
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={snarkel.isFeatured}
@@ -1341,9 +1341,9 @@ export default function SnarkelCreationPage() {
                                   isFeatured: e.target.checked,
                                   featuredPriority: e.target.checked ? prev.featuredPriority : 0
                                 }))}
-                                className="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
+                                className="w-5 h-5 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
                               />
-                              <span className="font-handwriting text-sm" style={{ color: '#655947' }}>
+                              <span className="font-handwriting text-sm sm:text-base" style={{ color: '#655947' }}>
                                 Make this quiz featured on homepage
                               </span>
                             </label>
@@ -1352,10 +1352,10 @@ export default function SnarkelCreationPage() {
                           {/* Priority Setting */}
                           {snarkel.isFeatured && (
                             <div>
-                              <label className="block font-handwriting text-sm font-medium mb-1" style={{ color: '#476520' }}>
+                              <label className="block font-handwriting text-sm font-medium mb-2" style={{ color: '#476520' }}>
                                 🏆 Featured Priority (1-10)
                               </label>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-2">
                                 <input
                                   type="number"
                                   value={snarkel.featuredPriority}
@@ -1363,7 +1363,7 @@ export default function SnarkelCreationPage() {
                                     ...prev, 
                                     featuredPriority: Math.min(10, Math.max(1, parseInt(e.target.value) || 1))
                                   }))}
-                                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting"
+                                  className="w-24 sm:w-20 px-4 py-3 sm:px-3 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-handwriting text-base"
                                   min="1"
                                   max="10"
                                 />
@@ -1376,12 +1376,12 @@ export default function SnarkelCreationPage() {
 
                           {/* Featured Quiz Info */}
                           {snarkel.isFeatured && (
-                            <div className="bg-white bg-opacity-60 p-3 rounded-lg border border-yellow-300">
-                              <div className="flex items-start gap-2">
-                                <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                                <div className="text-sm" style={{ color: '#655947' }}>
-                                  <p className="font-medium mb-1">Featured Quiz Benefits:</p>
-                                  <ul className="space-y-1 text-xs">
+                            <div className="bg-white bg-opacity-60 p-4 rounded-lg border border-yellow-300">
+                              <div className="flex items-start gap-3">
+                                <Info className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                                <div className="text-sm sm:text-base" style={{ color: '#655947' }}>
+                                  <p className="font-medium mb-2">Featured Quiz Benefits:</p>
+                                  <ul className="space-y-1 text-xs sm:text-sm">
                                     <li>• Appears on homepage for all users</li>
                                     <li>• Can be started by anyone (not just creator)</li>
                                     <li>• Higher visibility and participation</li>
@@ -1847,32 +1847,35 @@ export default function SnarkelCreationPage() {
                  )}
                </div>
 
-               {/* Footer - compact */}
-               <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-4 py-3 border-t border-gray-200">
-                 <div className="flex justify-between items-center">
-                   <div className="font-handwriting text-sm text-gray-600 flex items-center gap-4">
-                     <span className="flex items-center gap-1">
+               {/* Footer - Mobile Optimized */}
+               <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-4 py-4 border-t border-gray-200">
+                 {/* Mobile: Stack vertically, Desktop: Side by side */}
+                 <div className="flex flex-col lg:flex-row gap-4 lg:gap-0 lg:justify-between lg:items-center">
+                   {/* Progress Info - Mobile: Full width, Desktop: Left side */}
+                   <div className="font-handwriting text-sm text-gray-600 flex flex-wrap items-center gap-2 lg:gap-4 order-2 lg:order-1">
+                     <span className="flex items-center gap-1 text-xs lg:text-sm">
                        <Edit3 size={14} />
                        {snarkel.questions.length} questions
                      </span>
-                     <span className="flex items-center gap-1">
+                     <span className="flex items-center gap-1 text-xs lg:text-sm">
                        <Users size={14} />
-                       {snarkel.allowlist.length} allowlist entries
+                       {snarkel.allowlist.length} allowlist
                      </span>
-                     <span className="flex items-center gap-1">
+                     <span className="flex items-center gap-1 text-xs lg:text-sm">
                        <Trophy size={14} />
-                       {snarkel.rewards.enabled ? 'Rewards enabled' : 'No rewards'}
+                       {snarkel.rewards.enabled ? 'Rewards' : 'No rewards'}
                      </span>
                      {/* Progress indicator */}
                      <span className="flex items-center gap-1 text-xs">
                        <div className="w-3 h-3 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs">
                          {tabs.filter(tab => isTabCompleted(tab.id)).length}
                        </div>
-                       of {tabs.length} completed
+                       of {tabs.length}
                      </span>
                    </div>
                    
-                   <div className="flex items-center gap-3">
+                   {/* Action Buttons - Mobile: Full width, Desktop: Right side */}
+                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 order-1 lg:order-2 w-full lg:w-auto">
                      {/* Back button - show on all tabs except first */}
                      {activeTab !== 'details' && (
                        <button
@@ -1882,42 +1885,40 @@ export default function SnarkelCreationPage() {
                              setActiveTab(tabs[tabIndex - 1].id);
                            }
                          }}
-                         className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium"
+                         className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-handwriting font-medium text-sm lg:text-base"
                        >
                          <ArrowLeft size={16} />
-                         Back
+                         <span className="hidden sm:inline">Back</span>
                        </button>
                      )}
                      
-                     {/* Wallet Error Display */}
-                     {activeTab === 'spam' && validationErrors.wallet && (
-                       <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                         <div className="flex items-center gap-2">
-                           <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                             <span className="text-white text-xs font-bold">!</span>
-                           </div>
-                           <span className="font-handwriting text-red-700">{validationErrors.wallet}</span>
-                         </div>
-                       </div>
-                     )}
-
-                     {/* Next/Create button */}
+                     {/* Next/Create button - Mobile: Full width, Desktop: Auto width */}
                      {activeTab === 'spam' ? (
                        // Last tab - show Create button
                        <button
                          onClick={handleSubmit}
                          disabled={!isTabCompleted('details') || !isTabCompleted('questions') || isSubmitting}
-                         className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
+                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold shadow-md text-sm lg:text-base min-h-[44px]"
                        >
                          {isSubmitting ? (
                            <>
                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                             {snarkel.rewards.enabled ? 'Creating with Rewards...' : 'Creating...'}
+                             <span className="hidden sm:inline">
+                               {snarkel.rewards.enabled ? 'Creating with Rewards...' : 'Creating...'}
+                             </span>
+                             <span className="sm:hidden">
+                               {snarkel.rewards.enabled ? 'Creating...' : 'Creating...'}
+                             </span>
                            </>
                          ) : (
                            <>
                              <Save size={16} />
-                             {snarkel.rewards.enabled ? 'Create with Rewards' : 'Create Snarkel'}
+                             <span className="hidden sm:inline">
+                               {snarkel.rewards.enabled ? 'Create with Rewards' : 'Create Snarkel'}
+                             </span>
+                             <span className="sm:hidden">
+                               {snarkel.rewards.enabled ? 'Create Quiz' : 'Create Quiz'}
+                             </span>
                            </>
                          )}
                        </button>
@@ -1926,14 +1927,27 @@ export default function SnarkelCreationPage() {
                        <button
                          onClick={handleNextTab}
                          disabled={isSubmitting}
-                         className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold shadow-md"
+                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 font-handwriting font-bold shadow-md text-sm lg:text-base min-h-[44px]"
                        >
-                         Next
+                         <span className="hidden sm:inline">Next</span>
+                         <span className="sm:hidden">Continue</span>
                          <ArrowRight size={16} />
                        </button>
                      )}
                    </div>
                  </div>
+                 
+                 {/* Wallet Error Display - Mobile: Below buttons */}
+                 {activeTab === 'spam' && validationErrors.wallet && (
+                   <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                     <div className="flex items-center gap-2">
+                       <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                         <span className="text-white text-xs font-bold">!</span>
+                       </div>
+                       <span className="font-handwriting text-red-700 text-sm">{validationErrors.wallet}</span>
+                     </div>
+                   </div>
+                 )}
                </div>
              </div>
            </div>
@@ -2083,6 +2097,26 @@ export default function SnarkelCreationPage() {
        
        .animate-bounce-slow {
          animation: bounce-slow 3s ease-in-out infinite;
+       }
+       
+       /* Mobile scrollbar hiding */
+       .scrollbar-hide {
+         -ms-overflow-style: none;  /* Internet Explorer 10+ */
+         scrollbar-width: none;  /* Firefox */
+       }
+       .scrollbar-hide::-webkit-scrollbar {
+         display: none;  /* Safari and Chrome */
+       }
+       
+       /* Mobile touch target optimization */
+       @media (max-width: 640px) {
+         button {
+           min-height: 44px;
+         }
+         
+         input, textarea, select {
+           min-height: 44px;
+         }
        }
      `}</style>
    </div>

@@ -1450,7 +1450,7 @@ export default function QuizRoomPage() {
                 )}
                 
                 {/* Quiz Complete Indicator - Show when game ends */}
-                {gameState === 'finished' && leaderboard.length > 0 && (
+                {gameState === 'finished' && (
                   <div className="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-lg p-8 mb-6 border-4 border-purple-400 shadow-2xl text-center">
                     <div className="flex items-center justify-center gap-3 mb-6">
                       <Trophy className="w-10 h-10 text-yellow-400" />
@@ -1463,34 +1463,44 @@ export default function QuizRoomPage() {
                     
                     {/* Final Results Leaderboard */}
                     <div className="max-w-2xl mx-auto space-y-3">
-                      {leaderboard.slice(0, 5).map((entry, index) => {
-                        const participant = participants.find(p => p.userId === entry.userId);
-                        const displayName = participant?.user?.name || 
-                                          (participant?.user?.address ? 
-                                            `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 
-                                            'Unknown Player');
-                        
-                        return (
-                          <div key={entry.userId} className={`flex items-center justify-between rounded-lg p-4 transition-all duration-300 ${
-                            index === 0 ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 border-2 border-yellow-400' :
-                            index === 1 ? 'bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-400' :
-                            index === 2 ? 'bg-gradient-to-r from-orange-600 to-orange-700 border-2 border-orange-400' :
-                            'bg-gray-800 border-2 border-gray-600'
-                          }`}>
-                            <div className="flex items-center gap-4">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg ${
-                                index === 0 ? 'bg-yellow-500 shadow-lg' : 
-                                index === 1 ? 'bg-gray-400 shadow-lg' : 
-                                index === 2 ? 'bg-orange-500 shadow-lg' : 'bg-gray-600'
-                              }`}>
-                                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                      {leaderboard.length > 0 ? (
+                        leaderboard.slice(0, 5).map((entry, index) => {
+                          const participant = participants.find(p => p.userId === entry.userId);
+                          const displayName = participant?.user?.name || 
+                                            (participant?.user?.address ? 
+                                              `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 
+                                              'Unknown Player');
+                          
+                          return (
+                            <div key={entry.userId} className={`flex items-center justify-between rounded-lg p-4 transition-all duration-300 ${
+                              index === 0 ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 border-2 border-yellow-400' :
+                              index === 1 ? 'bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-400' :
+                              index === 2 ? 'bg-gradient-to-r from-orange-600 to-orange-700 border-2 border-orange-400' :
+                              'bg-gray-800 border-2 border-gray-600'
+                            }`}>
+                              <div className="flex items-center gap-4">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                                  index === 0 ? 'bg-yellow-500 shadow-lg' : 
+                                  index === 1 ? 'bg-gray-400 shadow-lg' : 
+                                  index === 2 ? 'bg-orange-500 shadow-lg' : 'bg-gray-600'
+                                }`}>
+                                  {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                                </div>
+                                <span className="text-white font-medium text-lg">{displayName}</span>
                               </div>
-                              <span className="text-white font-medium text-lg">{displayName}</span>
+                              <span className="text-yellow-400 font-bold text-2xl">{entry.score} pts</span>
                             </div>
-                            <span className="text-yellow-400 font-bold text-2xl">{entry.score} pts</span>
+                          );
+                        })
+                      ) : (
+                        <div className="text-center py-8">
+                          <div className="w-16 h-16 mx-auto mb-4 bg-gray-700 rounded-full flex items-center justify-center">
+                            <Trophy className="w-8 h-8 text-gray-400" />
                           </div>
-                        );
-                      })}
+                          <p className="text-gray-300 text-lg">Final results are being calculated...</p>
+                          <p className="text-gray-400 text-sm mt-2">Please wait while we process the scores.</p>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Rewards Status */}

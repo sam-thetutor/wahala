@@ -88,14 +88,15 @@ export async function POST(
       userAddress: user?.address
     });
 
-    // **ENHANCED ADMIN CHECK**: Check if user is the snarkel creator OR room admin OR if it's a featured quiz
+    // **ENHANCED ADMIN CHECK**: Check if user is the snarkel creator OR room admin OR if it's the first person joining a featured quiz (session starter)
     // Also check if the user ID matches the room admin ID for additional verification
     const isSnarkelCreator = room.snarkel.creator.address.toLowerCase() === walletAddress.toLowerCase();
     const isRoomAdmin = room.admin.address.toLowerCase() === walletAddress.toLowerCase();
     const isAdminById = room.adminId === user.id;
     const isFeaturedQuiz = room.snarkel.isFeatured;
+    const isFirstPersonJoiningFeatured = isFeaturedQuiz && room.currentParticipants === 0;
     
-    const isAdmin = isSnarkelCreator || isRoomAdmin || isAdminById || isFeaturedQuiz;
+    const isAdmin = isSnarkelCreator || isRoomAdmin || isAdminById || isFirstPersonJoiningFeatured;
 
     console.log('Admin check details:', {
       walletAddress: walletAddress.toLowerCase(),
