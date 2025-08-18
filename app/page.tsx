@@ -163,7 +163,17 @@ export default function HomePage() {
       // Action bar is always visible, no need for auto-open logic
 
   useEffect(() => {
-    sdk.actions.ready();
+    // Call sdk.actions.ready() to hide Farcaster Mini App splash screen
+    const callReady = async () => {
+      try {
+        await sdk.actions.ready();
+        console.log('Farcaster Mini App ready() called successfully on main page');
+      } catch (error) {
+        console.error('Error calling sdk.actions.ready():', error);
+      }
+    };
+    
+    callReady();
   }, []);
 
   return (
