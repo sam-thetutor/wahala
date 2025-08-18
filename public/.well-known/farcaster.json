@@ -4,6 +4,9 @@
     "payload": "eyJkb21haW4iOiJzbmFya2Vscy5sb2wifQ",
     "signature": "MHgyYTA1ZWQ5MTA5ZWY0MTQzYWQyZWI2ZDliNjNjMjMwMTNiODE4MTY2MjNlODAzYzI5MTE0NDBmMDAwMzg2OWFmMGQ1YjE3ZjA1NzIzYmYzYTk3OTk0ZjI0ZTBkOTdkM2FkYTkwNmFhZTA5ZmM1N2IzYTc1MGU3MGM1Yzc2NjA4NTFi"
   },
+  "frame": {
+    "version": "v0"
+  },
   "miniapp": {
     "version": "1",
     "name": "Snarkels",
