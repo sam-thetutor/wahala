@@ -84,36 +84,36 @@ const FeaturedSnarkelCard = ({ snarkel, index }: { snarkel: Snarkel; index: numb
 
   return (
     <div 
-      className="group relative bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-200 hover:border-blue-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+      className="group relative bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 border border-gray-200 hover:border-blue-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Gradient border on hover */}
-      <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      <div className="absolute inset-0 rounded-xl sm:rounded-2xl lg:rounded-3xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
       
       <div className="relative z-10">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
           {/* Header with category and difficulty */}
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-0">
             <div className="flex-1 min-w-0">
               {/* Title */}
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
+              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
                 {snarkel.title}
               </h3>
               
               {/* Description */}
-              <p className="text-sm sm:text-base text-gray-600 line-clamp-2 leading-relaxed">
+              <p className="text-xs sm:text-sm lg:text-base text-gray-600 line-clamp-2 leading-relaxed">
                 {snarkel.description}
               </p>
             </div>
             
             {/* Category and Difficulty */}
-            <div className="flex flex-col items-end gap-2 ml-3">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+            <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 sm:ml-3">
+              <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                 {snarkel.category}
               </span>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 border border-gray-200">
-                <span className="text-sm">{difficultyIcons[snarkel.difficulty]}</span>
+              <div className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-gray-50 border border-gray-200">
+                <span className="text-xs sm:text-sm">{difficultyIcons[snarkel.difficulty]}</span>
                 <span className={`text-xs font-semibold ${difficultyColors[snarkel.difficulty]}`}>
                   {snarkel.difficulty}
                 </span>
@@ -122,26 +122,26 @@ const FeaturedSnarkelCard = ({ snarkel, index }: { snarkel: Snarkel; index: numb
           </div>
           
           {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-3 py-3 border-t border-gray-100">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 py-2 sm:py-3 border-t border-gray-100">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
-                <Users className="w-4 h-4" />
+                <Users className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
-              <p className="text-sm font-semibold text-gray-900">{snarkel.formattedParticipants}</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-900">{snarkel.formattedParticipants}</p>
               <p className="text-xs text-gray-500">Players</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
-                <Clock className="w-4 h-4" />
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
-              <p className="text-sm font-semibold text-gray-900">{snarkel.duration}</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-900">{snarkel.duration}</p>
               <p className="text-xs text-gray-500">Duration</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
-                <Trophy className="w-4 h-4" />
+                <Trophy className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="text-xs sm:text-sm font-semibold text-gray-900">
                 {snarkel.reward ? `${snarkel.reward.amount} ${snarkel.reward.symbol}` : 'No rewards'}
               </p>
               <p className="text-xs text-gray-500">
@@ -154,9 +154,9 @@ const FeaturedSnarkelCard = ({ snarkel, index }: { snarkel: Snarkel; index: numb
           <div className="pt-2">
             <Link
               href={`/snarkel/${snarkel.snarkelCode}`}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-3 rounded-xl font-semibold text-center transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group"
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-xl font-semibold text-center transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group text-sm sm:text-base"
             >
-              <Play className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              <Play className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
               Start Snarkel
             </Link>
           </div>
@@ -274,49 +274,50 @@ export default function FeaturedPage() {
       {/* Header */}
       <div className="relative bg-white/80 backdrop-blur-sm shadow-xl border-b border-white/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-8">
-            <div className="flex items-center gap-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 sm:py-8 gap-4 sm:gap-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
               <Link
                 href="/"
-                className="group p-3 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white rounded-xl transition-all duration-300 flex items-center gap-3 text-gray-600 hover:text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="group p-2 sm:p-3 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white rounded-xl transition-all duration-300 flex items-center gap-2 sm:gap-3 text-gray-600 hover:text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
-                <ArrowLeft className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
                 <span className="hidden sm:inline font-medium">Back to Home</span>
+                <span className="sm:hidden font-medium">Back</span>
               </Link>
               
               <div className="relative">
-                <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-2xl">
-                  <Star className="w-8 h-8 text-white drop-shadow-lg" />
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl sm:shadow-2xl">
+                  <Star className="w-6 h-6 sm:w-8 sm:h-8 text-white drop-shadow-lg" />
                 </div>
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                  <Trophy className="w-3 h-3 text-white" />
+                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-6 sm:h-6 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                  <Trophy className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
                 </div>
               </div>
               
               <div className="relative">
-                <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                   Featured Snarkels
                 </h1>
-                <p className="text-gray-600 text-lg mt-1">
+                <p className="text-gray-600 text-sm sm:text-lg mt-1">
                   Discover amazing challenges and test your knowledge
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-center sm:justify-end">
               <Link
                 href="/admin"
-                className="group p-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl transition-all duration-300 text-white hover:scale-105 transform shadow-lg hover:shadow-xl"
+                className="group p-2 sm:p-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl transition-all duration-300 text-white hover:scale-105 transform shadow-lg hover:shadow-xl"
                 title="Dashboard"
               >
-                <Trophy className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                <Trophy className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform duration-300" />
               </Link>
               <Link
                 href="/create"
-                className="group p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl transition-all duration-300 text-white hover:scale-105 transform shadow-lg hover:shadow-xl"
+                className="group p-2 sm:p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl transition-all duration-300 text-white hover:scale-105 transform shadow-lg hover:shadow-xl"
                 title="Create Snarkel"
               >
-                <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-90 transition-transform duration-300" />
               </Link>
               <WalletConnectButton />
             </div>
@@ -325,83 +326,88 @@ export default function FeaturedPage() {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
         {/* Search and Filters */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-8 shadow-xl border border-white/30">
-          <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center">
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-xl border border-white/30">
+          <div className="flex flex-col gap-4 sm:gap-6">
             {/* Search Bar */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
               <input
                 type="text"
                 placeholder="Search featured Snarkels..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                className="w-full pl-10 pr-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-sm sm:text-base"
               />
             </div>
             
-            {/* Category Filter */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-gray-600" />
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'All Categories' : category}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Difficulty Filter */}
-            <div className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-gray-600" />
-              <select
-                value={selectedDifficulty}
-                onChange={(e) => setSelectedDifficulty(e.target.value)}
-                className="px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-              >
-                {difficulties.map(difficulty => (
-                  <option key={difficulty} value={difficulty}>
-                    {difficulty === 'all' ? 'All Difficulties' : difficulty}
-                  </option>
-                ))}
-              </select>
+            {/* Filters Row */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
+              {/* Category Filter */}
+              <div className="flex items-center gap-2 flex-1">
+                <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="flex-1 px-3 sm:px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-sm sm:text-base"
+                >
+                  {categories.map(category => (
+                    <option key={category} value={category}>
+                      {category === 'all' ? 'All Categories' : category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Difficulty Filter */}
+              <div className="flex items-center gap-2 flex-1">
+                <Award className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+                <select
+                  value={selectedDifficulty}
+                  onChange={(e) => setSelectedDifficulty(e.target.value)}
+                  className="flex-1 px-3 sm:px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-sm sm:text-base"
+                >
+                  {difficulties.map(difficulty => (
+                    <option key={difficulty} value={difficulty}>
+                      {difficulty === 'all' ? 'All Difficulties' : difficulty}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-2 bg-white/80 rounded-xl p-1 border border-gray-200">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-all duration-300 ${
-                  viewMode === 'grid' 
-                    ? 'bg-blue-500 text-white shadow-lg' 
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                <Grid3X3 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-all duration-300 ${
-                  viewMode === 'list' 
-                    ? 'bg-blue-500 text-white shadow-lg' 
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                <List className="w-5 h-5" />
-              </button>
+            <div className="flex items-center justify-center sm:justify-end">
+              <div className="flex items-center gap-2 bg-white/80 rounded-xl p-1 border border-gray-200">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-lg transition-all duration-300 ${
+                    viewMode === 'grid' 
+                      ? 'bg-blue-500 text-white shadow-lg' 
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  <Grid3X3 className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-lg transition-all duration-300 ${
+                    viewMode === 'list' 
+                      ? 'bg-blue-500 text-white shadow-lg' 
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  <List className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Results Count */}
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-gray-600">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-2 sm:gap-0">
+          <p className="text-gray-600 text-sm sm:text-base">
             Showing <span className="font-semibold text-gray-900">{filteredSnarkels.length}</span> of{' '}
             <span className="font-semibold text-gray-900">{featuredSnarkels.length}</span> featured Snarkels
           </p>
@@ -413,7 +419,7 @@ export default function FeaturedPage() {
                 setSelectedCategory('all');
                 setSelectedDifficulty('all');
               }}
-              className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-300"
+              className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-300 text-sm sm:text-base"
             >
               Clear filters
             </button>
@@ -425,7 +431,7 @@ export default function FeaturedPage() {
           // Loading state
           <div className={`${
             viewMode === 'grid' 
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6' 
+              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6' 
               : 'space-y-4'
           }`}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -475,7 +481,7 @@ export default function FeaturedPage() {
           // Snarkel cards
           <div className={`${
             viewMode === 'grid' 
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6' 
+              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6' 
               : 'space-y-4'
           }`}>
             {filteredSnarkels.map((snarkel, index) => (
@@ -485,20 +491,20 @@ export default function FeaturedPage() {
         )}
 
         {/* Call to Action */}
-        <div className="text-center mt-16">
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl p-8 border border-blue-200 shadow-xl">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+        <div className="text-center mt-8 sm:mt-16">
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-blue-200 shadow-xl">
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
               Want to create your own featured Snarkel?
             </h3>
-            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+            <p className="text-gray-600 mb-4 sm:mb-6 max-w-2xl mx-auto text-sm sm:text-base">
               Join our community of Snarkel creators and share your knowledge with the world. 
               Create engaging content and earn rewards!
             </p>
             <Link
               href="/create"
-              className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 shadow-xl hover:shadow-2xl"
+              className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 transform hover:-translate-y-1 shadow-xl hover:shadow-2xl"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               Create Your Snarkel
             </Link>
           </div>

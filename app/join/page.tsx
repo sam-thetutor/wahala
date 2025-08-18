@@ -68,19 +68,7 @@ interface Snarkel {
 function JoinSnarkelContent() {
   const { address, isConnected, isConnecting } = useAccount();
   
-  // Force re-render when wallet state changes
-  const [forceUpdate, setForceUpdate] = useState(0);
-  
-  // Add a manual refresh function
-  const refreshWalletState = () => {
-    setForceUpdate(prev => prev + 1);
-    console.log('Manual refresh triggered');
-  };
-  
-  // Debug wallet connection state changes
-  useEffect(() => {
-    console.log('Join page - Wallet state changed:', { isConnected, address, isConnecting });
-  }, [isConnected, address, isConnecting]);
+
   const searchParams = useSearchParams();
   const [snarkelCode, setSnarkelCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -351,8 +339,8 @@ function JoinSnarkelContent() {
       <div className={`relative z-10 transition-all duration-1000 ${
         isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
       }`}>
-        <div className="max-w-5xl mx-auto px-4 py-4">
-          <div className="bg-white shadow-lg rounded-xl p-4 transform -rotate-1 hover:rotate-0 transition-all duration-500 relative border-l-3 border-green-400 overflow-hidden">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="bg-white shadow-lg rounded-xl p-3 sm:p-4 transform -rotate-1 hover:rotate-0 transition-all duration-500 relative border-l-3 border-green-400 overflow-hidden">
             {/* Smaller pin effect */}
             <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-green-500 rounded-full shadow-md border border-white"></div>
             <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-600 rounded-full"></div>
@@ -364,21 +352,21 @@ function JoinSnarkelContent() {
                    backgroundSize: '12px 12px'
                  }}></div>
             
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <div className="relative">
-                  <Gamepad2 className="w-8 h-8 animate-bounce-slow" style={{ color: '#476520' }} />
-                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-ping bg-yellow-400"></div>
+                  <Gamepad2 className="w-6 h-6 sm:w-8 sm:h-8 animate-bounce-slow" style={{ color: '#476520' }} />
+                  <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-ping bg-yellow-400"></div>
                 </div>
                 <div>
-                  <h1 className="font-handwriting text-2xl font-bold" style={{ color: '#476520' }}>
+                  <h1 className="font-handwriting text-xl sm:text-2xl font-bold" style={{ color: '#476520' }}>
                     Join a Snarkel
                   </h1>
-                  <p className="font-handwriting text-sm text-gray-600 mt-0.5">Enter the secret code to join!</p>
+                  <p className="font-handwriting text-xs sm:text-sm text-gray-600 mt-0.5">Enter the secret code to join!</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-center sm:justify-end">
                 {/* Wallet Connect Button in Header */}
                 <div className="flex items-center gap-2">
                   <WalletConnectButton />
@@ -386,11 +374,12 @@ function JoinSnarkelContent() {
                 
                 <button 
                   onClick={handleGoHome}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors font-handwriting text-sm"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors font-handwriting text-xs sm:text-sm"
                   style={{ color: '#476520' }}
                 >
-                  <Home className="w-4 h-4" />
-                  Back Home
+                  <Home className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Back Home</span>
+                  <span className="sm:hidden">Home</span>
                 </button>
               </div>
             </div>
@@ -398,12 +387,12 @@ function JoinSnarkelContent() {
         </div>
       </div>
 
-      <div className="relative z-10 max-w-3xl mx-auto px-4 py-6">
+      <div className="relative z-10 max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Main join section - more compact */}
         <div className={`transition-all duration-1000 delay-300 ${
           isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}>
-          <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-lg p-6 md:p-8 transform rotate-1 hover:-rotate-0.5 transition-all duration-500 relative border-l-3 border-blue-400 overflow-hidden">
+          <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 transform rotate-1 hover:-rotate-0.5 transition-all duration-500 relative border-l-3 border-blue-400 overflow-hidden">
             {/* Smaller pin effects */}
             <div className="absolute -top-2 -left-2 w-5 h-5 bg-blue-500 rounded-full shadow-md border-2 border-white"></div>
             <div className="absolute -top-0.5 -left-0.5 w-2.5 h-2.5 bg-blue-600 rounded-full"></div>
@@ -422,29 +411,29 @@ function JoinSnarkelContent() {
 
             <div className="relative z-10">
               {/* Smaller header with animated icon */}
-              <div className="text-center mb-6">
-                <div className="relative inline-block mb-4">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto relative overflow-hidden" 
+              <div className="text-center mb-4 sm:mb-6">
+                <div className="relative inline-block mb-3 sm:mb-4">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto relative overflow-hidden" 
                        style={{ backgroundColor: '#FCFF52' }}>
-                    <Play className="h-7 w-7 animate-pulse" style={{ color: '#476520' }} />
+                    <Play className="h-5 w-5 sm:h-7 sm:w-7 animate-pulse" style={{ color: '#476520' }} />
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 -skew-x-12 animate-shimmer"></div>
                   </div>
                   <div className="absolute -top-1 -right-1 animate-bounce">
-                    <Sparkles className="w-4 h-4 text-yellow-500" />
+                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
                   </div>
                 </div>
-                <h2 className="font-handwriting text-3xl font-bold mb-3 transform hover:scale-105 transition-transform" style={{ color: '#476520' }}>
+                <h2 className="font-handwriting text-2xl sm:text-3xl font-bold mb-2 sm:mb-3 transform hover:scale-105 transition-transform" style={{ color: '#476520' }}>
                   Enter Your Secret Code
                 </h2>
-                <p className="font-handwriting text-lg text-gray-600 max-w-md mx-auto">
+                <p className="font-handwriting text-sm sm:text-lg text-gray-600 max-w-md mx-auto">
                   Got a code from a friend? Drop it in below! 🎉
                 </p>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Compact code input */}
                 <div className="space-y-3">
-                  <label className="block font-handwriting text-xl font-medium text-center" style={{ color: '#655947' }}>
+                  <label className="block font-handwriting text-lg sm:text-xl font-medium text-center" style={{ color: '#655947' }}>
                     🔐 Snarkel Code
                   </label>
                   
@@ -458,7 +447,7 @@ function JoinSnarkelContent() {
                         onChange={(e) => setSnarkelCode(e.target.value.toUpperCase())}
                         onFocus={() => setInputFocused(true)}
                         onBlur={() => setInputFocused(false)}
-                        className="w-full px-4 py-4 text-center text-2xl md:text-3xl font-mono font-bold tracking-widest border-3 border-yellow-400 rounded-xl focus:ring-3 focus:ring-yellow-300 focus:border-yellow-500 transition-all duration-300 shadow-md hover:shadow-lg bg-gradient-to-r from-white to-yellow-50"
+                        className="w-full px-3 sm:px-4 py-3 sm:py-4 text-center text-xl sm:text-2xl md:text-3xl font-mono font-bold tracking-widest border-3 border-yellow-400 rounded-xl focus:ring-3 focus:ring-yellow-300 focus:border-yellow-500 transition-all duration-300 shadow-md hover:shadow-lg bg-gradient-to-r from-white to-yellow-50"
                         placeholder="ABC123"
                         maxLength={6}
                         disabled={loading}
@@ -473,11 +462,11 @@ function JoinSnarkelContent() {
                       )}
                       
                       {/* Smaller character indicators */}
-                      <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 flex gap-1.5">
+                      <div className="absolute -bottom-4 sm:-bottom-6 left-1/2 transform -translate-x-1/2 flex gap-1 sm:gap-1.5">
                         {Array.from({ length: 6 }).map((_, i) => (
                           <div
                             key={i}
-                            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                            className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all duration-300 ${
                               i < snarkelCode.length
                                 ? 'bg-green-400 animate-pulse'
                                 : 'bg-gray-300'
@@ -488,7 +477,7 @@ function JoinSnarkelContent() {
                     </div>
                   </div>
                   
-                  <p className="font-handwriting text-base text-gray-500 text-center">
+                  <p className="font-handwriting text-sm sm:text-base text-gray-500 text-center">
                     ✨ Enter the magical 6-character code ✨
                   </p>
                   
@@ -543,19 +532,7 @@ function JoinSnarkelContent() {
 
 
 
-                {/* Debug wallet state */}
-                <div className="text-center text-xs text-gray-500 mb-2">
-                  useAccount: isConnected={isConnected.toString()}, address={address || 'none'}, isConnecting={isConnecting.toString()}
-                  <br />
-                  WalletConnectButton should show connected state above
-                  <br />
-                  <button 
-                    onClick={refreshWalletState}
-                    className="mt-1 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                  >
-                    🔄 Refresh State
-                  </button>
-                </div>
+
 
                 {/* Compact submit button */}
                 <div className="text-center">
@@ -567,25 +544,25 @@ function JoinSnarkelContent() {
                       type="button"
                       onClick={handleJoinSnarkel}
                       disabled={loading || !snarkelCode.trim() || !isConnected}
-                      className="relative flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-bold text-lg text-white hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 overflow-hidden group"
+                      className="relative flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg text-white hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 overflow-hidden group"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-white to-transparent opacity-0 group-hover:opacity-20 transition-opacity duration-300 -skew-x-12"></div>
                       
                       {loading ? (
                         <>
-                          <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span className="font-handwriting">Joining...</span>
+                          <div className="w-4 h-4 sm:w-5 sm:h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span className="font-handwriting text-sm sm:text-base">Joining...</span>
                         </>
                       ) : !isConnected ? (
                         <>
-                          <Wallet className="h-5 w-5" />
-                          <span className="font-handwriting">Connect Wallet to Join Room</span>
+                          <Wallet className="h-4 h-4 sm:w-5 sm:h-5" />
+                          <span className="font-handwriting text-sm sm:text-base">Connect Wallet to Join Room</span>
                         </>
                       ) : (
                         <>
-                          <Play className="h-5 w-5 animate-pulse" />
-                          <span className="font-handwriting">Join Waiting Room!</span>
-                          <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                          <Play className="h-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+                          <span className="font-handwriting text-sm sm:text-base">Join Waiting Room!</span>
+                          <ArrowRight className="h-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                         </>
                       )}
                     </button>

@@ -39,8 +39,8 @@ export default async function RootLayout({
         <meta name="description" content="On-chain Snarkels rewards users in interactive sessions with ERC20 tokens on Base and Celo networks" />
         
         {/* Farcaster Mini App Embed Meta Tags */}
-        <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://snarkels.vercel.app/api/og","button":{"title":"🎯 Start Quiz","action":{"type":"launch_miniapp","url":"https://snarkels.vercel.app","name":"Snarkels","splashImageUrl":"https://snarkels.vercel.app/logo.png","splashBackgroundColor":"#1f2937"}}}' />
-        <meta name="fc:frame" content='{"version":"1","imageUrl":"https://snarkels.vercel.app/api/og","button":{"title":"🎯 Start Quiz","action":{"type":"launch_frame","url":"https://snarkels.vercel.app","name":"Snarkels","splashImageUrl":"https://snarkels.vercel.app/logo.png","splashBackgroundColor":"#1f2937"}}}' />
+        <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://snarkels.lol/api/og","button":{"title":"🎯 Play a Snarkel","action":{"type":"launch_miniapp","url":"https://snarkels.lol","name":"Snarkels","splashImageUrl":"https://snarkels.lol/logo.png","splashBackgroundColor":"#1f2937"}}}' />
+        <meta name="fc:frame" content='{"version":"1","imageUrl":"https://snarkels.lol/api/og","button":{"title":"🎯 Play a Snarkel","action":{"type":"launch_frame","url":"https://snarkels.lol","name":"Snarkels","splashImageUrl":"https://snarkels.lol/logo.png","splashBackgroundColor":"#1f2937"}}}' />
         
         {/* Mini App Meta Tags */}
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
