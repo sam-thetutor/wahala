@@ -11,8 +11,8 @@
     "homeUrl": "https://snarkels.lol",
     "splashImageUrl": "https://snarkels.lol/logo.png",
     "splashBackgroundColor": "#1f2937",
-    "subtitle": "Quiz rewards platform",
-    "description": "Create and participate in quiz sessions with crypto rewards on Celo and Base networks.",
+    "subtitle": "Onchain Snarkels",
+    "description": "Create and participate in onchain Snarkels with crypto rewards on Celo and Base networks.",
     "primaryCategory": "social",
     "tags": [
       "quiz",
@@ -21,9 +21,9 @@
       "social"
     ],
     "heroImageUrl": "https://snarkels.lol/api/og",
-    "tagline": "Quiz rewards platform",
+    "tagline": "Onchain Snarkels",
     "ogTitle": "Snarkels",
-    "ogDescription": "Create and participate in quiz sessions with crypto rewards",
+    "ogDescription": "Create and participate in onchain Snarkels with crypto rewards",
     "ogImageUrl": "https://snarkels.lol/api/og",
     "requiredChains": [
       "eip155:42220",
