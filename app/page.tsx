@@ -24,6 +24,7 @@ import {
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { FarcasterUI } from '@/components/FarcasterUI';
 import { useAccount } from 'wagmi';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 
 // Action Bar Component
@@ -160,6 +161,10 @@ export default function HomePage() {
   }, [isMobile]);
 
       // Action bar is always visible, no need for auto-open logic
+
+  useEffect(() => {
+    sdk.actions.ready();
+  }, []);
 
   return (
     <FarcasterUI>

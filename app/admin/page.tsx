@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import QuizRewardsModal from '@/components/QuizRewardsModal';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 interface Snarkel {
   id: string;
@@ -241,6 +242,7 @@ export default function AdminPage() {
     if (isConnected && address) {
       fetchMySnarkels();
       fetchQuizSessions();
+      sdk.actions.ready();
     } else {
       setLoading(false);
     }

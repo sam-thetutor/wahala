@@ -13,6 +13,7 @@ import MiniAppHeader from '@/components/MiniAppHeader';
 import MiniAppContextDisplay from '@/components/MiniAppContextDisplay';
 import SocialShareButton from '@/components/SocialShareButton';
 import { useAccount } from 'wagmi';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 // Progress Modal Component
 interface ProgressStep {
@@ -356,6 +357,18 @@ export default function SnarkelCreationPage() {
 
   useEffect(() => {
     setIsLoaded(true);
+    
+    // Call sdk.actions.ready() to hide Farcaster Mini App splash screen
+    const callReady = async () => {
+      try {
+        await sdk.actions.ready();
+        console.log('Farcaster Mini App ready() called successfully');
+      } catch (error) {
+        console.error('Error calling sdk.actions.ready():', error);
+      }
+    };
+    
+    callReady();
     
     // Create floating elements
     const elements = Array.from({ length: 10 }, (_, i) => ({

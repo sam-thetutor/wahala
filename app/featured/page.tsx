@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { useAccount } from 'wagmi';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 // Snarkel type definition - Updated to match actual API response
 interface Snarkel {
@@ -178,6 +179,18 @@ export default function FeaturedPage() {
 
   // Fetch featured Snarkels from API instead of using dummy data
   useEffect(() => {
+    // Call sdk.actions.ready() to hide Farcaster Mini App splash screen
+    const callReady = async () => {
+      try {
+        await sdk.actions.ready();
+        console.log('Farcaster Mini App ready() called successfully on featured page');
+      } catch (error) {
+        console.error('Error calling sdk.actions.ready():', error);
+      }
+    };
+    
+    callReady();
+    
     const fetchFeaturedSnarkels = async () => {
       try {
         setLoadingSnarkels(true);

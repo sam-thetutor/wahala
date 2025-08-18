@@ -16,6 +16,7 @@ import {
   Download
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 interface SnarkelData {
   id: string;
@@ -46,6 +47,18 @@ function ShareSnarkelContent() {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
 
   useEffect(() => {
+    // Call sdk.actions.ready() to hide Farcaster Mini App splash screen
+    const callReady = async () => {
+      try {
+        await sdk.actions.ready();
+        console.log('Farcaster Mini App ready() called successfully on share page');
+      } catch (error) {
+        console.error('Error calling sdk.actions.ready():', error);
+      }
+    };
+    
+    callReady();
+    
     const code = searchParams.get('code');
     if (!code) {
       setError('No snarkel code provided');

@@ -38,6 +38,7 @@ import {
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { MiniAppHeader } from '@/components/MiniAppHeader';
 import { MiniAppContextDisplay } from '@/components/MiniAppContextDisplay';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 interface QuizHistory {
   id: string;
@@ -83,6 +84,7 @@ export default function ProfilePage() {
     if (isConnected && address) {
       fetchQuizHistory();
       fetchRewardSummary();
+      sdk.actions.ready();
     } else {
       setLoading(false);
     }
