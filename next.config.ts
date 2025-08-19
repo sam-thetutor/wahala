@@ -1,5 +1,11 @@
 import type { NextConfig } from "next";
 
+// Bundle analyzer configuration
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+});
+
 const nextConfig: NextConfig = {
   env: {
     PORT: '4000'
@@ -32,6 +38,11 @@ const nextConfig: NextConfig = {
   webpack: (config, { isServer, dev }) => {
     // Keep existing externals
     config.externals.push("pino-pretty", "lokijs", "encoding");
+    
+    // Disable source maps in production to reduce memory usage
+    if (!dev) {
+      config.devtool = false;
+    }
     
     if (!isServer && !dev) {
       // Check if we're on a low-memory server (less than 4GB)
@@ -113,6 +124,9 @@ const nextConfig: NextConfig = {
     
     // Enable server components HMR cache for better performance
     serverComponentsHmrCache: true,
+    
+    // Disable source maps in production builds
+    forceSwcTransforms: true,
   },
   
   // Performance optimizations
@@ -128,4 +142,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

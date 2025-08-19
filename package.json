@@ -9,6 +9,8 @@
     "build:fast": "NODE_ENV=development NODE_OPTIONS='--max-old-space-size=8192' prisma generate --no-engine && next build",
     "build:prod": "NODE_ENV=production NODE_OPTIONS='--max-old-space-size=8192' prisma generate --no-engine && next build",
     "build:clean": "rm -rf .next && NODE_OPTIONS='--max-old-space-size=8192' prisma generate --no-engine && next build",
+    "build:server": "NODE_ENV=production NODE_OPTIONS='--max-old-space-size=3072' prisma generate --no-engine && next build",
+    "build:minimal": "NODE_ENV=production NODE_OPTIONS='--max-old-space-size=2048' prisma generate --no-engine && next build",
     "start": "next start -p 4000",
     "lint": "next lint",
     "socket": "node socket-server.js",
@@ -24,7 +26,9 @@
     "db:push": "npx prisma db push",
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",
-    "test:turbopack": "node scripts/test-turbopack.js"
+    "test:turbopack": "node scripts/test-turbopack.js",
+    "analyze": "ANALYZE=true pnpm build",
+    "analyze:server": "ANALYZE=true MEMORY_LIMIT=low NODE_OPTIONS='--max-old-space-size=3072' pnpm build"
   },
   "dependencies": {
     "@coinbase/onchainkit": "^0.38.19",
@@ -63,6 +67,7 @@
     "wagmi": "^2.16.0"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^15.4.7",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -73,5 +78,6 @@
     "tailwindcss": "^4",
     "tsx": "^4.20.3",
     "typescript": "^5"
-  }
+  },
+  "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
 }
