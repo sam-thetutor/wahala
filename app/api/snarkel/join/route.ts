@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     // Find the snarkel
     const snarkel = await prisma.snarkel.findFirst({
-      where: { name: snarkelCode },
+      where: { snarkelCode: snarkelCode },
       include: {
         participants: {
           include: {

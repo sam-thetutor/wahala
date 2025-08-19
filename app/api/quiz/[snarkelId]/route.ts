@@ -29,9 +29,7 @@ export async function GET(
         basePointsPerQuestion: true,
         speedBonusEnabled: true,
         maxSpeedBonus: true,
-        rewardsEnabled: true,
-        isCompleted: true,
-        completedAt: true,
+
         createdAt: true,
         creator: {
           select: {
@@ -62,11 +60,10 @@ export async function GET(
         isWaiting: true,
         isStarted: true,
         isFinished: true,
-        sessionNumber: true,
         createdAt: true
       },
       orderBy: {
-        sessionNumber: 'desc'
+        createdAt: 'desc'
       }
     });
 

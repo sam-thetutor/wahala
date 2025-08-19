@@ -28,7 +28,7 @@ export async function generateSnarkelCode(): Promise<string> {
 export async function isWalletAllowed(snarkelId: string, walletAddress: string): Promise<boolean> {
   const snarkel = await prisma.snarkel.findUnique({
     where: { id: snarkelId },
-    include: { allowlist: true }
+    include: { allowlists: true }
   });
 
   if (!snarkel) return false;
@@ -37,7 +37,7 @@ export async function isWalletAllowed(snarkelId: string, walletAddress: string):
   if (snarkel.isPublic) return true;
 
   // Check if wallet is in allowlist
-  const allowed = snarkel.allowlist.some((entry: any) => 
+  const allowed = snarkel.allowlists.some((entry: any) => 
     entry.address.toLowerCase() === walletAddress.toLowerCase()
   );
 

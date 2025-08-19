@@ -43,7 +43,7 @@ async function fetchSnarkelsByUser(address: string) {
           id: true
         }
       },
-      allowlist: {
+      allowlists: {
         select: {
           id: true
         }
@@ -102,7 +102,7 @@ async function fetchSnarkelsByUser(address: string) {
       entryFee: snarkel.entryFeeAmount?.toString() || '0',
       entryFeeToken: snarkel.entryFeeTokenAddress || '',
       entryFeeNetwork: snarkel.entryFeeNetwork || snarkel.rewards[0]?.network || '',
-      allowlistCount: snarkel.allowlist.length,
+      allowlistCount: snarkel.allowlists.length,
       hasRewards: snarkel.rewards.length > 0,
       rewardsNetwork: snarkel.rewards[0]?.network || '',
       rewardsChainId: snarkel.rewards[0]?.chainId || undefined,

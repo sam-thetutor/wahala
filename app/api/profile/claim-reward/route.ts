@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const submission = await prisma.submission.findUnique({
       where: { id: quizId },
       include: {
-        rewards: {
+        rewardDistributions: {
           include: {
             reward: true
           }
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if there are rewards to claim
-    if (!submission.rewards || submission.rewards.length === 0) {
+    if (!submission.rewardDistributions || submission.rewardDistributions.length === 0) {
       return NextResponse.json(
         { error: 'No rewards available to claim' },
         { status: 400 }
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     // For now, we'll simulate claiming the reward
     // In a real implementation, this would interact with the blockchain contract
-    const rewardDistribution = submission.rewards[0];
+    const rewardDistribution = submission.rewardDistributions[0];
     const rewardAmount = rewardDistribution.amount;
     const chainId = rewardDistribution.reward.chainId;
 

@@ -55,7 +55,7 @@ export async function GET(
     const distributionStatus = {
       isDistributed: reward.isDistributed,
       distributedAt: reward.distributedAt,
-      onchainSessionId: reward.onchainSessionId,
+
       totalDistributions,
       successfulDistributions,
       failedDistributions,
@@ -72,7 +72,6 @@ export async function GET(
         error: dist.isProcessed ? undefined : 'Transaction failed or pending'
       })),
       roomInfo: room ? {
-        sessionNumber: room.sessionNumber,
         isFinished: room.isFinished,
         endTime: room.endTime,
         totalParticipants: room.currentParticipants

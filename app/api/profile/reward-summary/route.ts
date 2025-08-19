@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         userId: user.id
       },
       include: {
-        rewards: {
+        rewardDistributions: {
           include: {
             reward: {
               select: {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const networkMap = new Map<number, { count: number; totalAmount: number }>();
 
     submissions.forEach(submission => {
-      const rewardDistribution = submission.rewards[0];
+      const rewardDistribution = submission.rewardDistributions[0];
       if (rewardDistribution?.amount) {
         const amount = parseFloat(rewardDistribution.amount.toString());
         const chainId = rewardDistribution.reward?.chainId || 8453;

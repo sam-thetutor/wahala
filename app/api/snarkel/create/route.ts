@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
             }
           }))
         },
-        allowlist: isPublic ? undefined : {
+        allowlists: isPublic ? undefined : {
           create: allowlist.map((address: string) => ({
             address: address.trim()
           }))
@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
             order: 'asc'
           }
         },
-        allowlist: true,
+        allowlists: true,
         featuredContent: true
       }
     });
@@ -328,7 +328,7 @@ export async function POST(request: NextRequest) {
         spamControlEnabled: snarkel.spamControlEnabled,
         entryFee: snarkel.entryFeeAmount,
         entryFeeToken: snarkel.entryFeeTokenAddress,
-        allowlistCount: snarkel.allowlist.length,
+        allowlistCount: snarkel.allowlists.length,
         hasRewards: rewards.enabled,
         creator: {
           id: user.id,

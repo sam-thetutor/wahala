@@ -25,12 +25,16 @@ model User {
   updatedAt   DateTime @updatedAt
   totalPoints Int      @default(0)
 
-  // Basic verification fields
+  // Enhanced verification fields
   isVerified         Boolean   @default(false)
   verificationMethod String?
   verifiedAt         DateTime?
   country            String?
   nationality        String?
+  dateOfBirth        DateTime?
+  gender             String?
+  passportNumber     String?
+  passportExpiry     DateTime?
 
   // Relations
   snarkels             Snarkel[]
@@ -73,10 +77,25 @@ model Snarkel {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   creatorId             String
+  
+  // Reward and session management
+  rewardsEnabled        Boolean   @default(false)
+  onchainSessionId      String?
+  isCompleted           Boolean   @default(false)
+  completedAt           DateTime?
+  maxPossibleScore      Int?
 
-  // Basic anti-spam - only what's needed
-  requireVerification Boolean  @default(false)
-  excludedCountries   String[] @default([])
+  // Enhanced anti-spam fields
+  requireVerification   Boolean   @default(false)
+  minAge                Int?
+  allowedCountries      String[]
+  excludedCountries     String[]  @default([])
+  maxParticipantsPerIP  Int?
+  cooldownPeriod        Int?
+  captchaEnabled        Boolean   @default(false)
+  rateLimitPerHour      Int?
+  isSpam                Boolean   @default(false)
+  spamReason            String?
 
   // Relations
   creator              User                  @relation("SnarkelCreator", fields: [creatorId], references: [id])
@@ -179,6 +198,11 @@ model Submission {
   completedAt            DateTime @default(now())
   userId                 String
   snarkelId              String
+  
+  // Reward claiming fields
+  rewardClaimed         Boolean   @default(false)
+  rewardClaimedAt       DateTime?
+  rewardTxHash          String?
 
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   snarkel             Snarkel              @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
@@ -218,6 +242,7 @@ model Room {
   endTime             DateTime?
   adminId             String
   snarkelId           String
+  sessionNumber       Int       @default(1)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @default(now())
   
@@ -225,7 +250,7 @@ model Room {
   snarkel             Snarkel   @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
   participants        RoomParticipant[]
   
-  @@unique([snarkelId])
+  @@unique([snarkelId, sessionNumber])
 }
 
 model RoomParticipant {
@@ -243,22 +268,25 @@ model RoomParticipant {
 }
 
 model SnarkelReward {
-  id              String     @id @default(cuid())
-  rewardType      RewardType
-  tokenAddress    String
-  tokenSymbol     String
-  tokenName       String
-  tokenDecimals   Int        @default(18)
-  network         String
-  totalWinners    Int?
-  rewardAmounts   Json?
-  totalRewardPool String?
-  minParticipants Int?
-  pointsWeight    Float?
-  isDistributed   Boolean    @default(false)
-  distributedAt   DateTime?
-  createdAt       DateTime   @default(now())
-  snarkelId       String
+  id                     String     @id @default(cuid())
+  rewardType             RewardType
+  tokenAddress           String
+  tokenSymbol            String
+  tokenName              String
+  tokenDecimals          Int        @default(18)
+  network                String
+  chainId                Int        @default(42220)
+  onchainSessionId       String?
+  rewardAllParticipants  Boolean    @default(false)
+  totalWinners           Int?
+  rewardAmounts          Json?
+  totalRewardPool        String?
+  minParticipants        Int?
+  pointsWeight           Float?
+  isDistributed          Boolean    @default(false)
+  distributedAt          DateTime?
+  createdAt              DateTime   @default(now())
+  snarkelId              String
 
   snarkel       Snarkel              @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
   distributions RewardDistribution[]

@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
             snarkelCode: true
           }
         },
-        rewards: {
+        rewardDistributions: {
           include: {
             reward: {
               select: {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       const position = index + 1;
       
       // Get reward information
-      const rewardDistribution = submission.rewards[0];
+      const rewardDistribution = submission.rewardDistributions[0];
       const rewardAmount = rewardDistribution?.amount || null;
       const rewardToken = rewardDistribution?.reward?.tokenAddress || null;
       const chainId = rewardDistribution?.reward?.chainId || 8453; // Default to Base

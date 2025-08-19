@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         }, { status: 404 });
       }
 
-      if (!snarkel.rewardsEnabled || snarkel.rewards.length === 0) {
+      if (snarkel.rewards.length === 0) {
         return NextResponse.json({
           success: true,
           message: 'No rewards to distribute',
@@ -172,8 +172,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check if rewards are enabled for this snarkel
-    if (!room.snarkel.rewardsEnabled || room.snarkel.rewards.length === 0) {
+    // Check if rewards are available for this snarkel
+    if (room.snarkel.rewards.length === 0) {
       console.log('No rewards configured for this snarkel');
       return NextResponse.json({
         success: true,
@@ -293,17 +293,16 @@ export async function POST(request: NextRequest) {
                   // Calculate reward distribution based on configuration
         let distributionAmounts: Array<{ userId: string; amount: number; position: number }> = [];
         
-        if (reward.rewardAllParticipants) {
-          // Reward all participants using quadratic formula
-          const totalPool = parseFloat(reward.totalRewardPool || '0');
-          const totalParticipants = validLeaderboard.length;
-          
-          // Use quadratic funding formula: amount = (score^2 / total_score^2) * total_pool
-          const totalScoreSquared = validLeaderboard.reduce((sum, p) => sum + Math.pow(p.score, 2), 0);
-          
-          distributionAmounts = validLeaderboard.map(participant => {
-            const scoreSquared = Math.pow(participant.score, 2);
-            const amount = totalScoreSquared > 0 ? (scoreSquared / totalScoreSquared) * totalPool : 0;
+        // Reward based on configuration - default to top winners
+        const totalWinners = reward.totalWinners || 5;
+        const topWinners = validLeaderboard.slice(0, totalWinners);
+        const totalPool = parseFloat(reward.totalRewardPool || '0');
+        
+        // Use predefined reward amounts if available, otherwise distribute proportionally
+        if (reward.rewardAmounts && Array.isArray(reward.rewardAmounts) && reward.rewardAmounts.length > 0) {
+          distributionAmounts = topWinners.map((participant, index) => {
+            const rewardAmount = (reward.rewardAmounts as number[])[index] || 0;
+            const amount = (rewardAmount / 100) * totalPool; // Convert percentage to amount
             return {
               userId: participant.userId,
               amount: Math.max(0, amount),
@@ -311,34 +310,16 @@ export async function POST(request: NextRequest) {
             };
           });
         } else {
-          // Reward only top winners
-          const totalWinners = reward.totalWinners || 5;
-          const topWinners = validLeaderboard.slice(0, totalWinners);
-          const totalPool = parseFloat(reward.totalRewardPool || '0');
-          
-          // Use predefined reward amounts if available, otherwise distribute proportionally
-          if (reward.rewardAmounts && Array.isArray(reward.rewardAmounts) && reward.rewardAmounts.length > 0) {
-            distributionAmounts = topWinners.map((participant, index) => {
-              const rewardAmount = (reward.rewardAmounts as number[])[index] || 0;
-              const amount = (rewardAmount / 100) * totalPool; // Convert percentage to amount
-              return {
-                userId: participant.userId,
-                amount: Math.max(0, amount),
-                position: participant.position
-              };
-            });
-          } else {
-            // Proportional distribution among top winners
-            const totalScore = topWinners.reduce((sum, p) => sum + p.score, 0);
-            distributionAmounts = topWinners.map(participant => {
-              const amount = totalScore > 0 ? (participant.score / totalScore) * totalPool : 0;
-              return {
-                userId: participant.userId,
-                amount: Math.max(0, amount),
-                position: participant.position
-              };
-            });
-          }
+          // Proportional distribution among top winners
+          const totalScore = topWinners.reduce((sum, p) => sum + p.score, 0);
+          distributionAmounts = topWinners.map(participant => {
+            const amount = totalScore > 0 ? (participant.score / totalScore) * totalPool : 0;
+            return {
+              userId: participant.userId,
+              amount: Math.max(0, amount),
+              position: participant.position
+            };
+          });
         }
         
         // Create reward distribution records in database

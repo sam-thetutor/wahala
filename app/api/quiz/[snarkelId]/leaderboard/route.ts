@@ -27,17 +27,7 @@ export async function GET(
           { snarkelCode: snarkelId }
         ]
       },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        snarkelCode: true,
-        maxPossibleScore: true,
-        isCompleted: true,
-        completedAt: true,
-        basePointsPerQuestion: true,
-        rewardsEnabled: true,
-        onchainSessionId: true,
+      include: {
         creator: {
           select: {
             id: true,
@@ -69,10 +59,8 @@ export async function GET(
             isDistributed: true,
             distributedAt: true,
             totalWinners: true,
-            rewardAllParticipants: true,
             rewardAmounts: true,
             minParticipants: true,
-            chainId: true,
             network: true
           }
         }
@@ -86,9 +74,9 @@ export async function GET(
       );
     }
 
-    // Calculate max possible score if not set
-    let maxPossibleScore = quiz.maxPossibleScore;
-    if (!maxPossibleScore && quiz.questions.length > 0) {
+    // Calculate max possible score from questions
+    let maxPossibleScore = 0;
+    if (quiz.questions.length > 0) {
       maxPossibleScore = quiz.questions.reduce((total: number, question: { points: number }) => total + question.points, 0);
     }
 
@@ -219,7 +207,7 @@ export async function GET(
     }
 
     // Check if rewards are available and not distributed
-    const hasRewards = quiz.rewardsEnabled && quiz.rewards.length > 0;
+    const hasRewards = quiz.rewards.length > 0;
     const undistributedRewards = quiz.rewards.filter((reward: any) => !reward.isDistributed);
     const canDistributeRewards = isAdmin && hasRewards && undistributedRewards.length > 0;
 
@@ -231,12 +219,9 @@ export async function GET(
       snarkelCode: quiz.snarkelCode,
       maxPossibleScore,
       totalParticipants,
-      isCompleted: quiz.isCompleted,
-      completedAt: quiz.completedAt?.toISOString(),
       hasRewards,
       rewards: quiz.rewards,
       canDistributeRewards,
-      onchainSessionId: quiz.onchainSessionId,
       totalQuestions: quiz.questions.length,
       questions: quiz.questions
     };
