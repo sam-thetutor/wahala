@@ -21,15 +21,8 @@ export async function POST(request: NextRequest) {
       entryFeeToken,
       entryFeeNetwork,
       
-      // NEW: Enhanced anti-spam fields
+      // Self Protocol verification
       requireVerification,
-      minAge,
-      allowedCountries,
-      excludedCountries,
-      maxParticipantsPerIP,
-      cooldownPeriod,
-      captchaEnabled,
-      rateLimitPerHour,
       
       creatorAddress,
       rewards,
@@ -190,15 +183,8 @@ export async function POST(request: NextRequest) {
         entryFeeTokenAddress: spamControlEnabled ? entryFeeToken : '',
         entryFeeNetwork: spamControlEnabled ? entryFeeNetwork : '',
         
-        // NEW: Enhanced anti-spam fields
+        // Self Protocol verification
         requireVerification: requireVerification || false,
-        minAge: minAge || null,
-        allowedCountries: allowedCountries || [],
-        excludedCountries: excludedCountries || [],
-        maxParticipantsPerIP: maxParticipantsPerIP || null,
-        cooldownPeriod: cooldownPeriod || null,
-        captchaEnabled: captchaEnabled || false,
-        rateLimitPerHour: rateLimitPerHour || null,
         
         rewardsEnabled: rewards.enabled || false,
         creatorId: user.id,
