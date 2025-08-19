@@ -14,6 +14,18 @@ model User {
   email               String?
   metadata            Json?
   totalPoints         Int                  @default(0)
+  
+  // NEW: Verification fields
+  isVerified          Boolean              @default(false)
+  verificationMethod  String?             // "self", "manual", etc.
+  verifiedAt          DateTime?
+  country             String?              // Country from verification
+  nationality         String?              // Nationality from verification
+  dateOfBirth        DateTime?            // Date of birth from verification
+  gender              String?              // Gender from verification
+  passportNumber      String?             // Passport number (hashed)
+  passportExpiry      DateTime?           // Passport expiry date
+  
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   rewardDistributions RewardDistribution[]
@@ -23,6 +35,11 @@ model User {
   createdSnarkels     Snarkel[]            @relation("SnarkelCreator")
   socketSessions      SocketSession[]
   submissions         Submission[]
+  verificationAttempts VerificationAttempt[]
+  
+  // NEW: Spam-related relations
+  spamReports         Snarkel[]            @relation("SpamReports")
+  spamReviews         Snarkel[]            @relation("SpamReviews")
 
   @@index([address])
   @@map("users")
@@ -96,7 +113,17 @@ model Snarkel {
   rewardsEnabled        Boolean            @default(false)
   onchainSessionId      String?
   
-  // NEW: Quiz functionality fields
+  // NEW: Enhanced anti-spam fields
+  requireVerification   Boolean            @default(false)  // Require Self Protocol verification
+  minAge                Int?               // Minimum age requirement
+  allowedCountries      String[]           // Allowed countries (empty = all)
+  excludedCountries     String[]           // Excluded countries
+  maxParticipantsPerIP  Int?               // Max participants per IP address
+  cooldownPeriod        Int?               // Cooldown period in minutes between joins
+  captchaEnabled        Boolean            @default(false)  // Enable CAPTCHA
+  rateLimitPerHour      Int?               // Max joins per hour per user
+  
+  // Quiz functionality fields
   maxPossibleScore      Int?               // Maximum score achievable in quiz
   rewardPerPoint        String?            // Reward amount per point (as string for precision)
   totalRewardPool       String?            // Total reward pool for the quiz (moved from SnarkelReward)
@@ -110,6 +137,17 @@ model Snarkel {
   resultsSubmitted      Boolean            @default(false)  // Track if results submitted
   completedAt           DateTime?          // When quiz was completed
   
+  // NEW: Anti-spam fields
+  isSpam                Boolean            @default(false)
+  spamReason            String?
+  spamReportedBy        User[]             @relation("SpamReports")
+  spamReportedAt        DateTime?
+  spamReviewedBy        User?              @relation("SpamReviews", fields: [spamReviewedById], references: [id])
+  spamReviewedById      String?
+  spamReviewedAt        DateTime?
+  spamReviewedReason    String?
+  spamReviewedComment   String?
+  
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   creatorId             String
@@ -121,6 +159,8 @@ model Snarkel {
   rewardTracking        QuizRewardTracking[]  // NEW: Add this relation
   creator               User               @relation("SnarkelCreator", fields: [creatorId], references: [id])
   submissions           Submission[]
+  ipRateLimits         IPRateLimit[]
+  verificationAttempts VerificationAttempt[]
 
   @@map("snarkels")
 }
@@ -294,6 +334,40 @@ model FeaturedContent {
   snarkel   Snarkel  @relation(fields: [snarkelId], references: [id], onDelete: Cascade)
 
   @@map("featured_content")
+}
+
+// NEW: Verification tracking model
+model VerificationAttempt {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snarkelId       String?
+  snarkel         Snarkel? @relation(fields: [snarkelId], references: [id], onDelete: SetNull)
+  verificationType String  // "self", "manual", etc.
+  status          String   // "pending", "success", "failed"
+  proofData       Json?    // Verification proof data
+  verifiedAt      DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("verification_attempts")
+}
+
+// NEW: IP-based anti-spam tracking
+model IPRateLimit {
+  id              String   @id @default(cuid())
+  ipAddress       String
+  snarkelId       String?
+  snarkel         Snarkel? @relation(fields: [snarkelId], references: [id], onDelete: SetNull)
+  joinCount       Int      @default(0)
+  lastJoinAt      DateTime @default(now())
+  blockedUntil    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([ipAddress, snarkelId])
+  @@map("ip_rate_limits")
 }
 
 enum RewardType {

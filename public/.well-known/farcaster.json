@@ -5,7 +5,31 @@
     "signature": "MHgyYTA1ZWQ5MTA5ZWY0MTQzYWQyZWI2ZDliNjNjMjMwMTNiODE4MTY2MjNlODAzYzI5MTE0NDBmMDAwMzg2OWFmMGQ1YjE3ZjA1NzIzYmYzYTk3OTk0ZjI0ZTBkOTdkM2FkYTkwNmFhZTA5ZmM1N2IzYTc1MGU3MGM1Yzc2NjA4NTFi"
   },
   "frame": {
-    "version": "v0"
+    "version": "1",
+    "name": "Snarkels",
+    "homeUrl": "https://snarkels.lol",
+    "iconUrl": "https://snarkels.lol/logo.png",
+    "splashImageUrl": "https://snarkels.lol/logo.png",
+    "splashBackgroundColor": "#1f2937",
+    "webhookUrl": "https://snarkels.lol/api/webhook",
+    "subtitle": "Onchain Snarkels",
+    "description": "Create and participate in onchain Snarkels with crypto rewards on Celo and Base networks.",
+    "screenshotUrls": [
+      "https://snarkels.lol/logo.png"
+    ],
+    "primaryCategory": "social",
+    "tags": [
+      "quiz",
+      "rewards",
+      "crypto",
+      "social"
+    ],
+    "heroImageUrl": "https://snarkels.lol/api/og",
+    "tagline": "Onchain Snarkels",
+    "ogTitle": "Snarkels",
+    "ogDescription": "Create and participate in onchain Snarkels with crypto rewards",
+    "ogImageUrl": "https://snarkels.lol/api/og",
+    "noindex": false
   },
   "miniapp": {
     "version": "1",

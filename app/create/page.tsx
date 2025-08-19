@@ -260,6 +260,17 @@ interface SnarkelData {
   spamControlEnabled: boolean;
   entryFee: number;
   entryFeeToken: string;
+  
+  // NEW: Enhanced anti-spam fields
+  requireVerification: boolean;
+  minAge: number | null;
+  allowedCountries: string[];
+  excludedCountries: string[];
+  maxParticipantsPerIP: number | null;
+  cooldownPeriod: number | null;
+  captchaEnabled: boolean;
+  rateLimitPerHour: number | null;
+  
   autoStartEnabled: boolean;
   scheduledStartTime: string | null;
   isFeatured: boolean;
@@ -321,6 +332,17 @@ export default function SnarkelCreationPage() {
     spamControlEnabled: false,
     entryFee: 0,
     entryFeeToken: '',
+    
+    // NEW: Enhanced anti-spam fields
+    requireVerification: false,
+    minAge: null,
+    allowedCountries: [],
+    excludedCountries: [],
+    maxParticipantsPerIP: null,
+    cooldownPeriod: null,
+    captchaEnabled: false,
+    rateLimitPerHour: null,
+    
     autoStartEnabled: false,
     scheduledStartTime: null,
     isFeatured: false,
@@ -459,8 +481,28 @@ export default function SnarkelCreationPage() {
         errors.entryFeeToken = 'Entry fee token address is required';
       }
     }
+
+    // Validate enhanced anti-spam fields
+    if (snarkel.requireVerification) {
+      if (snarkel.minAge && (snarkel.minAge < 13 || snarkel.minAge > 100)) {
+        errors.minAge = 'Minimum age must be between 13 and 100';
+      }
+      
+      if (snarkel.maxParticipantsPerIP && (snarkel.maxParticipantsPerIP < 1 || snarkel.maxParticipantsPerIP > 10)) {
+        errors.maxParticipantsPerIP = 'Max participants per IP must be between 1 and 10';
+      }
+      
+      if (snarkel.cooldownPeriod && (snarkel.cooldownPeriod < 1 || snarkel.cooldownPeriod > 1440)) {
+        errors.cooldownPeriod = 'Cooldown period must be between 1 and 1440 minutes';
+      }
+      
+      if (snarkel.rateLimitPerHour && (snarkel.rateLimitPerHour < 1 || snarkel.rateLimitPerHour > 100)) {
+        errors.rateLimitPerHour = 'Rate limit per hour must be between 1 and 100';
+      }
+    }
+
     return errors;
-  }, [snarkel.spamControlEnabled, snarkel.entryFee, snarkel.entryFeeToken]);
+  }, [snarkel.spamControlEnabled, snarkel.entryFee, snarkel.entryFeeToken, snarkel.requireVerification, snarkel.minAge, snarkel.maxParticipantsPerIP, snarkel.cooldownPeriod, snarkel.rateLimitPerHour]);
 
   const handleNextTab = useCallback(() => {
     let isValid = true;
@@ -533,8 +575,20 @@ export default function SnarkelCreationPage() {
       // Quadratic distribution mode - need token, pool, and min participants
       return hasToken && hasRewardPool && hasMinParticipants;
     } else if (tabId === 'spam') {
-      if (!snarkel.spamControlEnabled) return true;
-      return snarkel.entryFee > 0 && snarkel.entryFeeToken.trim() !== '';
+      if (!snarkel.spamControlEnabled && !snarkel.requireVerification) return true;
+      
+      let isValid = true;
+      
+      if (snarkel.spamControlEnabled) {
+        isValid = isValid && snarkel.entryFee > 0 && snarkel.entryFeeToken.trim() !== '';
+      }
+      
+      if (snarkel.requireVerification) {
+        // Basic verification is enabled, no additional validation needed for completion
+        isValid = isValid && true;
+      }
+      
+      return isValid;
     }
     return false;
   }, [snarkel]);
@@ -1782,6 +1836,7 @@ export default function SnarkelCreationPage() {
 
                  {activeTab === 'spam' && (
                    <div className="space-y-4">
+                     {/* Basic Spam Control */}
                      <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
                        <input
                          type="checkbox"
@@ -1843,6 +1898,126 @@ export default function SnarkelCreationPage() {
                          </div>
                        </div>
                      )}
+
+                     {/* Enhanced Anti-Spam Features */}
+                     <div className="space-y-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                       <h3 className="font-handwriting text-lg font-semibold text-gray-800 mb-3">
+                         🚀 Enhanced Anti-Spam Features
+                       </h3>
+
+                       {/* Self Protocol Verification */}
+                       <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-200">
+                         <input
+                           type="checkbox"
+                           id="requireVerification"
+                           checked={snarkel.requireVerification}
+                           onChange={(e) => setSnarkel(prev => ({ ...prev, requireVerification: e.target.checked }))}
+                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                         />
+                         <label htmlFor="requireVerification" className="font-handwriting text-sm font-medium text-gray-700">
+                           🔐 Require Self Protocol identity verification
+                         </label>
+                       </div>
+
+                       {snarkel.requireVerification && (
+                         <div className="space-y-3 p-3 bg-white rounded-lg border border-blue-200">
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                             <div>
+                               <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                                 🎂 Minimum Age
+                               </label>
+                               <input
+                                 type="number"
+                                 value={snarkel.minAge || ''}
+                                 onChange={(e) => setSnarkel(prev => ({ ...prev, minAge: e.target.value ? parseInt(e.target.value) : null }))}
+                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-handwriting"
+                                 min="13"
+                                 max="100"
+                                 placeholder="18"
+                               />
+                             </div>
+
+                             <div>
+                               <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                                 🌍 Excluded Countries
+                               </label>
+                               <input
+                                 type="text"
+                                 value={snarkel.excludedCountries.join(', ')}
+                                 onChange={(e) => setSnarkel(prev => ({ 
+                                   ...prev, 
+                                   excludedCountries: e.target.value.split(',').map(c => c.trim()).filter(c => c)
+                                 }))}
+                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-handwriting"
+                                 placeholder="US, CA, GB (comma separated)"
+                               />
+                             </div>
+                           </div>
+
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                             <div>
+                               <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                                 🖥️ Max Participants per IP
+                               </label>
+                               <input
+                                 type="number"
+                                 value={snarkel.maxParticipantsPerIP || ''}
+                                 onChange={(e) => setSnarkel(prev => ({ ...prev, maxParticipantsPerIP: e.target.value ? parseInt(e.target.value) : null }))}
+                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-handwriting"
+                                 min="1"
+                                 max="10"
+                                 placeholder="3"
+                               />
+                             </div>
+
+                             <div>
+                               <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                                 ⏱️ Cooldown Period (minutes)
+                               </label>
+                               <input
+                                 type="number"
+                                 value={snarkel.cooldownPeriod || ''}
+                                 onChange={(e) => setSnarkel(prev => ({ ...prev, cooldownPeriod: e.target.value ? parseInt(e.target.value) : null }))}
+                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-handwriting"
+                                 min="1"
+                                 max="1440"
+                                 placeholder="60"
+                               />
+                             </div>
+                           </div>
+
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                             <div className="flex items-center gap-3">
+                               <input
+                                 type="checkbox"
+                                 id="captchaEnabled"
+                                 checked={snarkel.captchaEnabled}
+                                 onChange={(e) => setSnarkel(prev => ({ ...prev, captchaEnabled: e.target.checked }))}
+                                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                               />
+                               <label htmlFor="captchaEnabled" className="font-handwriting text-sm font-medium text-gray-700">
+                                 🤖 Enable CAPTCHA
+                               </label>
+                             </div>
+
+                             <div>
+                               <label className="block font-handwriting text-sm font-medium text-gray-700 mb-1">
+                                 🚫 Rate Limit per Hour
+                               </label>
+                               <input
+                                 type="number"
+                                 value={snarkel.rateLimitPerHour || ''}
+                                 onChange={(e) => setSnarkel(prev => ({ ...prev, rateLimitPerHour: e.target.value ? parseInt(e.target.value) : null }))}
+                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-handwriting"
+                                 min="1"
+                                 max="100"
+                                 placeholder="5"
+                               />
+                             </div>
+                           </div>
+                         </div>
+                       )}
+                     </div>
                    </div>
                  )}
                </div>
