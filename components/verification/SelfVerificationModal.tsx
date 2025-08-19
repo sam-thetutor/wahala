@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { SelfQRcodeWrapper, SelfAppBuilder, type SelfApp } from '@selfxyz/qrcode';
 import { getUniversalLink } from '@selfxyz/core';
-import { ethers } from 'ethers';
+import { useAccount } from 'wagmi';
+import WalletConnectButton from '@/components/WalletConnectButton';
 
 interface SelfVerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  userId?: string;
   snarkelId?: string;
 }
 
@@ -17,14 +17,14 @@ export default function SelfVerificationModal({
   isOpen,
   onClose,
   onSuccess,
-  userId,
   snarkelId
 }: SelfVerificationModalProps) {
   const [selfApp, setSelfApp] = useState<SelfApp | null>(null);
   const [universalLink, setUniversalLink] = useState("");
+  const { address, isConnected } = useAccount();
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isConnected && address) {
       try {
         const app = new SelfAppBuilder({
           version: 2,
@@ -32,13 +32,13 @@ export default function SelfVerificationModal({
           scope: process.env.NEXT_PUBLIC_SELF_SCOPE || 'snarkels-verification',
           endpoint: process.env.NEXT_PUBLIC_SELF_ENDPOINT || 'https://snarkels.lol/api/verification/self',
           logoBase64: 'https://snarkels.lol/logo.png',
-          userId: userId || ethers.ZeroAddress,
+          userId: address, // Use connected wallet address
           endpointType: 'staging_https',
           userIdType: 'hex',
           userDefinedData: `Snarkels Verification - ${snarkelId || 'General'}`,
           disclosures: {
-            // Only what we need - country and nationality
-            nationality: true,
+            // Simplified: only age above 18 and country
+            minimumAge: 18,
             issuing_state: true, // This gives us the country
           }
         }).build();
@@ -48,17 +48,24 @@ export default function SelfVerificationModal({
       } catch (error) {
         console.error('Failed to initialize Self app:', error);
       }
+    } else {
+      // Reset app if wallet disconnects
+      setSelfApp(null);
+      setUniversalLink("");
     }
-  }, [isOpen, userId, snarkelId]);
+  }, [isOpen, isConnected, address, snarkelId]);
 
   const handleVerificationSuccess = () => {
     console.log('Verification successful!');
+    // The verification data will be sent to our API endpoint
+    // The API will handle saving the data to the database
     onSuccess();
     onClose();
   };
 
   const handleVerificationError = (error: any) => {
     console.error('Verification failed:', error);
+    // You could show an error message to the user here
   };
 
   const openSelfApp = () => {
@@ -74,35 +81,53 @@ export default function SelfVerificationModal({
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
         <div className="text-center">
           <h2 className="text-xl font-bold mb-4">Verify Your Identity</h2>
-          <p className="text-gray-600 mb-6">
-            Scan this QR code with the Self app to verify your identity
-          </p>
           
-          {selfApp ? (
+          {!isConnected ? (
             <div className="space-y-4">
-              <SelfQRcodeWrapper
-                selfApp={selfApp}
-                onSuccess={handleVerificationSuccess}
-                onError={handleVerificationError}
-              />
-              
+              <p className="text-gray-600 mb-6">
+                Please connect your wallet to proceed with identity verification
+              </p>
+              <WalletConnectButton />
               <button
-                onClick={openSelfApp}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+                onClick={onClose}
+                className="mt-4 text-gray-500 hover:text-gray-700"
               >
-                Open Self App
+                Cancel
               </button>
             </div>
           ) : (
-            <div className="text-gray-500">Loading QR Code...</div>
+            <>
+              <p className="text-gray-600 mb-6">
+                Scan this QR code with the Self app to verify your identity
+              </p>
+              
+              {selfApp ? (
+                <div className="space-y-4">
+                  <SelfQRcodeWrapper
+                    selfApp={selfApp}
+                    onSuccess={handleVerificationSuccess}
+                    onError={handleVerificationError}
+                  />
+                  
+                  <button
+                    onClick={openSelfApp}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+                  >
+                    Open Self App
+                  </button>
+                </div>
+              ) : (
+                <div className="text-gray-500">Loading QR Code...</div>
+              )}
+              
+              <button
+                onClick={onClose}
+                className="mt-4 text-gray-500 hover:text-gray-700"
+              >
+                Cancel
+              </button>
+            </>
           )}
-          
-          <button
-            onClick={onClose}
-            className="mt-4 text-gray-500 hover:text-gray-700"
-          >
-            Cancel
-          </button>
         </div>
       </div>
     </div>

@@ -85,15 +85,8 @@ model Snarkel {
   completedAt           DateTime?
   maxPossibleScore      Int?
 
-  // Enhanced anti-spam fields
+  // Self Protocol verification
   requireVerification   Boolean   @default(false)
-  minAge                Int?
-  allowedCountries      String[]
-  excludedCountries     String[]  @default([])
-  maxParticipantsPerIP  Int?
-  cooldownPeriod        Int?
-  captchaEnabled        Boolean   @default(false)
-  rateLimitPerHour      Int?
   isSpam                Boolean   @default(false)
   spamReason            String?
 
