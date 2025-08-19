@@ -86,16 +86,6 @@ const nextConfig: NextConfig = {
     // Enable React compiler for better performance
     reactCompiler: true,
     
-    // Optimize package imports for better tree-shaking
-    optimizePackageImports: [
-      'lucide-react',
-      'framer-motion',
-      '@wagmi/core',
-      'viem',
-      'socket.io-client',
-      '@prisma/client' // Add this for Prisma optimization
-    ],
-    
     // Enable server components HMR cache for better performance
     serverComponentsHmrCache: true,
   },
