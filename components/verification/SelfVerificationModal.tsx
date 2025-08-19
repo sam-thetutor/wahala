@@ -38,14 +38,14 @@ export default function SelfVerificationModal({
           version: 2,
           appName: process.env.NEXT_PUBLIC_SELF_APP_NAME || 'Snarkels',
           scope: process.env.NEXT_PUBLIC_SELF_SCOPE || 'snarkels-verification',
-          endpoint: `${process.env.NEXT_PUBLIC_SELF_ENDPOINT || ''}`,
+          endpoint: process.env.NEXT_PUBLIC_SELF_ENDPOINT || 'https://snarkels.lol/api/verification/self',
           logoBase64: 'https://snarkels.lol/logo.png',
           userId: userId || ethers.ZeroAddress,
           endpointType: 'staging_https',
           userIdType: 'hex',
           userDefinedData: `Snarkels Verification - ${snarkelId || 'General'}`,
           disclosures: {
-            // Verification requirements
+            // Verification requirements (must match backend)
             minimumAge: 18,
             ofac: false,
             excludedCountries: [],
@@ -68,49 +68,26 @@ export default function SelfVerificationModal({
     }
   }, [isOpen, snarkelId, userId]);
 
-  const handleVerificationSuccess = async () => {
-    setVerificationStatus('verifying');
+  const handleVerificationSuccess = () => {
+    console.log('Verification successful!');
+    setVerificationStatus('success');
     
-    try {
-      // Call backend to verify the proof
-      const response = await fetch('/api/verification/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          snarkelId,
-          userId,
-          verificationType: 'self',
-        }),
-      });
-
-      if (response.ok) {
-        const verificationData = await response.json();
-        setVerificationStatus('success');
-        onSuccess(verificationData);
-        
-        // Close modal after success
-        setTimeout(() => {
-          onClose();
-        }, 2000);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Verification failed');
-      }
-    } catch (error: any) {
-      console.error('Verification error:', error);
-      setErrorMessage(error.message || 'Verification failed');
-      setVerificationStatus('error');
-      onError(error.message || 'Verification failed');
-    }
+    // The SelfQRcodeWrapper automatically handles the verification
+    // We just need to update our local state and call the success callback
+    onSuccess({ message: 'Verification successful' });
+    
+    // Close modal after success
+    setTimeout(() => {
+      onClose();
+    }, 2000);
   };
 
-  const handleVerificationError = (error: string) => {
+  const handleVerificationError = (error: any) => {
     console.error('Self verification error:', error);
-    setErrorMessage('Verification failed. Please try again.');
+    const errorMessage = error?.reason || error?.error_code || 'Verification failed. Please try again.';
+    setErrorMessage(errorMessage);
     setVerificationStatus('error');
-    onError(error);
+    onError(errorMessage);
   };
 
   const openSelfApp = () => {

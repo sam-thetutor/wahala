@@ -78,7 +78,22 @@ export async function POST(request: NextRequest) {
 
     // Find or create user
     let user = await prisma.user.findUnique({
-      where: { address: walletAddress.toLowerCase() }
+      where: { address: walletAddress.toLowerCase() },
+      select: {
+        id: true,
+        address: true,
+        name: true,
+        isVerified: true,
+        verificationMethod: true,
+        verifiedAt: true,
+        country: true,
+        nationality: true,
+        dateOfBirth: true,
+        gender: true,
+        totalPoints: true,
+        createdAt: true,
+        updatedAt: true
+      }
     });
 
     if (!user) {
@@ -89,6 +104,68 @@ export async function POST(request: NextRequest) {
           totalPoints: 0
         }
       });
+    }
+
+    // NEW: Check verification requirements
+    if (snarkel.requireVerification && !user.isVerified) {
+      return NextResponse.json({
+        verificationRequired: true,
+        message: 'Identity verification required to join this quiz',
+        snarkel: {
+          id: snarkel.id,
+          title: snarkel.title,
+          requireVerification: snarkel.requireVerification,
+          minAge: snarkel.minAge,
+          allowedCountries: snarkel.allowedCountries,
+          excludedCountries: snarkel.excludedCountries,
+        }
+      }, { status: 403 });
+    }
+
+    // Check age requirement if verification is required
+    if (snarkel.requireVerification && snarkel.minAge && user.dateOfBirth) {
+      const age = Math.floor((Date.now() - new Date(user.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      if (age < snarkel.minAge) {
+        return NextResponse.json({
+          verificationRequired: true,
+          message: `Minimum age ${snarkel.minAge} required. You are ${age} years old.`,
+          snarkel: {
+            id: snarkel.id,
+            title: snarkel.title,
+            requireVerification: snarkel.requireVerification,
+            minAge: snarkel.minAge,
+          }
+        }, { status: 403 });
+      }
+    }
+
+    // Check country restrictions if verification is required
+    if (snarkel.requireVerification && user.country) {
+      if (snarkel.excludedCountries && snarkel.excludedCountries.includes(user.country)) {
+        return NextResponse.json({
+          verificationRequired: true,
+          message: `Users from ${user.country} cannot join this quiz.`,
+          snarkel: {
+            id: snarkel.id,
+            title: snarkel.title,
+            requireVerification: snarkel.requireVerification,
+            excludedCountries: snarkel.excludedCountries,
+          }
+        }, { status: 403 });
+      }
+      
+      if (snarkel.allowedCountries && snarkel.allowedCountries.length > 0 && !snarkel.allowedCountries.includes(user.country)) {
+        return NextResponse.json({
+          verificationRequired: true,
+          message: `Users from ${user.country} are not in the allowed countries list.`,
+          snarkel: {
+            id: snarkel.id,
+            title: snarkel.title,
+            requireVerification: snarkel.requireVerification,
+            allowedCountries: snarkel.allowedCountries,
+          }
+        }, { status: 403 });
+      }
     }
 
     // Find active room or create new one

@@ -27,6 +27,7 @@ import {
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { getSocketUrl } from '@/config/environment';
 import { sdk } from '@farcaster/miniapp-sdk';
+import SelfVerificationModal from '@/components/verification/SelfVerificationModal';
 
 
 
@@ -98,6 +99,12 @@ function JoinSnarkelContent() {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [countdownTime, setCountdownTime] = useState<number>(5);
   const [showCountdownModal, setShowCountdownModal] = useState(false);
+  
+  // NEW: Verification state
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationRequired, setVerificationRequired] = useState(false);
+  const [verificationData, setVerificationData] = useState<any>(null);
+  const [currentSnarkelId, setCurrentSnarkelId] = useState<string | null>(null);
 
 
 
@@ -155,7 +162,8 @@ function JoinSnarkelContent() {
     setJoinAnimation(true);
 
     try {
-      const response = await fetch('/api/snarkel/join', {
+      // First, check if we can join the snarkel
+      const joinResponse = await fetch('/api/snarkel/join', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -166,9 +174,19 @@ function JoinSnarkelContent() {
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (joinResponse.ok) {
+        const data = await joinResponse.json();
         console.log('Join API Response:', data);
+        
+        // Check if verification is required
+        if (data.verificationRequired) {
+          setVerificationRequired(true);
+          setCurrentSnarkelId(data.snarkel?.id || data.snarkelId);
+          setShowVerificationModal(true);
+          setLoading(false);
+          setJoinAnimation(false);
+          return;
+        }
         
         // Set admin state
         setIsAdmin(data.isAdmin);
@@ -195,7 +213,7 @@ function JoinSnarkelContent() {
           router.push(`/quiz/${snarkelId}/room/${data.roomId}`);
         }, 1500);
       } else {
-        const errorData = await response.json();
+        const errorData = await joinResponse.json();
         setError(errorData.error || 'Failed to join snarkel');
         setJoinAnimation(false);
       }
@@ -241,6 +259,63 @@ function JoinSnarkelContent() {
     if (socket && isAdmin) {
       setShowCountdownModal(true);
     }
+  };
+
+  // NEW: Handle verification success
+  const handleVerificationSuccess = async (verificationData: any) => {
+    console.log('Verification successful:', verificationData);
+    
+    // Now try to join the snarkel again
+    if (currentSnarkelId) {
+      try {
+        setLoading(true);
+        const joinResponse = await fetch('/api/snarkel/join', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            snarkelCode: snarkelCode.trim().toUpperCase(),
+            walletAddress: address,
+          }),
+        });
+
+        if (joinResponse.ok) {
+          const data = await joinResponse.json();
+          
+          // Set admin state
+          setIsAdmin(data.isAdmin);
+          setIsSessionStarter(data.isSessionStarter || false);
+          setRoom(data.room);
+          setSnarkel(data.snarkel);
+          setParticipants(data.participants || []);
+          
+          // Initialize socket if admin
+          if (data.isAdmin) {
+            initializeSocket(data.roomId);
+          }
+          
+          // Redirect to room
+          const snarkelId = data.snarkel?.id || data.snarkelId;
+          if (snarkelId) {
+            router.push(`/quiz/${snarkelId}/room/${data.roomId}`);
+          }
+        } else {
+          const errorData = await joinResponse.json();
+          setError(errorData.error || 'Failed to join snarkel after verification');
+        }
+      } catch (error) {
+        console.error('Failed to join after verification:', error);
+        setError('Failed to join snarkel after verification. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleVerificationError = (error: string) => {
+    console.error('Verification failed:', error);
+    setError(`Verification failed: ${error}`);
   };
 
   const confirmStartGame = () => {
@@ -426,7 +501,7 @@ function JoinSnarkelContent() {
                   Enter Your Secret Code
                 </h2>
                 <p className="font-handwriting text-sm sm:text-lg text-gray-600 max-w-md mx-auto">
-                  Got a code from a friend? Drop it in below! 🎉
+                  Got a code from a friend? Drop it in below! ��
                 </p>
               </div>
 
@@ -909,6 +984,16 @@ function JoinSnarkelContent() {
           </div>
         </div>
       )}
+
+      {/* Self Protocol Verification Modal */}
+      <SelfVerificationModal
+        isOpen={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+        onSuccess={handleVerificationSuccess}
+        onError={handleVerificationError}
+        snarkelId={currentSnarkelId || undefined}
+        userId={address}
+      />
 
       <style jsx>{`
         .font-handwriting {
