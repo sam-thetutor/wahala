@@ -139,6 +139,18 @@ export async function POST(
       p => p.user.address.toLowerCase() === walletAddress.toLowerCase()
     );
 
+    console.log('Room participant lookup debug:', {
+      walletAddress: walletAddress.toLowerCase(),
+      userLookupId: user.id,
+      roomParticipants: room.participants.map(p => ({
+        participantId: p.id,
+        participantUserId: p.userId,
+        participantUserAddress: p.user.address.toLowerCase(),
+        isAdmin: p.isAdmin
+      })),
+      existingParticipantFound: !!existingParticipant
+    });
+
     console.log('Existing participant check:', {
       walletAddress: walletAddress.toLowerCase(),
       existingParticipantFound: !!existingParticipant,

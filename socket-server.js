@@ -48,12 +48,17 @@ const questionAnswers = new Map(); // roomId -> Map(questionId -> answers)
 const roomScores = new Map(); // roomId -> Map(userId -> score)
 
 // Helper function to check if user is already connected to a room
-function isUserAlreadyConnected(roomId, walletAddress) {
+function isUserAlreadyConnected(roomId, walletAddress, currentSocketId = null) {
   const roomConnections = activeConnections.get(roomId);
   if (!roomConnections) return false;
   
   const existingSocketId = roomConnections.get(walletAddress);
   if (!existingSocketId) return false;
+  
+  // If checking from current socket, don't consider it as "already connected"
+  if (currentSocketId && existingSocketId === currentSocketId) {
+    return false;
+  }
   
   // Check if the existing socket is still connected
   const existingSocket = io.sockets.sockets.get(existingSocketId);
@@ -97,12 +102,23 @@ function removeConnectionTracking(socketId) {
 // Helper function to get participant info safely
 async function getParticipantInfo(roomId, userId) {
   try {
+    console.log('Looking for participant:', { roomId, userId });
+    
     const participant = await prisma.roomParticipant.findFirst({
       where: {
         roomId,
         userId
       }
     });
+    
+    console.log('Participant lookup result:', {
+      roomId,
+      userId,
+      participantFound: !!participant,
+      participantId: participant?.id,
+      participantUserId: participant?.userId
+    });
+    
     return participant;
   } catch (error) {
     console.error('Error getting participant info:', error);
@@ -204,17 +220,61 @@ io.on('connection', (socket) => {
         return;
       }
 
+      console.log('Socket validation - user lookup:', {
+        walletAddress,
+        userId: user.id,
+        userAddress: user.address
+      });
+
       // Check if user is a participant in this room
       const participant = await getParticipantInfo(roomId, user.id);
       if (!participant) {
         console.log(`User ${walletAddress} not a participant in room ${roomId}`);
-        safeDisconnect(socket, 'Not a participant', 'You are not a participant in this room. Please join the room first.');
-        return;
+        console.log('Participant lookup failed for:', { roomId, userId: user.id });
+        
+        // Fallback: Check if user is the room admin or snarkel creator
+        const room = await prisma.room.findUnique({
+          where: { id: roomId },
+          include: {
+            admin: true,
+            snarkel: {
+              include: {
+                creator: true
+              }
+            }
+          }
+        });
+        
+        if (room && (room.admin.address.toLowerCase() === walletAddress.toLowerCase() || 
+                     room.snarkel.creator.address.toLowerCase() === walletAddress.toLowerCase())) {
+          console.log(`User ${walletAddress} is room admin or snarkel creator, allowing connection`);
+          
+          // Create room participant for this user
+          const newParticipant = await prisma.roomParticipant.create({
+            data: {
+              roomId: roomId,
+              userId: user.id,
+              isReady: false,
+              isAdmin: room.admin.address.toLowerCase() === walletAddress.toLowerCase()
+            }
+          });
+          
+          console.log('Created room participant for admin/creator:', {
+            participantId: newParticipant.id,
+            userId: newParticipant.userId,
+            isAdmin: newParticipant.isAdmin
+          });
+          
+          // Continue with connection
+        } else {
+          safeDisconnect(socket, 'Not a participant', 'You are not a participant in this room. Please join the room first.');
+          return;
+        }
       }
 
-      // Double-check that user isn't already connected
-      if (isUserAlreadyConnected(roomId, walletAddress)) {
-        console.log(`User ${walletAddress} already connected to room ${roomId} during manual validation`);
+      // Double-check that user isn't already connected from another socket
+      if (isUserAlreadyConnected(roomId, walletAddress, socket.id)) {
+        console.log(`User ${walletAddress} already connected to room ${roomId} from another socket during manual validation`);
         safeDisconnect(socket, 'Already connected', 'You are already connected to this room from another tab or device.');
         return;
       }
@@ -247,13 +307,23 @@ io.on('connection', (socket) => {
   });
 
   // Auto-validate connection after a short delay to allow client to set up
+  // This ensures the connection is properly validated even if manual validation fails
   setTimeout(async () => {
     try {
-      // Check if socket is still connected
+      // Check if socket is already validated and connected
       if (!socket.connected) {
         console.log(`Socket ${socket.id} disconnected before auto-validation could complete`);
         return;
       }
+
+      // Check if user is already tracked (meaning manual validation succeeded)
+      const userInfo = socketToUser.get(socket.id);
+      if (userInfo) {
+        console.log(`Socket ${socket.id} already validated and tracked, skipping auto-validation`);
+        return;
+      }
+
+      console.log(`Auto-validating socket ${socket.id} for ${walletAddress} in room ${roomId}`);
 
       // Check if room is still valid
       if (!(await isRoomValid(roomId))) {
@@ -276,13 +346,50 @@ io.on('connection', (socket) => {
       const participant = await getParticipantInfo(roomId, user.id);
       if (!participant) {
         console.log(`User ${walletAddress} not a participant in room ${roomId} during auto-validation`);
-        safeDisconnect(socket, 'Not a participant', 'You are not a participant in this room. Please join the room first.');
-        return;
+        
+        // Fallback: Check if user is the room admin or snarkel creator
+        const room = await prisma.room.findUnique({
+          where: { id: roomId },
+          include: {
+            admin: true,
+            snarkel: {
+              include: {
+                creator: true
+              }
+            }
+          }
+        });
+        
+        if (room && (room.admin.address.toLowerCase() === walletAddress.toLowerCase() || 
+                     room.snarkel.creator.address.toLowerCase() === walletAddress.toLowerCase())) {
+          console.log(`User ${walletAddress} is room admin or snarkel creator during auto-validation, allowing connection`);
+          
+          // Create room participant for this user
+          const newParticipant = await prisma.roomParticipant.create({
+            data: {
+              roomId: roomId,
+              userId: user.id,
+              isReady: false,
+              isAdmin: room.admin.address.toLowerCase() === walletAddress.toLowerCase()
+            }
+          });
+          
+          console.log('Created room participant for admin/creator during auto-validation:', {
+            participantId: newParticipant.id,
+            userId: newParticipant.userId,
+            isAdmin: newParticipant.isAdmin
+          });
+          
+          // Continue with connection
+        } else {
+          safeDisconnect(socket, 'Not a participant', 'You are not a participant in this room. Please join the room first.');
+          return;
+        }
       }
 
-      // Double-check that user isn't already connected
-      if (isUserAlreadyConnected(roomId, walletAddress)) {
-        console.log(`User ${walletAddress} already connected to room ${roomId} during auto-validation`);
+      // Check if user is already connected from another socket
+      if (isUserAlreadyConnected(roomId, walletAddress, socket.id)) {
+        console.log(`User ${walletAddress} already connected to room ${roomId} from another socket during auto-validation`);
         safeDisconnect(socket, 'Already connected', 'You are already connected to this room from another tab or device.');
         return;
       }
@@ -317,7 +424,7 @@ io.on('connection', (socket) => {
         safeDisconnect(socket, 'Validation error', 'Error validating your connection. Please try again.');
       }
     }
-  }, 1000); // 1 second delay to allow client setup
+  }, 2000); // Increased delay to 2 seconds to allow manual validation to complete
 
   // Add connection monitoring
   socket.on('error', (error) => {

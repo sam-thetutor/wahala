@@ -15,6 +15,7 @@ export default function JoinPage() {
   const [verificationRequired, setVerificationRequired] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [currentSnarkelId, setCurrentSnarkelId] = useState<string | null>(null);
+  const [isAlreadyParticipant, setIsAlreadyParticipant] = useState(false);
 
   const handleJoinSnarkel = async () => {
     if (!isConnected) {
@@ -45,9 +46,13 @@ export default function JoinPage() {
           setVerificationRequired(true);
           setCurrentSnarkelId(data.snarkelId);
           setShowVerificationModal(true);
+        } else if (data.alreadyParticipant) {
+          // User is already a participant, redirect to room
+          setIsAlreadyParticipant(true);
+          router.push(`/quiz/${data.snarkelId}/room/${data.roomId}`);
         } else {
           // Join successful, redirect to room
-          router.push(`/room/${data.roomId}`);
+          router.push(`/quiz/${data.snarkelId}/room/${data.roomId}`);
         }
       } else {
         setError(data.error || 'Failed to join snarkel');
@@ -78,7 +83,13 @@ export default function JoinPage() {
         const data = await response.json();
 
         if (response.ok) {
-          router.push(`/room/${data.roomId}`);
+          if (data.alreadyParticipant) {
+            // User is already a participant, redirect to room
+            router.push(`/quiz/${data.snarkelId}/room/${data.roomId}`);
+          } else {
+            // Join successful, redirect to room
+            router.push(`/quiz/${data.snarkelId}/room/${data.roomId}`);
+          }
         } else {
           setError(data.error || 'Failed to join after verification');
         }
@@ -126,12 +137,18 @@ export default function JoinPage() {
               </div>
             )}
 
+            {isAlreadyParticipant && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
+                You are already a participant in this quiz. Click to enter the room.
+              </div>
+            )}
+
             <button
               onClick={handleJoinSnarkel}
               disabled={isLoading || !snarkelCode.trim()}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
-              {isLoading ? 'Joining...' : 'Join Snarkel'}
+              {isLoading ? 'Joining...' : isAlreadyParticipant ? 'Enter Room' : 'Join Snarkel'}
             </button>
           </div>
         )}
