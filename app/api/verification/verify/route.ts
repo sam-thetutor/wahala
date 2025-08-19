@@ -69,9 +69,9 @@ export async function POST(request: NextRequest) {
               isVerified: true,
               verificationMethod: 'self',
               verifiedAt: new Date(),
-              country: disclosedData.issuing_state || null,
+              country: disclosedData.issuingState || null,
               nationality: disclosedData.nationality || null,
-              dateOfBirth: disclosedData.date_of_birth ? new Date(disclosedData.date_of_birth) : null,
+              dateOfBirth: disclosedData.dateOfBirth ? new Date(disclosedData.dateOfBirth) : null,
               gender: disclosedData.gender || null,
             }
           });
