@@ -205,11 +205,11 @@ export async function POST(request: NextRequest) {
             }
           }))
         },
-        allowlists: isPublic ? undefined : {
+        allowlists: (!isPublic && allowlist && allowlist.length > 0) ? {
           create: allowlist.map((address: string) => ({
             address: address.trim()
           }))
-        },
+        } : undefined,
         // Create featured content if marked as featured
         featuredContent: isFeatured ? {
           create: {
@@ -345,13 +345,21 @@ export async function POST(request: NextRequest) {
     // Handle other database errors
     if (error.code && error.code.startsWith('P')) {
       return NextResponse.json(
-        { error: 'Database error occurred. Please try again.' },
+        { error: `Database error (${error.code}): ${error.message || 'Unknown database error'}` },
         { status: 500 }
       );
     }
     
+    // Log the full error for debugging
+    console.error('Full error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      meta: error.meta
+    });
+    
     return NextResponse.json(
-      { error: 'Failed to create snarkel. Please try again.' },
+      { error: `Failed to create snarkel: ${error.message || 'Unknown error occurred'}` },
       { status: 500 }
     );
   }

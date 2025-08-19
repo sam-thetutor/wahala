@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Set the port for the Next.js app
   env: {
     PORT: '4000'
   },
@@ -29,18 +28,63 @@ const nextConfig: NextConfig = {
     },
   },
   
-  // Keep existing webpack configuration for production builds
-  webpack: (config) => {
+  // Optimized webpack configuration for production builds
+  webpack: (config, { isServer, dev }) => {
+    // Keep existing externals
     config.externals.push("pino-pretty", "lokijs", "encoding");
+    
+    if (!isServer && !dev) {
+      // Production-only optimizations
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        cacheGroups: {
+          // Prisma chunk (this is likely causing your memory issues)
+          'prisma-vendor': {
+            test: /[\\/]node_modules[\\/](@prisma|prisma)[\\/]/,
+            name: 'prisma-vendor',
+            chunks: 'all',
+            priority: 20,
+            enforce: true,
+          },
+          // Wagmi/viem chunk (heavy blockchain libraries)
+          'blockchain-vendor': {
+            test: /[\\/]node_modules[\\/](wagmi|@wagmi|viem|@tanstack)[\\/]/,
+            name: 'blockchain-vendor',
+            chunks: 'all',
+            priority: 15,
+          },
+          // React chunk
+          'react-vendor': {
+            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+            name: 'react-vendor',
+            chunks: 'all',
+            priority: 10,
+          },
+          // Lucide icons chunk
+          'lucide-vendor': {
+            test: /[\\/]node_modules[\\/]lucide-react[\\/]/,
+            name: 'lucide-vendor',
+            chunks: 'all',
+            priority: 8,
+          },
+          // General vendor chunk
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendor',
+            chunks: 'all',
+            priority: 5,
+          },
+        },
+      }
+    }
+    
     return config;
   },
   
   // Additional optimizations for development and production
   experimental: {
-    // Enable React compiler for better performance (disable in dev for faster builds)
-    reactCompiler: process.env.NODE_ENV === 'production',
-    
-
+    // Enable React compiler for better performance
+    reactCompiler: true,
     
     // Optimize package imports for better tree-shaking
     optimizePackageImports: [
@@ -48,7 +92,8 @@ const nextConfig: NextConfig = {
       'framer-motion',
       '@wagmi/core',
       'viem',
-      'socket.io-client'
+      'socket.io-client',
+      '@prisma/client' // Add this for Prisma optimization
     ],
     
     // Enable server components HMR cache for better performance
@@ -57,9 +102,6 @@ const nextConfig: NextConfig = {
   
   // Performance optimizations
   compress: true,
-  
-  // Build optimizations
-  swcMinify: true,
   
   // Enable production source maps for debugging
   productionBrowserSourceMaps: false,
