@@ -34,69 +34,72 @@ const nextConfig: NextConfig = {
     config.externals.push("pino-pretty", "lokijs", "encoding");
     
     if (!isServer && !dev) {
-      // Production-only optimizations with cleaner chunk splitting
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          // React chunk (highest priority)
-          'react-vendor': {
-            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
-            name: 'react-vendor',
-            chunks: 'all',
-            priority: 30,
-            enforce: true,
+      // Check if we're on a low-memory server (less than 4GB)
+      const isLowMemoryServer = process.env.NODE_ENV === 'production' && 
+        (process.env.MEMORY_LIMIT === 'low' || process.env.SERVER_ENV === 'production');
+      
+      if (isLowMemoryServer) {
+        // Ultra-minimal chunking for low-memory servers
+        config.optimization.splitChunks = {
+          chunks: 'all',
+          cacheGroups: {
+            // Only split React into separate chunk
+            'react-vendor': {
+              test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+              name: 'react-vendor',
+              chunks: 'all',
+              priority: 20,
+            },
+            // Everything else goes into vendor
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendor',
+              chunks: 'all',
+              priority: 5,
+              reuseExistingChunk: true,
+            },
           },
-          // Lucide icons chunk
-          'lucide-vendor': {
-            test: /[\\/]node_modules[\\/]lucide-react[\\/]/,
-            name: 'lucide-vendor',
-            chunks: 'all',
-            priority: 25,
-            enforce: true,
+          // Very conservative memory settings for low-memory servers
+          maxSize: 5000000, // 5MB - larger chunks = less memory pressure
+          minSize: 200000, // 200KB minimum
+          maxAsyncRequests: 5, // Very low limit
+          maxInitialRequests: 3, // Very low limit
+        }
+      } else {
+        // Standard chunking for higher-memory environments
+        config.optimization.splitChunks = {
+          chunks: 'all',
+          cacheGroups: {
+            // React chunk
+            'react-vendor': {
+              test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+              name: 'react-vendor',
+              chunks: 'all',
+              priority: 20,
+            },
+            // Blockchain libraries chunk
+            'blockchain-vendor': {
+              test: /[\\/]node_modules[\\/](wagmi|@wagmi|viem|@tanstack)[\\/]/,
+              name: 'blockchain-vendor',
+              chunks: 'all',
+              priority: 15,
+            },
+            // General vendor chunk (includes everything else)
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendor',
+              chunks: 'all',
+              priority: 5,
+              reuseExistingChunk: true,
+            },
           },
-          // Wagmi/viem chunk (blockchain libraries)
-          'wagmi-vendor': {
-            test: /[\\/]node_modules[\\/](wagmi|@wagmi|viem|@tanstack)[\\/]/,
-            name: 'wagmi-vendor',
-            chunks: 'all',
-            priority: 20,
-            enforce: true,
-          },
-          // Prisma chunk
-          'prisma-vendor': {
-            test: /[\\/]node_modules[\\/](@prisma|prisma)[\\/]/,
-            name: 'prisma-vendor',
-            chunks: 'all',
-            priority: 15,
-            enforce: true,
-          },
-          // Framer Motion chunk
-          'framer-vendor': {
-            test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
-            name: 'framer-vendor',
-            chunks: 'all',
-            priority: 10,
-            enforce: true,
-          },
-          // Socket.io chunk
-          'socket-vendor': {
-            test: /[\\/]node_modules[\\/]socket\.io-client[\\/]/,
-            name: 'socket-vendor',
-            chunks: 'all',
-            priority: 8,
-            enforce: true,
-          },
-          // General vendor chunk (lowest priority)
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendor',
-            chunks: 'all',
-            priority: 5,
-            reuseExistingChunk: true,
-          },
-        },
-        // Increase chunk size warning limit (similar to Vite's chunkSizeWarningLimit)
-        maxSize: 1000000, // 1MB in bytes
+          // Increase chunk size limit to reduce memory pressure
+          maxSize: 3000000, // 3MB in bytes
+          // Memory-friendly options
+          minSize: 100000, // 100KB minimum chunk size
+          maxAsyncRequests: 10, // Limit concurrent async chunks
+          maxInitialRequests: 6, // Limit initial chunks
+        }
       }
     }
     
