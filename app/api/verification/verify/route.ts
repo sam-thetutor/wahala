@@ -18,15 +18,24 @@ const verification_config = {
 // Create the configuration store
 const configStore = new DefaultConfigStore(verification_config);
 
-// Initialize the verifier
-const selfBackendVerifier = new SelfBackendVerifier(
-  process.env.NEXT_PUBLIC_SELF_SCOPE || 'snarkels-verification',
-  process.env.NEXT_PUBLIC_SELF_ENDPOINT || '',
-  process.env.NODE_ENV === 'development', // true = mock for testing, false = production
-  AllIds,
-  configStore,
-  'hex'
-);
+// Initialize the verifier only when needed
+function getSelfBackendVerifier() {
+  const scope = process.env.NEXT_PUBLIC_SELF_SCOPE || 'snarkels-verification';
+  const endpoint = process.env.NEXT_PUBLIC_SELF_ENDPOINT;
+  
+  if (!endpoint) {
+    throw new Error('NEXT_PUBLIC_SELF_ENDPOINT environment variable is required');
+  }
+  
+  return new SelfBackendVerifier(
+    scope,
+    endpoint,
+    false,
+    AllIds,
+    configStore,
+    'hex'
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +60,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // Verify the proof using Self Protocol
+        const selfBackendVerifier = getSelfBackendVerifier();
         const result = await selfBackendVerifier.verify(
           attestationId,    // Document type (1 = passport, 2 = EU ID card)
           proof,            // The zero-knowledge proof

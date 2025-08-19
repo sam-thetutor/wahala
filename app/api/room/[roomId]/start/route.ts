@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client/index';
+import { PrismaClient } from '@prisma/client';
 import { startRoomCountdown, startSnarkelImmediately } from '@/lib/snarkel-utils';
 
 const prisma = new PrismaClient();
