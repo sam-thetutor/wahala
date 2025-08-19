@@ -1147,7 +1147,12 @@ export default function AdminPage() {
                                 <td className="py-2">
                                   {distribution.txHash ? (
                                     <a 
-                                      href={`https://alfajores.celoscan.io/tx/${distribution.txHash}`}
+                                      href={(() => {
+                                        const chainId = reward.chainId;
+                                        if (chainId === 42220) return `https://celoscan.io/tx/${distribution.txHash}`;
+                                        if (chainId === 8453) return `https://basescan.org/tx/${distribution.txHash}`;
+                                        return `https://basescan.org/tx/${distribution.txHash}`; // Default to Base
+                                      })()}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-blue-600 hover:text-blue-800 text-xs font-mono"

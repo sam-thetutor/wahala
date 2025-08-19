@@ -251,7 +251,7 @@ export default function EnhancedLeaderboard({
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600">Transaction:</span>
                     <a
-                      href={`https://alfajores.celoscan.io/tx/${userReward.transactionHash}`}
+                      href={`https://basescan.org/tx/${userReward.transactionHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800 text-sm font-mono flex items-center gap-1"

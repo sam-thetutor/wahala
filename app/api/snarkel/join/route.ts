@@ -5,13 +5,37 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { snarkelCode, skipVerification } = await request.json();
+    const { snarkelCode, skipVerification, userAddress } = await request.json();
 
     if (!snarkelCode) {
       return NextResponse.json(
         { error: 'Snarkel code is required' },
         { status: 400 }
       );
+    }
+
+    if (!userAddress) {
+      return NextResponse.json(
+        { error: 'User address is required' },
+        { status: 400 }
+      );
+    }
+
+    // Find or create user by wallet address
+    let user = await prisma.user.findUnique({
+      where: { address: userAddress }
+    });
+
+    if (!user) {
+      // Create a basic user record if they don't exist
+      user = await prisma.user.create({
+        data: {
+          address: userAddress,
+          isVerified: false,
+          verificationMethod: null,
+          verifiedAt: null,
+        }
+      });
     }
 
     // Find the snarkel
@@ -42,16 +66,18 @@ export async function POST(request: NextRequest) {
 
     // Check if verification is required
     if (snarkel.requireVerification && !skipVerification) {
-      return NextResponse.json({
-        verificationRequired: true,
-        snarkelId: snarkel.id,
-        message: 'This quiz requires identity verification'
-      });
+      if (!user.isVerified) {
+        return NextResponse.json({
+          verificationRequired: true,
+          snarkelId: snarkel.id,
+          message: 'This quiz requires identity verification'
+        });
+      }
     }
 
     // Check if user is already a participant
     const existingParticipant = snarkel.participants.find(
-      p => p.user.id === 'user123' // This should come from your auth system
+      p => p.user.address === userAddress
     );
 
     if (existingParticipant) {
@@ -71,7 +97,7 @@ export async function POST(request: NextRequest) {
     const participant = await prisma.participant.create({
       data: {
         snarkelId: snarkel.id,
-        userId: 'user123', // This should come from your auth system
+        userId: user.id,
         joinedAt: new Date(),
         points: 0
       }

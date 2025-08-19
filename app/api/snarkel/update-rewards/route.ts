@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         tokenSymbol: 'TOKEN', // This would come from token validation
         tokenName: 'Reward Token', // This would come from token validation
         tokenDecimals: 18,
-        network: rewardConfig.chainId === 42220 ? 'Celo Mainnet' : 'Celo Alfajores',
+        network: rewardConfig.chainId === 42220 ? 'Celo Mainnet' : 'Base',
         chainId: rewardConfig.chainId,
         totalWinners: rewardConfig.totalWinners,
         rewardAmounts: rewardConfig.rewardAmounts,
