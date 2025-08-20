@@ -260,6 +260,46 @@ export async function GET(
       questions: quiz.questions
     };
 
+    // Check if no submissions exist and provide helpful feedback
+    if (allSubmissions.length === 0) {
+      console.log('🔍 API: No submissions found, checking if quiz has been completed');
+      
+      // Check if there are any completed rooms for this snarkel
+      const completedRooms = await prisma.room.findMany({
+        where: {
+          snarkelId: quiz.id,
+          isFinished: true
+        }
+      });
+      
+      console.log('🔍 API: Completed rooms found:', completedRooms.length);
+      
+      if (completedRooms.length === 0) {
+        console.log('🔍 API: No completed rooms found - quiz may not have been played yet');
+        return NextResponse.json({
+          success: true,
+          leaderboard: [],
+          quizInfo,
+          isAdmin,
+          adminDetails,
+          message: 'This quiz has not been completed yet. No results available.',
+          status: 'not_played'
+        });
+      } else {
+        console.log('🔍 API: Quiz has been completed but no submissions exist - this indicates a data consistency issue');
+        return NextResponse.json({
+          success: true,
+          leaderboard: [],
+          quizInfo,
+          isAdmin,
+          adminDetails,
+          message: 'Quiz has been completed but results are not available. This may be a temporary issue.',
+          status: 'completed_no_submissions',
+          completedRoomsCount: completedRooms.length
+        });
+      }
+    }
+
     const response = {
       success: true,
       leaderboard,
@@ -279,6 +319,152 @@ export async function GET(
 
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ snarkelId: string }> }
+) {
+  try {
+    const { snarkelId } = await params;
+    const body = await request.json();
+    const { userAddress, action } = body;
+
+    if (!userAddress) {
+      return NextResponse.json(
+        { success: false, error: 'User address is required' },
+        { status: 400 }
+      );
+    }
+
+    // Find user by wallet address
+    const user = await prisma.user.findUnique({
+      where: { address: userAddress.toLowerCase() }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Find quiz
+    const quiz = await prisma.snarkel.findFirst({
+      where: { 
+        OR: [
+          { id: snarkelId },
+          { snarkelCode: snarkelId }
+        ]
+      },
+      include: {
+        creator: { select: { id: true, address: true } }
+      }
+    });
+
+    if (!quiz) {
+      return NextResponse.json(
+        { success: false, error: 'Quiz not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user is admin (creator) of this quiz
+    if (quiz.creator.address.toLowerCase() !== userAddress.toLowerCase()) {
+      return NextResponse.json(
+        { success: false, error: 'Only quiz creator can perform this action' },
+        { status: 403 }
+      );
+    }
+
+    if (action === 'create_submissions') {
+      // Find completed rooms for this quiz
+      const completedRooms = await prisma.room.findMany({
+        where: {
+          snarkelId: quiz.id,
+          isFinished: true
+        },
+        include: {
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  address: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (completedRooms.length === 0) {
+        return NextResponse.json({
+          success: false,
+          error: 'No completed rooms found for this quiz'
+        });
+      }
+
+      // Create submissions for all participants in completed rooms
+      const submissionsCreated = [];
+      
+      for (const room of completedRooms) {
+        for (const participant of room.participants) {
+          // Check if submission already exists
+          const existingSubmission = await prisma.submission.findFirst({
+            where: {
+              userId: participant.userId,
+              snarkelId: quiz.id
+            }
+          });
+
+          if (!existingSubmission) {
+            // Create a basic submission (score will be 0 since we don't have actual game data)
+            const submission = await prisma.submission.create({
+              data: {
+                score: 0, // Default score since we don't have actual game data
+                totalPoints: 0,
+                totalQuestions: 0, // Will be updated when we have question data
+                timeSpent: 0,
+                completedAt: room.endTime || new Date(),
+                userId: participant.userId,
+                snarkelId: quiz.id
+              }
+            });
+            
+            submissionsCreated.push({
+              userId: participant.userId,
+              userAddress: participant.user.address,
+              submissionId: submission.id
+            });
+          }
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Created ${submissionsCreated.length} submissions for completed quiz`,
+        submissionsCreated
+      });
+    }
+
+    return NextResponse.json({
+      success: false,
+      error: 'Invalid action'
+    });
+
+  } catch (error) {
+    console.error('Error in POST leaderboard:', error);
     return NextResponse.json(
       { 
         success: false, 

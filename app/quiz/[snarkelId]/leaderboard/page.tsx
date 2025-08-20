@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useQuizContract } from '@/hooks/useViemContract';
+import toast from 'react-hot-toast';
 
 
 interface QuestionBreakdown {
@@ -112,6 +113,7 @@ interface AdminDetails {
   isQuizCreator: boolean;
   creatorAddress: string;
   creatorName: string;
+  canDistributeRewards: boolean;
 }
 
 export default function QuizLeaderboardPage() {
@@ -129,6 +131,8 @@ export default function QuizLeaderboardPage() {
   const [adminDetails, setAdminDetails] = useState<AdminDetails | null>(null);
   const [showQuestionDetails, setShowQuestionDetails] = useState<string | null>(null);
   const [distributingRewards, setDistributingRewards] = useState(false);
+  const [creatingSubmissions, setCreatingSubmissions] = useState(false);
+  const [participantTabs, setParticipantTabs] = useState<Array<{id: string, name: string, address: string, isReady: boolean, isAdmin: boolean}>>([]);
   const [rewardDistributionStatus, setRewardDistributionStatus] = useState<string>('');
   const [questions, setQuestions] = useState<any[]>([]);
   const [rewardsDistributed, setRewardsDistributed] = useState(false);
@@ -161,6 +165,38 @@ export default function QuizLeaderboardPage() {
     getExpectedRewardAmount,
     getCurrentSessionId
   } = useQuizContract(8453); // Use Base chain for now
+
+  // Handler functions
+  const handleCreateSubmissions = async () => {
+    if (!address || !isAdmin) return;
+    
+    setCreatingSubmissions(true);
+    try {
+      const response = await fetch(`/api/quiz/${snarkelId}/leaderboard`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userAddress: address,
+          action: 'create_submissions'
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(result.message);
+        // Refresh leaderboard
+        fetchLeaderboard();
+      } else {
+        toast.error(result.error || 'Failed to create submissions');
+      }
+    } catch (error) {
+      console.error('Error creating submissions:', error);
+      toast.error('Failed to create submissions');
+    } finally {
+      setCreatingSubmissions(false);
+    }
+  };
 
   useEffect(() => {
     if (snarkelId) {
@@ -214,11 +250,23 @@ export default function QuizLeaderboardPage() {
         console.log('🔍 Setting leaderboard:', data.leaderboard);
         console.log('🔍 Setting quiz info:', data.quizInfo);
         console.log('🔍 Is admin:', data.isAdmin);
+        console.log('🔍 API message:', data.message);
+        console.log('🔍 API status:', data.status);
         
         setLeaderboard(data.leaderboard || []);
         setQuizInfo(data.quizInfo || null);
         setIsAdmin(data.isAdmin || false);
         setAdminDetails(data.adminDetails || null);
+        
+        // Handle different status messages
+        if (data.status === 'not_played') {
+          setError('This quiz has not been completed yet. No results available.');
+        } else if (data.status === 'completed_no_submissions') {
+          setError('Quiz has been completed but results are not available. This may be a temporary issue.');
+        } else if (data.message) {
+          // Show any other messages from the API
+          setError(data.message);
+        }
         
         // Find user position if connected
         if (isConnected && address) {
@@ -381,9 +429,31 @@ export default function QuizLeaderboardPage() {
   };
 
   const handleDistributeRewards = async () => {
-    setShowDistributionModal(true);
-    // Calculate initial preview
-    setTimeout(() => calculateDistributionPreview(), 100);
+    if (!address || !isAdmin) return;
+    
+    setDistributingRewards(true);
+    try {
+      const response = await fetch(`/api/quiz/${snarkelId}/distribute-rewards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userAddress: address })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success('Rewards distributed successfully!');
+        // Refresh leaderboard
+        fetchLeaderboard();
+      } else {
+        toast.error(result.error || 'Failed to distribute rewards');
+      }
+    } catch (error) {
+      console.error('Error distributing rewards:', error);
+      toast.error('Failed to distribute rewards');
+    } finally {
+      setDistributingRewards(false);
+    }
   };
 
   const handleAmountEdit = (walletAddress: string, newAmount: string) => {
@@ -1594,6 +1664,33 @@ export default function QuizLeaderboardPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Controls */}
+      {isAdmin && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-lg font-semibold text-blue-800 mb-3">Admin Controls</h3>
+          <div className="flex flex-wrap gap-3">
+            {adminDetails?.canDistributeRewards && (
+              <button
+                onClick={handleDistributeRewards}
+                disabled={distributingRewards}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+              >
+                {distributingRewards ? 'Distributing...' : 'Distribute Rewards'}
+              </button>
+            )}
+            
+            {/* Manual submission creation for admins */}
+            <button
+              onClick={handleCreateSubmissions}
+              disabled={creatingSubmissions}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+            >
+              {creatingSubmissions ? 'Creating...' : 'Create Missing Submissions'}
+            </button>
           </div>
         </div>
       )}

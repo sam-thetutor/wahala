@@ -207,6 +207,21 @@ export default function QuizRoomPage() {
     };
   }, [isConnected, address, roomId]);
 
+  // Add useEffect to update isReady state when participants are loaded
+  useEffect(() => {
+    if (participants.length > 0 && address) {
+      // Find the current user's participant and update isReady state
+      const currentParticipant = participants.find(p => 
+        p.user.address.toLowerCase() === address.toLowerCase()
+      );
+      
+      if (currentParticipant) {
+        console.log('🔍 Setting initial isReady state:', currentParticipant.isReady);
+        setIsReady(currentParticipant.isReady);
+      }
+    }
+  }, [participants, address]);
+
   // Add socket cleanup effect
   useEffect(() => {
     return () => {
@@ -509,6 +524,7 @@ export default function QuizRoomPage() {
     newSocket.on('participantReadyUpdated', (data: { participantId: string, isReady: boolean, userId: string }) => {
       console.log('Received participantReadyUpdated:', data);
       console.log('Current participants before update:', participants);
+      console.log('Current user address:', address);
       
       // Update participants list with the new ready status
       setParticipants(prev => {
@@ -523,11 +539,11 @@ export default function QuizRoomPage() {
       );
       
       // If this is the current user, update their ready status
-      // Find the current user's participant by comparing wallet address
-      const currentParticipant = participants.find(p => p.user.address.toLowerCase() === address?.toLowerCase());
-      if (currentParticipant && currentParticipant.id === data.participantId) {
-        setIsReady(data.isReady);
+      // Check if the updated participant is the current user by comparing wallet address
+      const updatedParticipant = participants.find(p => p.id === data.participantId);
+      if (updatedParticipant && updatedParticipant.user.address.toLowerCase() === address?.toLowerCase()) {
         console.log(`Current user ready status updated to: ${data.isReady}`);
+        setIsReady(data.isReady);
       }
       
       console.log(`Participant ${data.participantId} ready status updated to: ${data.isReady}`);
@@ -567,6 +583,7 @@ export default function QuizRoomPage() {
           return newParticipant;
         });
         
+        console.log('Merged participants with preserved ready status:', mergedParticipants);
         return mergedParticipants;
       });
       
@@ -840,11 +857,16 @@ export default function QuizRoomPage() {
       return;
     }
     
+    console.log('🔍 toggleReady called');
+    console.log('🔍 Current isReady state:', isReady);
+    console.log('🔍 Current user address:', address);
+    
     if (socket) {
-      console.log('Emitting toggleReady event');
+      console.log('🔍 Emitting toggleReady event');
       socket.emit('toggleReady');
       // Don't update local state immediately - wait for server response
       // setIsReady(!isReady); // This line is removed
+      console.log('🔍 toggleReady event emitted, waiting for server response');
     }
   };
 

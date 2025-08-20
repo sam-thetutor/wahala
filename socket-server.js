@@ -1135,9 +1135,35 @@ async function endQuiz(roomId) {
         message: 'Quiz completed! Redirecting to leaderboard...'
       });
 
+      // IMPORTANT: Create submissions for ALL completed quizzes, regardless of rewards
+      console.log(`Creating submissions for ${finalLeaderboard.length} participants in quiz ${room.snarkelId}`);
+      
+      try {
+        const submissionRecords = await Promise.all(
+          finalLeaderboard.map(async (participant) => {
+            return prisma.submission.create({
+              data: {
+                score: participant.score,
+                totalPoints: participant.score,
+                totalQuestions: room.snarkel.questions?.length || 0,
+                timeSpent: 0, // Could be calculated from actual game data
+                completedAt: new Date(),
+                userId: participant.userId,
+                snarkelId: room.snarkelId
+              }
+            });
+          })
+        );
+        
+        console.log(`Successfully created ${submissionRecords.length} submissions for quiz ${room.snarkelId}`);
+      } catch (submissionError) {
+        console.error(`Error creating submissions for quiz ${room.snarkelId}:`, submissionError);
+        // Don't fail the entire process if submission creation fails
+      }
+
       // Automatically distribute rewards if enabled
-      if (room.snarkel.rewardsEnabled) {
-        console.log(`Attempting automatic reward distribution for room ${roomId}, session ${room.sessionNumber}`);
+      if (room.snarkel.rewardsEnabled && room.snarkel.rewards && room.snarkel.rewards.length > 0) {
+        console.log(`Rewards enabled for snarkel ${room.snarkelId}, distributing automatically...`);
         
         try {
           const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'}/api/quiz/distribute-rewards`, {
@@ -1146,38 +1172,10 @@ async function endQuiz(roomId) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              roomId,
-              sessionNumber: room.sessionNumber,
-              finalLeaderboard
-            }),
+              roomId: roomId,
+              finalLeaderboard: finalLeaderboard
+            })
           });
-
-          // Check if response is successful before trying to parse JSON
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Reward distribution API returned ${response.status}: ${errorText}`);
-            
-            // Try to parse as JSON if possible, otherwise use the text
-            let errorMessage = 'Failed to distribute rewards automatically';
-            try {
-              const errorJson = JSON.parse(errorText);
-              errorMessage = errorJson.error || errorMessage;
-            } catch (parseError) {
-              // If it's HTML or other non-JSON content, use a generic message
-              if (response.status === 500) {
-                errorMessage = 'Server error during reward distribution';
-              } else {
-                errorMessage = `HTTP ${response.status}: ${errorText.substring(0, 100)}...`;
-              }
-            }
-            
-            io.to(roomId).emit('rewardsDistributed', {
-              success: false,
-              message: errorMessage,
-              error: `HTTP ${response.status}`
-            });
-            return;
-          }
 
           const result = await response.json();
           

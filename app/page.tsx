@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Play, 
   Users, 
@@ -96,6 +97,7 @@ const ActionBar = ({ isConnected, disconnect }: { isConnected: boolean; disconne
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
+  const router = useRouter();
   const [floatingElements, setFloatingElements] = useState<Array<{
     id: number;
     x: number;
@@ -309,11 +311,30 @@ export default function HomePage() {
                 </Link>
                 
                 {/* Clickable reference text below button */}
-                <Link href="/featured" className="block mt-6">
-                  <p className="text-gray-500 text-base font-handwriting hover:text-blue-600 transition-colors cursor-pointer underline">
-                    explore featured snarkels
+                <Link 
+                  href="/featured" 
+                  className="block mt-6 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-all duration-300" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    console.log('🔍 Featured link clicked, navigating to /featured');
+                    router.push('/featured');
+                  }}
+                >
+                  <p className="text-blue-700 text-base font-handwriting hover:text-blue-800 transition-colors cursor-pointer font-semibold">
+                    🏆 Explore Featured Snarkels
                   </p>
                 </Link>
+                
+                {/* Alternative navigation method for debugging */}
+                <button 
+                  onClick={() => {
+                    console.log('🔍 Featured button clicked, using router.push');
+                    router.push('/featured');
+                  }}
+                  className="block mt-2 text-gray-400 text-sm font-handwriting hover:text-blue-600 transition-colors cursor-pointer underline"
+                >
+                  (debug: click here if link above doesn't work)
+                </button>
               </div>
             </div>
 
