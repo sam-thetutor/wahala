@@ -12,6 +12,9 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const walletAddress = searchParams.get('walletAddress');
 
+    console.log('🔍 API: Fetching leaderboard for snarkelId:', snarkelId);
+    console.log('🔍 API: Wallet address:', walletAddress);
+
     if (!snarkelId) {
       return NextResponse.json(
         { success: false, error: 'Quiz ID is required' },
@@ -67,6 +70,13 @@ export async function GET(
       }
     });
 
+    console.log('🔍 API: Quiz found:', !!quiz);
+    if (quiz) {
+      console.log('🔍 API: Quiz ID:', quiz.id);
+      console.log('🔍 API: Quiz title:', quiz.title);
+      console.log('🔍 API: Questions count:', quiz.questions.length);
+    }
+
     if (!quiz) {
       return NextResponse.json(
         { success: false, error: 'Quiz not found' },
@@ -109,6 +119,30 @@ export async function GET(
         score: 'desc'
       }
     });
+
+    console.log('🔍 API: Submissions found:', submissions.length);
+    console.log('🔍 API: Submissions with score > 0:', submissions.filter(s => s.score > 0).length);
+    
+    if (submissions.length > 0) {
+      console.log('🔍 API: First submission score:', submissions[0].score);
+      console.log('🔍 API: First submission user:', submissions[0].user?.name || submissions[0].user?.address);
+    }
+
+    // Debug: Check ALL submissions regardless of score
+    const allSubmissions = await prisma.submission.findMany({
+      where: {
+        snarkelId: quiz.id
+      },
+      select: {
+        id: true,
+        score: true,
+        userId: true,
+        completedAt: true
+      }
+    });
+    
+    console.log('🔍 API: ALL submissions found:', allSubmissions.length);
+    console.log('🔍 API: Submission scores:', allSubmissions.map(s => ({ id: s.id, score: s.score, userId: s.userId })));
 
     // Fetch questions with options for question breakdown
     const questions = await prisma.question.findMany({
@@ -226,13 +260,22 @@ export async function GET(
       questions: quiz.questions
     };
 
-    return NextResponse.json({
+    const response = {
       success: true,
       leaderboard,
       quizInfo,
       isAdmin,
       adminDetails
+    };
+
+    console.log('🔍 API: Final response:', {
+      success: response.success,
+      leaderboardLength: response.leaderboard.length,
+      quizInfoId: response.quizInfo.id,
+      isAdmin: response.isAdmin
     });
+
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error('Error fetching leaderboard:', error);

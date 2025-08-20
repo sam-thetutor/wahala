@@ -187,12 +187,20 @@ export default function QuizLeaderboardPage() {
       setLoading(true);
       setError(null);
 
+      console.log('🔍 Fetching leaderboard for snarkelId:', snarkelId);
+      console.log('🔍 Wallet address:', address);
+
       // Fetch quiz info and leaderboard with wallet address for admin check
       const url = address 
         ? `/api/quiz/${snarkelId}/leaderboard?walletAddress=${address}`
         : `/api/quiz/${snarkelId}/leaderboard`;
         
+      console.log('🔍 API URL:', url);
+      
       const response = await fetch(url);
+      
+      console.log('🔍 Response status:', response.status);
+      console.log('🔍 Response ok:', response.ok);
       
       if (!response.ok) {
         throw new Error('Failed to fetch leaderboard');
@@ -200,7 +208,13 @@ export default function QuizLeaderboardPage() {
 
       const data = await response.json();
       
+      console.log('🔍 API Response data:', data);
+      
       if (data.success) {
+        console.log('🔍 Setting leaderboard:', data.leaderboard);
+        console.log('🔍 Setting quiz info:', data.quizInfo);
+        console.log('🔍 Is admin:', data.isAdmin);
+        
         setLeaderboard(data.leaderboard || []);
         setQuizInfo(data.quizInfo || null);
         setIsAdmin(data.isAdmin || false);
@@ -218,10 +232,11 @@ export default function QuizLeaderboardPage() {
           }
         }
       } else {
+        console.error('🔍 API returned error:', data.error);
         setError(data.error || 'Failed to fetch leaderboard');
       }
     } catch (err) {
-      console.error('Error fetching leaderboard:', err);
+      console.error('🔍 Error fetching leaderboard:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -1291,6 +1306,39 @@ export default function QuizLeaderboardPage() {
             <div className="px-6 py-12 text-center text-gray-500">
               <Trophy className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <p>No results available yet</p>
+              
+              {/* Debug Information */}
+              <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left text-sm">
+                <h4 className="font-medium mb-2">Debug Information:</h4>
+                <div className="space-y-1">
+                  <p><strong>Loading:</strong> {loading ? 'Yes' : 'No'}</p>
+                  <p><strong>Error:</strong> {error || 'None'}</p>
+                  <p><strong>Leaderboard Length:</strong> {leaderboard.length}</p>
+                  <p><strong>Quiz Info:</strong> {quizInfo ? 'Loaded' : 'Not loaded'}</p>
+                  <p><strong>Snarkel ID:</strong> {snarkelId}</p>
+                  <p><strong>Wallet Connected:</strong> {isConnected ? 'Yes' : 'No'}</p>
+                  <p><strong>Wallet Address:</strong> {address || 'Not connected'}</p>
+                </div>
+                
+                {/* Show raw data for debugging */}
+                {quizInfo && (
+                  <div className="mt-3 p-3 bg-white rounded border">
+                    <h5 className="font-medium mb-2">Quiz Info:</h5>
+                    <pre className="text-xs overflow-auto">
+                      {JSON.stringify(quizInfo, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                
+                {leaderboard.length > 0 && (
+                  <div className="mt-3 p-3 bg-white rounded border">
+                    <h5 className="font-medium mb-2">Leaderboard Data:</h5>
+                    <pre className="text-xs overflow-auto">
+                      {JSON.stringify(leaderboard, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

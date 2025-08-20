@@ -13,6 +13,7 @@ import MiniAppHeader from '@/components/MiniAppHeader';
 import MiniAppContextDisplay from '@/components/MiniAppContextDisplay';
 import SocialShareButton from '@/components/SocialShareButton';
 import { useAccount } from 'wagmi';
+import toast from 'react-hot-toast';
 
 // Progress Modal Component
 interface ProgressStep {
@@ -962,7 +963,49 @@ export default function SnarkelCreationPage() {
       index === stepIndex ? { ...step, status, error } : step
     ));
     setCurrentProgressStep(stepIndex);
-  }, []);
+    
+    // Add toast notifications for better user feedback
+    const step = progressSteps[stepIndex];
+    if (step) {
+      switch (status) {
+        case 'loading':
+          if (step.title.includes('Token')) {
+            toast.loading('Checking token allowance...', { id: `step-${stepIndex}` });
+          } else if (step.title.includes('Approving')) {
+            toast.loading('Approving tokens...', { id: `step-${stepIndex}` });
+          } else if (step.title.includes('Transferring')) {
+            toast.loading('Transferring tokens...', { id: `step-${stepIndex}` });
+          } else {
+            toast.loading(`${step.title}...`, { id: `step-${stepIndex}` });
+          }
+          break;
+        case 'completed':
+          toast.dismiss(`step-${stepIndex}`);
+          if (step.title.includes('Token')) {
+            toast.success('Token operations completed!');
+          } else if (step.title.includes('Approving')) {
+            toast.success('Token approval successful!');
+          } else if (step.title.includes('Transferring')) {
+            toast.success('Token transfer successful!');
+          } else {
+            toast.success(`${step.title} completed!`);
+          }
+          break;
+        case 'error':
+          toast.dismiss(`step-${stepIndex}`);
+          if (step.title.includes('Token')) {
+            toast.error(`Token operation failed: ${error}`);
+          } else if (step.title.includes('Approving')) {
+            toast.error(`Approval failed: ${error}`);
+          } else if (step.title.includes('Transferring')) {
+            toast.error(`Transfer failed: ${error}`);
+          } else {
+            toast.error(`${step.title} failed: ${error}`);
+          }
+          break;
+      }
+    }
+  }, [progressSteps]);
 
   // Handle AI generated quiz
   const handleAIGeneratedQuiz = useCallback((quizData: any) => {
@@ -2132,6 +2175,11 @@ export default function SnarkelCreationPage() {
        onClose={() => setShowAIModal(false)}
        onGenerate={handleAIGeneratedQuiz}
      />
+
+     {/* Toast Notifications */}
+     <div className="toast-container">
+       {/* Toaster will be rendered here by react-hot-toast */}
+     </div>
 
      <style jsx>{`
        .font-handwriting {

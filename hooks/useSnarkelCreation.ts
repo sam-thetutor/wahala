@@ -330,43 +330,95 @@ export const useSnarkelCreation = (): UseSnarkelCreationReturn => {
           if (data.rewards.enabled && sessionResult.transactionHash) {
             console.log('=== STEP 3: Handling ERC20 token operations ===');
             
-            // Skip token balance check - let the blockchain handle it
-            console.log('Skipping token balance check - proceeding with approval and transfer');
+            // Check current allowance first
+            console.log('=== Checking current token allowance ===');
+            const currentAllowance = await getTokenAllowance(
+              data.rewards.tokenAddress as any,
+              data.creatorAddress as any,
+              getContractAddress(data.rewards.chainId) as any
+            );
+            
+            console.log('Current allowance:', currentAllowance);
             console.log('Required amount:', requiredAmount);
+            
+            // Only approve if current allowance is insufficient
+            if (parseFloat(currentAllowance) < parseFloat(requiredAmount)) {
+              console.log('=== Current allowance insufficient, approving tokens ===');
+              const approveResult = await approveToken({
+                tokenAddress: data.rewards.tokenAddress as any,
+                spenderAddress: getContractAddress(data.rewards.chainId) as any,
+                amount: requiredAmount
+              });
 
-            // Skip allowance check - just proceed with approval
-            console.log('=== Approving tokens ===');
-            const approveResult = await approveToken({
-              tokenAddress: data.rewards.tokenAddress as any,
-              spenderAddress: getContractAddress(data.rewards.chainId) as any,
-              amount: requiredAmount
-            });
+              console.log('Approve result:', approveResult);
+              if (!approveResult.success) {
+                console.warn('Token approval failed, but continuing with session creation');
+                console.warn('User will need to approve tokens manually before participating');
+                
+                // Set a warning message for the user
+                setError(`⚠️ Token approval failed. Your quiz was created successfully, but you'll need to approve ${data.rewards.tokenSymbol} tokens manually before participants can join.`);
+                
+                // Don't throw error - continue with session creation
+              } else {
+                console.log('Token approval successful, transaction hash:', approveResult.transactionHash);
+                
+                // Wait for approval to be processed
+                console.log('Waiting for approval to be processed...');
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                // Verify approval was successful
+                const newAllowance = await getTokenAllowance(
+                  data.rewards.tokenAddress as any,
+                  data.creatorAddress as any,
+                  getContractAddress(data.rewards.chainId) as any
+                );
+                
+                if (parseFloat(newAllowance) >= parseFloat(requiredAmount)) {
+                  console.log('Approval verified successfully, new allowance:', newAllowance);
+                  
+                  // Transfer tokens to contract
+                  console.log('=== Transferring tokens to contract ===');
+                  const transferResult = await transferToken({
+                    tokenAddress: data.rewards.tokenAddress as any,
+                    toAddress: getContractAddress(data.rewards.chainId) as any,
+                    amount: requiredAmount
+                  });
 
-            console.log('Approve result:', approveResult);
-            if (!approveResult.success) {
-              throw new Error(`Token approval failed: ${approveResult.error}`);
+                  console.log('Transfer result:', transferResult);
+                  if (!transferResult.success) {
+                    console.warn('Token transfer failed, but session was created');
+                    console.warn('User will need to transfer tokens manually');
+                    setError(`⚠️ Token transfer failed. Your quiz was created successfully, but you'll need to transfer ${data.rewards.tokenSymbol} tokens manually to the contract.`);
+                  } else {
+                    console.log('Token transfer successful, transaction hash:', transferResult.transactionHash);
+                    // Clear any previous errors and show success
+                    setError(null);
+                  }
+                } else {
+                  console.warn('Approval verification failed, new allowance:', newAllowance);
+                  console.warn('User will need to approve and transfer tokens manually');
+                  setError(`⚠️ Token approval verification failed. Your quiz was created successfully, but you'll need to approve and transfer ${data.rewards.tokenSymbol} tokens manually.`);
+                }
+              }
+            } else {
+              console.log('=== Sufficient allowance already exists, transferring tokens ===');
+              const transferResult = await transferToken({
+                tokenAddress: data.rewards.tokenAddress as any,
+                toAddress: getContractAddress(data.rewards.chainId) as any,
+                amount: requiredAmount
+              });
+
+              console.log('Transfer result:', transferResult);
+              if (!transferResult.success) {
+                console.warn('Token transfer failed, but session was created');
+                console.warn('User will need to transfer tokens manually');
+                setError(`⚠️ Token transfer failed. Your quiz was created successfully, but you'll need to transfer ${data.rewards.tokenSymbol} tokens manually to the contract.`);
+              } else {
+                console.log('Token transfer successful, transaction hash:', transferResult.transactionHash);
+                // Clear any previous errors and show success
+                setError(null);
+              }
             }
-
-            console.log('Token approval successful, transaction hash:', approveResult.transactionHash);
-
-            // Wait a bit for the approval to be processed
-            console.log('Waiting for approval to be processed...');
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Transfer tokens to contract - Using Wagmi
-            console.log('=== Transferring tokens to contract ===');
-            const transferResult = await transferToken({
-              tokenAddress: data.rewards.tokenAddress as any,
-              toAddress: getContractAddress(data.rewards.chainId) as any,
-              amount: requiredAmount
-            });
-
-            console.log('Transfer result:', transferResult);
-            if (!transferResult.success) {
-              throw new Error(`Token transfer failed: ${transferResult.error}`);
-            }
-
-            console.log('Token transfer successful, transaction hash:', transferResult.transactionHash);
           }
 
           // Get the actual session ID from the contract response
