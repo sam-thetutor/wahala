@@ -201,12 +201,38 @@ export default function QuizRoomPage() {
           isReady: participant.isReady,
           isAdmin: participant.isAdmin
         }]);
+        
+        // Show join notification
+        const shortAddress = `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}`;
+        setParticipantJoinNotification(`User ${shortAddress} joined the room`);
+        setTimeout(() => {
+          setParticipantJoinNotification('');
+        }, 3000);
       }
     },
     onParticipantLeft: (participantId) => {
+      // Find the participant who left before removing them
+      const leavingParticipant = participants.find(p => p.id === participantId);
+      const participantName = leavingParticipant && leavingParticipant.user && leavingParticipant.user.address 
+        ? `${leavingParticipant.user.address.slice(0, 6)}...${leavingParticipant.user.address.slice(-4)}` 
+        : 'Unknown';
+      
+      // Remove participant from local state
       setParticipants(prev => prev.filter(p => p.id !== participantId));
-      // Remove from animated tabs
       setParticipantTabs(prev => prev.filter(p => p.id !== participantId));
+      
+      // Remove from leaderboard if they were there
+      setLeaderboard(prev => prev.filter(p => {
+        return leavingParticipant ? p.userId !== leavingParticipant.userId : true;
+      }));
+      
+      // Show leave notification
+      setParticipantLeaveNotification(`${participantName} left the room`);
+      setTimeout(() => {
+        setParticipantLeaveNotification('');
+      }, 3000);
+      
+      console.log('Participant left:', participantId);
     },
     onParticipantReady: (participantId) => {
       setParticipants(prev => 
@@ -216,6 +242,33 @@ export default function QuizRoomPage() {
       setParticipantTabs(prev => 
         prev.map(p => p.id === participantId ? { ...p, isReady: true } : p)
       );
+    },
+    onParticipantReadyUpdated: (data) => {
+      console.log('Received participantReadyUpdated:', data);
+      console.log('Current participants before update:', participants);
+      console.log('Current user address:', address);
+      
+      // Update participants list with the new ready status
+      setParticipants(prev => {
+        const updated = prev.map(p => p.id === data.participantId ? { ...p, isReady: data.isReady } : p);
+        console.log('Participants after update:', updated);
+        return updated;
+      });
+      
+      // Update animated tabs
+      setParticipantTabs(prev => 
+        prev.map(p => p.id === data.participantId ? { ...p, isReady: data.isReady } : p)
+      );
+      
+      // If this is the current user, update their ready status
+      // Check if the updated participant is the current user by comparing wallet address
+      const updatedParticipant = participants.find(p => p.id === data.participantId);
+      if (updatedParticipant && updatedParticipant.user.address.toLowerCase() === address?.toLowerCase()) {
+        console.log(`Current user ready status updated to: ${data.isReady}`);
+        setIsReady(data.isReady);
+      }
+      
+      console.log(`Participant ${data.participantId} ready status updated to: ${data.isReady}`);
     },
     onRoomStatsUpdate: (data) => {
       // Update room stats
@@ -268,48 +321,178 @@ export default function QuizRoomPage() {
       console.log('Stats updated with merged participant data');
     },
     onGameStarting: (countdownTime) => {
-      setShowCountdownDisplay(true);
+      console.log('=== gameStarting event received ===');
+      console.log('Countdown time received:', countdownTime);
+      console.log('Previous gameState:', gameState);
+      
+      setGameState('countdown');
+      setCountdown(countdownTime);
       setCountdownDisplay(countdownTime);
-      // Hide countdown after it reaches 0
-      if (countdownTime <= 0) {
-        setTimeout(() => {
-          setShowCountdownDisplay(false);
-        }, 1000);
-      }
+      setShowCountdownDisplay(true);
+      setQuizStartTime(new Date());
+      
+      // Close the future start countdown when admin starts the countdown
+      setShowFutureStartCountdown(false);
+      setFutureStartCountdown(null);
+      
+      console.log('New gameState set to:', 'countdown');
+      console.log('Countdown set to:', countdownTime);
+      console.log('CountdownDisplay set to:', countdownTime);
+      console.log('=== gameStarting event processed ===');
     },
     onCountdownUpdate: (timeLeft) => {
+      console.log('=== countdownUpdate event received ===');
+      console.log('Time left:', timeLeft);
+      console.log('Current gameState:', gameState);
+      
+      setCountdown(timeLeft);
       setCountdownDisplay(timeLeft);
-      // Hide countdown when it reaches 0
+      
+      // When countdown reaches 0, transition to playing state
       if (timeLeft <= 0) {
-        setTimeout(() => {
-          setShowCountdownDisplay(false);
-        }, 1000);
+        console.log('Countdown finished, transitioning to playing state');
+        setGameState('playing');
+        setShowCountdownDisplay(false);
+        console.log('GameState changed to: playing');
       }
+      
+      console.log('=== countdownUpdate event processed ===');
     },
     onAdminMessage: (data) => {
       setAdminMessageDisplay(data.message);
       setShowAdminMessage(true);
-      // Auto-hide after 3 seconds
-      setTimeout(() => {
+      // Also update the TV message
+      setTvMessage(data.message);
+      
+      // Calculate duration based on word count: min 5s, max 10s
+      const wordCount = data.message.split(' ').length;
+      const duration = Math.min(Math.max(wordCount * 0.5, 5), 10) * 1000; // Convert to milliseconds
+      
+      // Set message duration and start progress animation
+      setMessageDuration(duration);
+      setMessageProgress(100);
+      
+      // Animate progress bar smoothly
+      const startTime = Date.now();
+      const animateProgress = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.max(0, 100 - (elapsed / duration) * 100);
+        setMessageProgress(progress);
+        
+        if (progress > 0) {
+          requestAnimationFrame(animateProgress);
+        }
+      };
+      requestAnimationFrame(animateProgress);
+      
+      // Auto-hide after calculated duration
+      const timeout = setTimeout(() => {
         setShowAdminMessage(false);
-      }, 3000);
+        // Start fade out by reducing progress to 0
+        setMessageProgress(0);
+        // Wait for fade out animation then clear message
+        const fadeOut = setTimeout(() => {
+          setTvMessage('');
+          setMessageProgress(100);
+          setShowAdminMessage(false);
+          setMessageTimeout(null);
+          setFadeTimeout(null);
+        }, 500);
+        setFadeTimeout(fadeOut);
+      }, duration);
+      
+      setMessageTimeout(timeout);
     },
     onQuestionStart: (question) => {
+      setGameState('playing');
       setCurrentQuestion(question);
       setQuestionTimeLeft(question.timeLimit);
-      setGameState('playing');
       setSelectedAnswers([]);
+      setShowAnswerReveal(false);
+      setCurrentAnswer(null);
+      setShowQuestionComplete(false);
+      setShowNextQuestion(false);
     },
     onQuestionEnd: () => {
-      setShowQuestionComplete(true);
+      setCurrentQuestion(null);
+      setQuestionTimeLeft(0);
+    },
+    onQuestionTimeUpdate: (timeLeft) => {
+      setQuestionTimeLeft(timeLeft);
+    },
+    onAnswerReveal: (data) => {
+      setShowAnswerReveal(true);
+      setCurrentAnswer(data);
+      
+      // Hide answer reveal after 10 seconds and show question complete state
       setTimeout(() => {
-        setShowQuestionComplete(false);
-        setShowNextQuestion(true);
-      }, 2000);
+        setShowAnswerReveal(false);
+        setCurrentAnswer(null);
+        setShowQuestionComplete(true);
+        
+        // Hide question complete state after 3 seconds and show next question indicator
+        setTimeout(() => {
+          setShowQuestionComplete(false);
+          setShowNextQuestion(true);
+          
+          // Hide next question indicator after 2 seconds
+          setTimeout(() => {
+            setShowNextQuestion(false);
+          }, 2000);
+        }, 3000);
+      }, 10000);
+    },
+    onLeaderboardUpdate: (newLeaderboard) => {
+      setLeaderboard(newLeaderboard);
+    },
+    onRedirectToLeaderboard: (data) => {
+      // Show redirect message
+      setTvMessage(data.message);
+      
+      // Redirect to leaderboard after 3 seconds
+      setTimeout(() => {
+        router.push(`/quiz/${data.snarkelId}/leaderboard`);
+      }, 3000);
+    },
+    onRewardsDistributed: (data) => {
+      setDistributingRewards(false);
+      
+      if (data.success) {
+        // Show success notification
+        setTvMessage(`🎉 ${data.message}`);
+        setRewardsDistributed(true);
+        // Refresh rewards data
+        // The useSessionRewards hook will automatically refetch
+      } else {
+        // Show error notification
+        setTvMessage(`❌ ${data.message}: ${data.error}`);
+      }
+      
+      // Clear notification after 5 seconds
+      setTimeout(() => {
+        setTvMessage('');
+      }, 5000);
     },
     onGameEnd: (results) => {
       setGameState('finished');
       setLeaderboard(results);
+      // Start distributing rewards if enabled
+      if (room?.snarkel?.rewardsEnabled) {
+        setDistributingRewards(true);
+      }
+    },
+    onRoomEmpty: () => {
+      setGameState('waiting');
+      setCurrentQuestion(null);
+      setQuestionTimeLeft(0);
+      setSelectedAnswers([]);
+      setShowAnswerReveal(false);
+      setCurrentAnswer(null);
+      setLeaderboard([]);
+      setError('All participants have left the room. The quiz has been reset.');
+    },
+    onConnectionHealth: (health) => {
+      console.log('Connection health:', health);
     }
   }, {
     autoConnect: true
