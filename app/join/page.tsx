@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import SelfVerificationModal from '../../components/verification/SelfVerificationModal';
 import WalletConnectButton from '../../components/WalletConnectButton';
 
 export default function JoinPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { address, isConnected } = useAccount();
   const [snarkelCode, setSnarkelCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -17,9 +18,24 @@ export default function JoinPage() {
   const [currentSnarkelId, setCurrentSnarkelId] = useState<string | null>(null);
   const [isAlreadyParticipant, setIsAlreadyParticipant] = useState(false);
 
+  // Check for snarkelCode in URL parameters on component mount
+  useEffect(() => {
+    const urlSnarkelCode = searchParams.get('snarkelCode');
+    if (urlSnarkelCode) {
+      setSnarkelCode(urlSnarkelCode);
+      // Auto-fill the input and show a message
+      console.log('Auto-filled snarkel code from URL:', urlSnarkelCode);
+    }
+  }, [searchParams]);
+
   const handleJoinSnarkel = async () => {
     if (!isConnected) {
       setError('Please connect your wallet first');
+      return;
+    }
+
+    if (!snarkelCode.trim()) {
+      setError('Please enter a snarkel code');
       return;
     }
 
@@ -129,6 +145,11 @@ export default function JoinPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={isLoading}
               />
+              {searchParams.get('snarkelCode') && (
+                <div className="mt-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                  ✨ Auto-filled from featured quiz
+                </div>
+              )}
             </div>
 
             {error && (

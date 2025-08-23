@@ -153,11 +153,11 @@ const FeaturedSnarkelCard = ({ snarkel, index }: { snarkel: Snarkel; index: numb
           {/* Action Button */}
           <div className="pt-2">
             <Link
-              href={`/snarkel/${snarkel.snarkelCode}`}
+              href={`/join?snarkelCode=${snarkel.snarkelCode}`}
               className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-xl font-semibold text-center transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group text-sm sm:text-base"
             >
               <Play className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
-              Start Snarkel
+              Join Snarkel
             </Link>
           </div>
         </div>

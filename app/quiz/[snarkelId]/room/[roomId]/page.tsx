@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
-import { io, Socket } from 'socket.io-client';
 import { isValidWalletAddress } from '@/lib/wallet-utils';
 import { useQuizContract } from '@/hooks/useViemContract';
+import { useSocket, SocketConfig, SocketEventHandlers } from '@/hooks/useSocket';
 import { 
   Users, 
   Clock, 
@@ -109,7 +109,16 @@ export default function QuizRoomPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
+  // Socket configuration and state using the new socket utilities
+  const socketConfig: SocketConfig | null = roomId && address ? {
+    roomId,
+    walletAddress: address,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
+    transports: ['websocket', 'polling']
+  } : null;
   const [countdown, setCountdown] = useState<number | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number>(0);
@@ -144,7 +153,167 @@ export default function QuizRoomPage() {
   const [fadeTimeout, setFadeTimeout] = useState<NodeJS.Timeout | null>(null);
   const [futureStartCountdown, setFutureStartCountdown] = useState<number | null>(null);
   const [showFutureStartCountdown, setShowFutureStartCountdown] = useState(false);
-  const [socketConnected, setSocketConnected] = useState<boolean>(false);
+  // Use the new socket hook
+  const {
+    socket,
+    state: socketState,
+    isConnected: socketConnected,
+    isConnecting: socketConnecting,
+    isReconnecting: socketReconnecting,
+    error: socketError,
+    connect: socketConnect,
+    disconnect: socketDisconnect,
+    reconnect: socketReconnect,
+    emit: socketEmit
+  } = useSocket(socketConfig, {
+    onConnect: (socket) => {
+      console.log('Socket connected successfully to room');
+      setError(null);
+    },
+    onDisconnect: (reason) => {
+      console.log('Socket disconnected from room:', reason);
+    },
+    onConnectError: (error) => {
+      console.error('Socket connection error:', error);
+      setError(error.message);
+    },
+    onReconnect: (attemptNumber) => {
+      console.log('Socket reconnected after', attemptNumber, 'attempts');
+      setError(null);
+    },
+    onReconnectError: (error) => {
+      console.error('Socket reconnection error:', error);
+      setError(error.message);
+    },
+    onReconnectFailed: () => {
+      console.error('Socket reconnection failed after all attempts');
+      setError('Failed to connect to quiz server. Please refresh the page and try again.');
+    },
+    onParticipantJoined: (participant) => {
+      // Safety check for participant data
+      if (participant && participant.user && participant.user.address) {
+        setParticipants(prev => [...prev, participant]);
+        // Add to animated tabs
+        setParticipantTabs(prev => [...prev, {
+          id: participant.id,
+          name: participant.name || `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}`,
+          address: participant.user.address,
+          isReady: participant.isReady,
+          isAdmin: participant.isAdmin
+        }]);
+      }
+    },
+    onParticipantLeft: (participantId) => {
+      setParticipants(prev => prev.filter(p => p.id !== participantId));
+      // Remove from animated tabs
+      setParticipantTabs(prev => prev.filter(p => p.id !== participantId));
+    },
+    onParticipantReady: (participantId) => {
+      setParticipants(prev => 
+        prev.map(p => p.id === participantId ? { ...p, isReady: true } : p)
+      );
+      // Update animated tabs
+      setParticipantTabs(prev => 
+        prev.map(p => p.id === participantId ? { ...p, isReady: true } : p)
+      );
+    },
+    onRoomStatsUpdate: (data) => {
+      // Update room stats
+      setRoom(prev => prev ? {
+        ...prev,
+        currentParticipants: data.currentParticipants,
+        maxParticipants: data.maxParticipants,
+        minParticipants: data.minParticipants,
+        isStarted: data.isStarted,
+        isWaiting: data.isWaiting
+      } : null);
+      
+      // Update participants list by merging with existing data to preserve individual updates
+      setParticipants(prev => {
+        if (!data.participants || !Array.isArray(data.participants)) {
+          return prev;
+        }
+        
+        // Create a map of existing participants by ID to preserve any local updates
+        const existingParticipantsMap = new Map(prev.map(p => [p.id, p]));
+        
+        // Merge with new data, preserving existing ready status if it's more recent
+        const mergedParticipants = data.participants.map((newParticipant: any) => {
+          const existing = existingParticipantsMap.get(newParticipant.id);
+          if (existing) {
+            // Keep existing participant data but update other fields
+            return {
+              ...newParticipant,
+              // Preserve existing ready status if it was recently updated
+              isReady: existing.isReady !== undefined ? existing.isReady : newParticipant.isReady
+            };
+          }
+          return newParticipant;
+        });
+        
+        console.log('Merged participants with merged participant data:', mergedParticipants);
+        return mergedParticipants;
+      });
+      
+      // Update participant tabs for TV display
+      setParticipantTabs(data.participants.map((p: any) => ({
+        id: p.id,
+        name: p.user && p.user.name ? p.user.name : (p.user && p.user.address ? `${p.user.address.slice(0, 6)}...${p.user.address.slice(-4)}` : 'Unknown'),
+        address: p.user?.address || '',
+        isReady: p.isReady,
+        isAdmin: p.isAdmin
+      })));
+      
+      // Log stats update
+      console.log('Stats updated with merged participant data');
+    },
+    onGameStarting: (countdownTime) => {
+      setShowCountdownDisplay(true);
+      setCountdownDisplay(countdownTime);
+      // Hide countdown after it reaches 0
+      if (countdownTime <= 0) {
+        setTimeout(() => {
+          setShowCountdownDisplay(false);
+        }, 1000);
+      }
+    },
+    onCountdownUpdate: (timeLeft) => {
+      setCountdownDisplay(timeLeft);
+      // Hide countdown when it reaches 0
+      if (timeLeft <= 0) {
+        setTimeout(() => {
+          setShowCountdownDisplay(false);
+        }, 1000);
+      }
+    },
+    onAdminMessage: (data) => {
+      setAdminMessageDisplay(data.message);
+      setShowAdminMessage(true);
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        setShowAdminMessage(false);
+      }, 3000);
+    },
+    onQuestionStart: (question) => {
+      setCurrentQuestion(question);
+      setQuestionTimeLeft(question.timeLimit);
+      setGameState('playing');
+      setSelectedAnswers([]);
+    },
+    onQuestionEnd: () => {
+      setShowQuestionComplete(true);
+      setTimeout(() => {
+        setShowQuestionComplete(false);
+        setShowNextQuestion(true);
+      }, 2000);
+    },
+    onGameEnd: (results) => {
+      setGameState('finished');
+      setLeaderboard(results);
+    }
+  }, {
+    autoConnect: true
+  });
 
   useEffect(() => {
     // Call sdk.actions.ready() to hide Farcaster Mini App splash screen
@@ -198,12 +367,7 @@ export default function QuizRoomPage() {
         clearTimeout(fadeTimeout);
       }
       
-      // Cleanup socket connection on unmount
-      if (socket) {
-        console.log('Cleaning up socket connection on unmount');
-        socket.disconnect();
-        setSocket(null);
-      }
+      // Socket cleanup is now handled by the useSocket hook
     };
   }, [isConnected, address, roomId]);
 
@@ -222,46 +386,7 @@ export default function QuizRoomPage() {
     }
   }, [participants, address]);
 
-  // Add socket cleanup effect
-  useEffect(() => {
-    return () => {
-      // Ensure socket is disconnected when component unmounts
-      if (socket) {
-        console.log('Socket cleanup effect: disconnecting socket');
-        socket.disconnect();
-        setSocket(null);
-      }
-    };
-  }, [socket]);
-
-  // Add periodic socket connection check
-  useEffect(() => {
-    if (!socket) return;
-
-    const checkConnection = () => {
-      if (socket && !socket.connected) {
-        console.log('Socket not connected, attempting to reconnect...');
-        socket.connect();
-      }
-    };
-
-    // Check connection every 30 seconds
-    const interval = setInterval(checkConnection, 30000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [socket]);
-
-  // Function to ensure socket connection
-  const ensureSocketConnection = () => {
-    if (!socket || !socket.connected) {
-      console.log('Socket not connected, reinitializing...');
-      initializeSocket();
-      return false;
-    }
-    return true;
-  };
+  // Socket connection management is now handled by the useSocket hook
 
   // Add useEffect for future start time countdown
   useEffect(() => {
@@ -385,7 +510,7 @@ export default function QuizRoomPage() {
           isAdmin: p.isAdmin
         })));
         
-        initializeSocket();
+        // Socket connection handled by useSocket hook
       } else {
         const errorMessage = data.error || 'Failed to join room';
         setError(errorMessage);
@@ -409,450 +534,12 @@ export default function QuizRoomPage() {
   console.log('Current user address:', address);
   console.log('Admin participant:', participants.find(p => p.isAdmin));
 
-  const initializeSocket = () => {
-    if (!roomId) return;
+  // All socket event handling is now managed by the useSocket hook
 
-    // Disconnect existing socket if it exists
-    if (socket) {
-      console.log('Disconnecting existing socket before creating new one');
-      socket.disconnect();
-      setSocket(null);
-    }
-
-    console.log('Initializing new socket connection...');
-    const newSocket = io(getSocketUrl(), {
-      query: {
-        roomId,
-        walletAddress: address
-      },
-      // Add reconnection options
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
-      // Add transport options for better reliability
-      transports: ['websocket', 'polling'],
-      upgrade: true,
-      rememberUpgrade: true
-    });
-
-    newSocket.on('connect', () => {
-      console.log('Connected to socket server');
-      console.log('Socket ID:', newSocket.id);
-      console.log('Room ID:', roomId);
-      console.log('Wallet Address:', address);
-      setSocketConnected(true);
-      setError(null); // Clear any connection errors
-    });
-
-    newSocket.on('disconnect', (reason) => {
-      console.log('Disconnected from socket server, reason:', reason);
-      setSocketConnected(false);
-      
-      // If it's a manual disconnect, don't try to reconnect
-      if (reason === 'io client disconnect') {
-        console.log('Manual disconnect, not attempting reconnection');
-        return;
-      }
-      
-      // For other disconnection reasons, attempt reconnection
-      console.log('Attempting to reconnect...');
-    });
-
-    newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      setSocketConnected(false);
-      
-      // If connection fails, try to reconnect after a delay
-      setTimeout(() => {
-        if (newSocket.disconnected) {
-          console.log('Attempting to reconnect after connection error...');
-          newSocket.connect();
-        }
-      }, 2000);
-    });
-
-    newSocket.on('reconnect', (attemptNumber) => {
-      console.log('Socket reconnected after', attemptNumber, 'attempts');
-      setSocketConnected(true);
-      setError(null); // Clear any connection errors
-    });
-
-    newSocket.on('reconnect_error', (error) => {
-      console.error('Socket reconnection error:', error);
-      setSocketConnected(false);
-    });
-
-    newSocket.on('reconnect_failed', () => {
-      console.error('Socket reconnection failed after all attempts');
-      setSocketConnected(false);
-      setError('Failed to connect to quiz server. Please refresh the page and try again.');
-    });
-
-    newSocket.on('participantJoined', (participant: Participant) => {
-      // Safety check for participant data
-      if (participant && participant.user && participant.user.address) {
-        setParticipants(prev => [...prev, participant]);
-        // Add to animated tabs
-        setParticipantTabs(prev => [...prev, {
-          id: participant.id,
-          name: `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}`,
-          address: participant.user.address,
-          isReady: participant.isReady,
-          isAdmin: participant.isAdmin
-        }]);
-      }
-    });
-
-    newSocket.on('participantLeft', (participantId: string) => {
-      setParticipants(prev => prev.filter(p => p.id !== participantId));
-      // Remove from animated tabs
-      setParticipantTabs(prev => prev.filter(p => p.id !== participantId));
-    });
-
-    newSocket.on('participantReady', (participantId: string) => {
-      setParticipants(prev => 
-        prev.map(p => p.id === participantId ? { ...p, isReady: true } : p)
-      );
-      // Update animated tabs
-      setParticipantTabs(prev => 
-        prev.map(p => p.id === participantId ? { ...p, isReady: true } : p)
-      );
-    });
-
-    newSocket.on('participantReadyUpdated', (data: { participantId: string, isReady: boolean, userId: string }) => {
-      console.log('Received participantReadyUpdated:', data);
-      console.log('Current participants before update:', participants);
-      console.log('Current user address:', address);
-      
-      // Update participants list with the new ready status
-      setParticipants(prev => {
-        const updated = prev.map(p => p.id === data.participantId ? { ...p, isReady: data.isReady } : p);
-        console.log('Participants after update:', updated);
-        return updated;
-      });
-      
-      // Update animated tabs
-      setParticipantTabs(prev => 
-        prev.map(p => p.id === data.participantId ? { ...p, isReady: data.isReady } : p)
-      );
-      
-      // If this is the current user, update their ready status
-      // Check if the updated participant is the current user by comparing wallet address
-      const updatedParticipant = participants.find(p => p.id === data.participantId);
-      if (updatedParticipant && updatedParticipant.user.address.toLowerCase() === address?.toLowerCase()) {
-        console.log(`Current user ready status updated to: ${data.isReady}`);
-        setIsReady(data.isReady);
-      }
-      
-      console.log(`Participant ${data.participantId} ready status updated to: ${data.isReady}`);
-    });
-
-    newSocket.on('roomStatsUpdate', (data: any) => {
-      // Update room stats
-      setRoom(prev => prev ? {
-        ...prev,
-        currentParticipants: data.currentParticipants,
-        maxParticipants: data.maxParticipants,
-        minParticipants: data.minParticipants,
-        isStarted: data.isStarted,
-        isWaiting: data.isWaiting
-      } : null);
-      
-      // Update participants list by merging with existing data to preserve individual updates
-      setParticipants(prev => {
-        if (!data.participants || !Array.isArray(data.participants)) {
-          return prev;
-        }
-        
-        // Create a map of existing participants by ID to preserve any local updates
-        const existingParticipantsMap = new Map(prev.map(p => [p.id, p]));
-        
-        // Merge with new data, preserving existing ready status if it's more recent
-        const mergedParticipants = data.participants.map((newParticipant: any) => {
-          const existing = existingParticipantsMap.get(newParticipant.id);
-          if (existing) {
-            // Keep existing participant data but update other fields
-            return {
-              ...newParticipant,
-              // Preserve existing ready status if it was recently updated
-              isReady: existing.isReady !== undefined ? existing.isReady : newParticipant.isReady
-            };
-          }
-          return newParticipant;
-        });
-        
-        console.log('Merged participants with preserved ready status:', mergedParticipants);
-        return mergedParticipants;
-      });
-      
-      // Update participant tabs for TV display
-      setParticipantTabs(data.participants.map((p: any) => ({
-        id: p.id,
-        name: p.user && p.user.address ? `${p.user.address.slice(0, 6)}...${p.user.address.slice(-4)}` : 'Unknown',
-        address: p.user?.address || '',
-        isReady: p.isReady,
-        isAdmin: p.isAdmin
-      })));
-      
-      // Log stats update
-      console.log('Stats updated with merged participant data');
-    });
-
-    newSocket.on('participantJoined', (data: { walletAddress: string, timestamp: string }) => {
-      // Show join notification
-      const shortAddress = `${data.walletAddress.slice(0, 6)}...${data.walletAddress.slice(-4)}`;
-      setParticipantJoinNotification(`User ${shortAddress} joined the room`);
-      setTimeout(() => {
-        setParticipantJoinNotification('');
-      }, 3000);
-      
-      console.log('Participant joined:', data.walletAddress);
-    });
-
-    newSocket.on('participantLeft', (participantId: string) => {
-      // Find the participant who left before removing them
-      const leavingParticipant = participants.find(p => p.id === participantId);
-      const participantName = leavingParticipant && leavingParticipant.user && leavingParticipant.user.address 
-        ? `${leavingParticipant.user.address.slice(0, 6)}...${leavingParticipant.user.address.slice(-4)}` 
-        : 'Unknown';
-      
-      // Remove participant from local state
-      setParticipants(prev => prev.filter(p => p.id !== participantId));
-      setParticipantTabs(prev => prev.filter(p => p.id !== participantId));
-      
-      // Remove from leaderboard if they were there
-      setLeaderboard(prev => prev.filter(p => {
-        return leavingParticipant ? p.userId !== leavingParticipant.userId : true;
-      }));
-      
-      // Show leave notification
-      setParticipantLeaveNotification(`${participantName} left the room`);
-      setTimeout(() => {
-        setParticipantLeaveNotification('');
-      }, 3000);
-      
-      console.log('Participant left:', participantId);
-    });
-
-    newSocket.on('gameStarting', (countdownTime: number) => {
-      console.log('=== gameStarting event received ===');
-      console.log('Countdown time received:', countdownTime);
-      console.log('Previous gameState:', gameState);
-      
-      setGameState('countdown');
-      setCountdown(countdownTime);
-      setCountdownDisplay(countdownTime);
-      setShowCountdownDisplay(true);
-      setQuizStartTime(new Date());
-      
-      // Close the future start countdown when admin starts the countdown
-      setShowFutureStartCountdown(false);
-      setFutureStartCountdown(null);
-      
-      console.log('New gameState set to:', 'countdown');
-      console.log('Countdown set to:', countdownTime);
-      console.log('CountdownDisplay set to:', countdownTime);
-      console.log('=== gameStarting event processed ===');
-    });
-
-    newSocket.on('tvMessage', (message: string) => {
-      setTvMessage(message);
-    });
-
-    newSocket.on('adminMessageReceived', (data: { message: string, timestamp: string }) => {
-      console.log('Received adminMessageReceived event:', data);
-      
-      // Clear any existing timeouts
-      if (messageTimeout) {
-        clearTimeout(messageTimeout);
-        setMessageTimeout(null);
-      }
-      if (fadeTimeout) {
-        clearTimeout(fadeTimeout);
-        setFadeTimeout(null);
-      }
-      
-      setAdminMessageDisplay(data.message);
-      setShowAdminMessage(true);
-      // Also update the TV message
-      setTvMessage(data.message);
-      console.log('Updated tvMessage to:', data.message);
-      
-      // Calculate duration based on word count: min 5s, max 10s
-      const wordCount = data.message.split(' ').length;
-      const duration = Math.min(Math.max(wordCount * 0.5, 5), 10) * 1000; // Convert to milliseconds
-      
-      console.log('Message duration:', duration, 'ms, word count:', wordCount);
-      
-      // Set message duration and start progress animation
-      setMessageDuration(duration);
-      setMessageProgress(100);
-      
-      // Animate progress bar smoothly
-      const startTime = Date.now();
-      const animateProgress = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.max(0, 100 - (elapsed / duration) * 100);
-        setMessageProgress(progress);
-        
-        if (progress > 0) {
-          requestAnimationFrame(animateProgress);
-        }
-      };
-      requestAnimationFrame(animateProgress);
-      
-      // Auto-hide after calculated duration
-      const timeout = setTimeout(() => {
-        console.log('Hiding message after duration:', duration, 'ms');
-        setShowAdminMessage(false);
-        // Start fade out by reducing progress to 0
-        setMessageProgress(0);
-        // Wait for fade out animation then clear message
-        const fadeOut = setTimeout(() => {
-          console.log('Clearing tvMessage completely');
-          setTvMessage('');
-          setMessageProgress(100);
-          setShowAdminMessage(false);
-          setMessageTimeout(null);
-          setFadeTimeout(null);
-        }, 500);
-        setFadeTimeout(fadeOut);
-      }, duration);
-      
-      setMessageTimeout(timeout);
-    });
-
-    newSocket.on('countdownUpdate', (timeLeft: number) => {
-      console.log('=== countdownUpdate event received ===');
-      console.log('Time left:', timeLeft);
-      console.log('Current gameState:', gameState);
-      
-      setCountdown(timeLeft);
-      setCountdownDisplay(timeLeft);
-      
-      // When countdown reaches 0, transition to playing state
-      if (timeLeft <= 0) {
-        console.log('Countdown finished, transitioning to playing state');
-        setGameState('playing');
-        setShowCountdownDisplay(false);
-        console.log('GameState changed to: playing');
-      }
-      
-      console.log('=== countdownUpdate event processed ===');
-    });
-
-    newSocket.on('questionStart', (question: Question) => {
-      setGameState('playing');
-      setCurrentQuestion(question);
-      setQuestionTimeLeft(question.timeLimit);
-      setSelectedAnswers([]);
-      setShowAnswerReveal(false);
-      setCurrentAnswer(null);
-      setShowQuestionComplete(false);
-      setShowNextQuestion(false);
-    });
-
-    newSocket.on('questionEnd', () => {
-      setCurrentQuestion(null);
-      setQuestionTimeLeft(0);
-    });
-
-    newSocket.on('questionTimeUpdate', (timeLeft: number) => {
-      setQuestionTimeLeft(timeLeft);
-    });
-
-    newSocket.on('answerReveal', (data: {questionId: string, correctAnswer: string, userAnswers: Array<{userId: string, answerId: string, isCorrect: boolean, points: number}>}) => {
-      setShowAnswerReveal(true);
-      setCurrentAnswer(data);
-      
-      // Hide answer reveal after 10 seconds and show question complete state
-      setTimeout(() => {
-        setShowAnswerReveal(false);
-        setCurrentAnswer(null);
-        setShowQuestionComplete(true);
-        
-        // Hide question complete state after 3 seconds and show next question indicator
-        setTimeout(() => {
-          setShowQuestionComplete(false);
-          setShowNextQuestion(true);
-          
-          // Hide next question indicator after 2 seconds
-          setTimeout(() => {
-            setShowNextQuestion(false);
-          }, 2000);
-        }, 3000);
-      }, 10000);
-    });
-
-    newSocket.on('leaderboardUpdate', (newLeaderboard: Array<{userId: string, score: number, name: string}>) => {
-      setLeaderboard(newLeaderboard);
-    });
-
-    newSocket.on('gameEnd', (finalLeaderboard: any[]) => {
-      setGameState('finished');
-      setLeaderboard(finalLeaderboard);
-      // Start distributing rewards if enabled
-      if (room?.snarkel?.rewardsEnabled) {
-        setDistributingRewards(true);
-      }
-    });
-
-    newSocket.on('redirectToLeaderboard', (data: {snarkelId: string, message: string}) => {
-      // Show redirect message
-      setTvMessage(data.message);
-      
-      // Redirect to leaderboard after 3 seconds
-      setTimeout(() => {
-        router.push(`/quiz/${data.snarkelId}/leaderboard`);
-      }, 3000);
-    });
-
-    newSocket.on('rewardsDistributed', (data: {success: boolean, message: string, results?: any[], error?: string}) => {
-      setDistributingRewards(false);
-      
-      if (data.success) {
-        // Show success notification
-        setTvMessage(`🎉 ${data.message}`);
-        setRewardsDistributed(true);
-        // Refresh rewards data
-        // The useSessionRewards hook will automatically refetch
-      } else {
-        // Show error notification
-        setTvMessage(`❌ ${data.message}: ${data.error}`);
-      }
-      
-      // Clear notification after 5 seconds
-      setTimeout(() => {
-        setTvMessage('');
-      }, 5000);
-    });
-
-    newSocket.on('roomEmpty', () => {
-      setGameState('waiting');
-      setCurrentQuestion(null);
-      setQuestionTimeLeft(0);
-      setSelectedAnswers([]);
-      setShowAnswerReveal(false);
-      setCurrentAnswer(null);
-      setLeaderboard([]);
-      setError('All participants have left the room. The quiz has been reset.');
-    });
-
-    newSocket.on('error', (error: string) => {
-      setError(error);
-    });
-
-    setSocket(newSocket);
-
-    return () => {
-      newSocket.disconnect();
-    };
-  };
+  // All socket event handling is now managed by the useSocket hook
 
   const toggleReady = () => {
-    if (!ensureSocketConnection()) {
+    if (!socketConnected) {
       console.log('Cannot toggle ready: socket not connected');
       return;
     }
@@ -863,7 +550,7 @@ export default function QuizRoomPage() {
     
     if (socket) {
       console.log('🔍 Emitting toggleReady event');
-      socket.emit('toggleReady');
+      socketEmit('toggleReady');
       // Don't update local state immediately - wait for server response
       // setIsReady(!isReady); // This line is removed
       console.log('🔍 toggleReady event emitted, waiting for server response');
@@ -877,7 +564,7 @@ export default function QuizRoomPage() {
     console.log('Current countdownTime (minutes):', countdownTime);
     console.log('Current gameState:', gameState);
     
-    if (!ensureSocketConnection()) {
+    if (!socketConnected) {
       console.log('Cannot start game: socket not connected');
       setError('Connection lost. Please wait for reconnection or refresh the page.');
       return;
@@ -889,7 +576,7 @@ export default function QuizRoomPage() {
       console.log(`Converting ${countdownTime} minutes to ${countdownSeconds} seconds`);
       console.log(`Emitting startGame event with countdownTime: ${countdownSeconds}`);
       
-      socket.emit('startGame', { countdownTime: countdownSeconds });
+      socketEmit('startGame', { countdownTime: countdownSeconds });
       
       console.log('Closing countdown modal');
       setShowCountdownModal(false);
@@ -901,7 +588,7 @@ export default function QuizRoomPage() {
   };
 
   const sendMessage = () => {
-    if (!ensureSocketConnection()) {
+    if (!socketConnected) {
       console.log('Cannot send message: socket not connected');
       setError('Connection lost. Please wait for reconnection or refresh the page.');
       return;
@@ -911,7 +598,7 @@ export default function QuizRoomPage() {
       const message = adminMessage.trim();
       
       console.log('Sending message:', message);
-      console.log('Socket connected:', socket.connected);
+      console.log('Socket connected:', socketConnected);
       console.log('Is admin:', isAdmin);
       
       // Clear previous message and reset progress
@@ -920,7 +607,7 @@ export default function QuizRoomPage() {
       setShowAdminMessage(false);
       
       // Emit the socket event - let the socket event handle setting tvMessage
-      socket.emit('sendMessage', { message });
+      socketEmit('sendMessage', { message });
       
       setMessageSentNotification('Message sent successfully!');
       setAdminMessage('');
@@ -935,7 +622,7 @@ export default function QuizRoomPage() {
         hasSocket: !!socket, 
         isAdmin, 
         hasMessage: !!adminMessage.trim(),
-        socketConnected: socket?.connected 
+        socketConnected: socketConnected 
       });
     }
   };
@@ -960,8 +647,7 @@ export default function QuizRoomPage() {
   const leaveRoom = () => {
     if (socket) {
       console.log('Leaving room, disconnecting socket...');
-      socket.disconnect();
-      setSocket(null);
+      socketDisconnect();
     }
     
     // Clear any error states
@@ -1108,7 +794,7 @@ export default function QuizRoomPage() {
                 <button
                   onClick={() => {
                     console.log('Manual reconnect requested');
-                    initializeSocket();
+                    socketReconnect();
                   }}
                   className="px-2 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
                 >
@@ -1181,7 +867,7 @@ export default function QuizRoomPage() {
                   <button
                     onClick={() => {
                       console.log('Manual reconnect requested');
-                      initializeSocket();
+                      socketReconnect();
                     }}
                     className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
                   >
@@ -1225,7 +911,7 @@ export default function QuizRoomPage() {
               <button
                 onClick={() => {
                   console.log('Manual reconnect requested from banner');
-                  initializeSocket();
+                  socketReconnect();
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
               >

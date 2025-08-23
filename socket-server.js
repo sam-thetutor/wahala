@@ -126,6 +126,38 @@ async function getParticipantInfo(roomId, userId) {
   }
 }
 
+// Helper function to get room participants with names
+async function getRoomParticipantsWithNames(roomId) {
+  try {
+    const participants = await prisma.roomParticipant.findMany({
+      where: { roomId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            address: true
+          }
+        }
+      },
+      orderBy: { joinedAt: 'asc' }
+    });
+
+    return participants.map(p => ({
+      id: p.id,
+      userId: p.userId,
+      walletAddress: p.user.address,
+      name: p.user.name || 'Unknown User',
+      isAdmin: p.isAdmin,
+      isReady: p.isReady,
+      joinedAt: p.joinedAt
+    }));
+  } catch (error) {
+    console.error('Error getting room participants with names:', error);
+    return [];
+  }
+}
+
 // Helper function to safely disconnect a socket
 function safeDisconnect(socket, reason, message) {
   try {
@@ -199,6 +231,149 @@ io.on('connection', (socket) => {
 
   // Log connection attempt
   console.log(`Connection attempt: ${socket.id} for ${walletAddress} to room ${roomId}`);
+
+  // Handle room joining with enhanced participant data
+  socket.on('joinRoom', async (data) => {
+    try {
+      const { roomId: joinRoomId, walletAddress: joinWalletAddress, userId: joinUserId, userName } = data;
+      
+      console.log('Join room request:', { joinRoomId, joinWalletAddress, joinUserId, userName });
+
+      // Check if room is still valid
+      if (!(await isRoomValid(joinRoomId))) {
+        console.log(`Room ${joinRoomId} is no longer valid during join request`);
+        socket.emit('roomJoinError', { 
+          reason: 'Room invalid', 
+          message: 'This room is no longer available. It may have been closed or finished.' 
+        });
+        return;
+      }
+
+      // Get user information with name
+      const user = await prisma.user.findUnique({
+        where: { address: joinWalletAddress.toLowerCase() }
+      });
+
+      if (!user) {
+        console.log(`User not found: ${joinWalletAddress}`);
+        socket.emit('roomJoinError', { 
+          reason: 'User not found', 
+          message: 'User account not found. Please refresh and try again.' 
+        });
+        return;
+      }
+
+      // Check if user is a participant in this room
+      const participant = await getParticipantInfo(joinRoomId, user.id);
+      if (!participant) {
+        console.log(`User ${joinWalletAddress} not a participant in room ${joinRoomId}`);
+        
+        // Fallback: Check if user is the room admin or snarkel creator
+        const room = await prisma.room.findUnique({
+          where: { id: joinRoomId },
+          include: {
+            admin: true,
+            snarkel: {
+              include: {
+                creator: true
+              }
+            }
+          }
+        });
+        
+        if (room && (room.admin.address.toLowerCase() === joinWalletAddress.toLowerCase() || 
+                     room.snarkel.creator.address.toLowerCase() === joinWalletAddress.toLowerCase())) {
+          console.log(`User ${joinWalletAddress} is room admin or snarkel creator, allowing connection`);
+          
+          // Create room participant for this user
+          const newParticipant = await prisma.roomParticipant.create({
+            data: {
+              roomId: joinRoomId,
+              userId: user.id,
+              isReady: false,
+              isAdmin: room.admin.address.toLowerCase() === joinWalletAddress.toLowerCase()
+            }
+          });
+          
+          console.log('Created room participant for admin/creator:', {
+            participantId: newParticipant.id,
+            userId: newParticipant.userId,
+            isAdmin: newParticipant.isAdmin
+          });
+          
+          // Continue with connection
+        } else {
+          socket.emit('roomJoinError', { 
+            reason: 'Not a participant', 
+            message: 'You are not a participant in this room. Please join the room first.' 
+          });
+          return;
+        }
+      }
+
+      // Double-check that user isn't already connected from another socket
+      if (isUserAlreadyConnected(joinRoomId, joinWalletAddress, socket.id)) {
+        console.log(`User ${joinWalletAddress} already connected to room ${joinRoomId} from another socket`);
+        socket.emit('roomJoinError', { 
+          reason: 'Already connected', 
+          message: 'You are already connected to this room from another tab or device.' 
+        });
+        return;
+      }
+
+      // Add connection tracking
+      addConnectionTracking(joinRoomId, joinWalletAddress, socket.id, user.id);
+      
+      // Join the room
+      socket.join(joinRoomId);
+      console.log(`User ${joinWalletAddress} (${user.name || 'Unknown'}) joined room ${joinRoomId} (socket: ${socket.id})`);
+
+      // Get enhanced participant data with names
+      const roomParticipants = await getRoomParticipantsWithNames(joinRoomId);
+      
+      // Notify other participants about the new join with enhanced data
+      socket.to(joinRoomId).emit('participantJoined', {
+        id: participant?.id || 'new',
+        userId: user.id,
+        walletAddress: joinWalletAddress,
+        name: user.name || 'Unknown User',
+        isAdmin: participant?.isAdmin || false,
+        isReady: participant?.isReady || false,
+        joinedAt: new Date().toISOString(),
+        timestamp: new Date().toISOString()
+      });
+
+      // Send room joined confirmation with participant data
+      socket.emit('roomJoined', {
+        roomId: joinRoomId,
+        participantCount: roomParticipants.length,
+        participants: roomParticipants,
+        currentUser: {
+          id: participant?.id || 'new',
+          userId: user.id,
+          walletAddress: joinWalletAddress,
+          name: user.name || 'Unknown User',
+          isAdmin: participant?.isAdmin || false,
+          isReady: participant?.isReady || false
+        }
+      });
+
+      // Emit room stats update when user joins
+      emitRoomStatsUpdate(joinRoomId);
+
+    } catch (error) {
+      console.error('Error during room join:', error);
+      socket.emit('roomJoinError', { 
+        reason: 'Server error', 
+        message: 'An error occurred while joining the room. Please try again.' 
+      });
+    }
+  });
+
+  // Handle ping for health check
+  socket.on('ping', () => {
+    socket.emit('pong', Date.now());
+  });
 
   // Validate room exists and user has access
   socket.on('validateConnection', async (callback) => {
