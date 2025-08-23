@@ -190,20 +190,23 @@ export default function QuizRoomPage() {
       setError('Failed to connect to quiz server. Please refresh the page and try again.');
     },
     onParticipantJoined: (participant) => {
-      // Safety check for participant data
-      if (participant && participant.user && participant.user.address) {
+      // Enhanced safety check for participant data
+      console.log('Participant joined data received:', participant);
+      if (participant && participant.user?.address) {
         setParticipants(prev => [...prev, participant]);
         // Add to animated tabs
         setParticipantTabs(prev => [...prev, {
           id: participant.id,
-          name: participant.name || `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}`,
-          address: participant.user.address,
+          name: participant.name || (participant.user?.address ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 'Unknown'),
+          address: participant.user?.address || 'Unknown',
           isReady: participant.isReady,
           isAdmin: participant.isAdmin
         }]);
         
         // Show join notification
-        const shortAddress = `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}`;
+        const shortAddress = participant.user?.address 
+          ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}`
+          : 'Unknown';
         setParticipantJoinNotification(`User ${shortAddress} joined the room`);
         setTimeout(() => {
           setParticipantJoinNotification('');
@@ -213,7 +216,7 @@ export default function QuizRoomPage() {
     onParticipantLeft: (participantId) => {
       // Find the participant who left before removing them
       const leavingParticipant = participants.find(p => p.id === participantId);
-      const participantName = leavingParticipant && leavingParticipant.user && leavingParticipant.user.address 
+      const participantName = leavingParticipant && leavingParticipant.user?.address 
         ? `${leavingParticipant.user.address.slice(0, 6)}...${leavingParticipant.user.address.slice(-4)}` 
         : 'Unknown';
       
@@ -263,7 +266,7 @@ export default function QuizRoomPage() {
       // If this is the current user, update their ready status
       // Check if the updated participant is the current user by comparing wallet address
       const updatedParticipant = participants.find(p => p.id === data.participantId);
-      if (updatedParticipant && updatedParticipant.user.address.toLowerCase() === address?.toLowerCase()) {
+      if (updatedParticipant && updatedParticipant.user?.address?.toLowerCase() === address?.toLowerCase()) {
         console.log(`Current user ready status updated to: ${data.isReady}`);
         setIsReady(data.isReady);
       }
@@ -308,14 +311,16 @@ export default function QuizRoomPage() {
         return mergedParticipants;
       });
       
-      // Update participant tabs for TV display
-      setParticipantTabs(data.participants.map((p: any) => ({
-        id: p.id,
-        name: p.user && p.user.name ? p.user.name : (p.user && p.user.address ? `${p.user.address.slice(0, 6)}...${p.user.address.slice(-4)}` : 'Unknown'),
-        address: p.user?.address || '',
-        isReady: p.isReady,
-        isAdmin: p.isAdmin
-      })));
+      // Update participant tabs for TV display with enhanced safety checks
+      if (data.participants && Array.isArray(data.participants)) {
+        setParticipantTabs(data.participants.map((p: any) => ({
+          id: p.id || 'unknown',
+          name: p.user?.name || (p.user?.address ? `${p.user.address.slice(0, 6)}...${p.user.address.slice(-4)}` : 'Unknown'),
+          address: p.user?.address || 'Unknown',
+          isReady: p.isReady || false,
+          isAdmin: p.isAdmin || false
+        })));
+      }
       
       // Log stats update
       console.log('Stats updated with merged participant data');
@@ -540,7 +545,7 @@ export default function QuizRoomPage() {
     if (roomId) {
       joinExistingRoom();
     }
-    
+
     return () => {
       // Cleanup timeouts on unmount
       if (messageTimeout) {
@@ -559,7 +564,7 @@ export default function QuizRoomPage() {
     if (participants.length > 0 && address) {
       // Find the current user's participant and update isReady state
       const currentParticipant = participants.find(p => 
-        p.user.address.toLowerCase() === address.toLowerCase()
+        p.user?.address?.toLowerCase() === address?.toLowerCase()
       );
       
       if (currentParticipant) {
@@ -712,8 +717,8 @@ export default function QuizRoomPage() {
   console.log('room', room);
   console.log("user", address);
   console.log('participants', participants);
-  console.log('current user is admin?', participants.find(p => p.user.address.toLowerCase() === address?.toLowerCase())?.isAdmin);
-  console.log('All participant addresses:', participants.map(p => ({ address: p.user.address, isAdmin: p.isAdmin, userId: p.userId })));
+  console.log('current user is admin?', participants.find(p => p.user?.address?.toLowerCase() === address?.toLowerCase())?.isAdmin);
+  console.log('All participant addresses:', participants.map(p => ({ address: p.user?.address || 'Unknown', isAdmin: p.isAdmin, userId: p.userId })));
   console.log('Current user address:', address);
   console.log('Admin participant:', participants.find(p => p.isAdmin));
 
@@ -2101,15 +2106,15 @@ export default function QuizRoomPage() {
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                           <span className="font-medium text-purple-600">
-                            {participants.find(p => p.isAdmin)?.user.address.slice(0, 6)}...{participants.find(p => p.isAdmin)?.user.address.slice(-4)}
+                            {participants.find(p => p.isAdmin)?.user?.address?.slice(0, 6) || 'Unknown'}...{participants.find(p => p.isAdmin)?.user?.address?.slice(-4) || ''}
                           </span>
                         </div>
                       </div>
                       <div className="text-xs text-gray-500 font-mono bg-gray-100 p-2 rounded break-all">
-                        {participants.find(p => p.isAdmin)?.user.address}
+                        {participants.find(p => p.isAdmin)?.user?.address || 'Unknown'}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {participants.find(p => p.isAdmin)?.user.name}
+                        {participants.find(p => p.isAdmin)?.user?.name || 'Unknown'}
                       </div>
                     </div>
                   </div>

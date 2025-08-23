@@ -150,7 +150,12 @@ async function getRoomParticipantsWithNames(roomId) {
       name: p.user.name || 'Unknown User',
       isAdmin: p.isAdmin,
       isReady: p.isReady,
-      joinedAt: p.joinedAt
+      joinedAt: p.joinedAt,
+      user: {
+        id: p.user.id,
+        address: p.user.address,
+        name: p.user.name || 'Unknown User'
+      }
     }));
   } catch (error) {
     console.error('Error getting room participants with names:', error);
@@ -340,7 +345,12 @@ io.on('connection', (socket) => {
         isAdmin: participant?.isAdmin || false,
         isReady: participant?.isReady || false,
         joinedAt: new Date().toISOString(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        user: {
+          id: user.id,
+          address: joinWalletAddress,
+          name: user.name || 'Unknown User'
+        }
       });
 
       // Send room joined confirmation with participant data
