@@ -43,7 +43,7 @@ export default function AdminControls({
 }: AdminControlsProps) {
   const [adminMessage, setAdminMessage] = useState('');
   const [showMessageModal, setShowMessageModal] = useState(false);
-  const [countdownTime, setCountdownTime] = useState(5);
+  const [countdownTime, setCountdownTime] = useState(10);
   const [showCountdownModal, setShowCountdownModal] = useState(false);
   const [roomSettings, setRoomSettings] = useState({
     maxParticipants: room?.maxParticipants || 50,
@@ -571,18 +571,38 @@ export default function AdminControls({
               <div className="space-y-4">
                 <div>
                   <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
-                    Countdown Duration (seconds)
+                    Countdown Duration
                   </label>
+                  
+                  {/* Quick preset buttons */}
+                  <div className="flex gap-2 mb-3">
+                    {[10, 30, 60].map((time) => (
+                      <button
+                        key={time}
+                        onClick={() => setCountdownTime(time)}
+                        className={`px-3 py-1 rounded-lg text-sm font-handwriting transition-colors ${
+                          countdownTime === time
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                        }`}
+                      >
+                        {time}s
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Custom input */}
                   <input
                     type="number"
                     value={countdownTime}
-                    onChange={(e) => setCountdownTime(parseInt(e.target.value) || 5)}
+                    onChange={(e) => setCountdownTime(parseInt(e.target.value) || 10)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    min="3"
-                    max="30"
+                    min="5"
+                    max="300"
+                    placeholder="Custom time in seconds"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Participants will see a countdown before the quiz starts
+                    Choose a preset or enter custom time. Late joiners get 30s grace period.
                   </p>
                 </div>
                 

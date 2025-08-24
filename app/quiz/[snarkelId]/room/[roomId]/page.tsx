@@ -31,7 +31,6 @@ import {
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import AdminControls from '@/components/AdminControls';
-import ParticipantRoom from '@/components/ParticipantRoom';
 import { getSocketUrl } from '@/config/environment';
 import { sdk } from '@farcaster/miniapp-sdk';
 
@@ -94,22 +93,73 @@ export default function QuizRoomPage() {
   const snarkelId = params.snarkelId as string;
   const roomId = params.roomId as string;
   
-  // Initialize rewards functionality with new secure contract
+  // Initialize rewards functionality
   const {
     areRewardsDistributed,
     getExpectedRewardToken,
     getExpectedRewardAmount
   } = useQuizContract();
   
+  // Core state
   const [room, setRoom] = useState<Room | null>(null);
   const [snarkel, setSnarkel] = useState<Snarkel | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isReady, setIsReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
-  // Socket configuration and state using the new socket utilities
+  
+  // Game state
+  const [gameState, setGameState] = useState<'waiting' | 'countdown' | 'playing' | 'finished'>('waiting');
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+  const [questionTimeLeft, setQuestionTimeLeft] = useState<number>(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
+  const [leaderboard, setLeaderboard] = useState<Array<{userId: string, score: number, name: string}>>([]);
+  
+  // UI state
+  const [showCountdownModal, setShowCountdownModal] = useState(false);
+  const [countdownTime, setCountdownTime] = useState<number>(10);
+  const [showAdminControls, setShowAdminControls] = useState(false);
+  const [showCountdownDisplay, setShowCountdownDisplay] = useState(false);
+  const [countdownDisplay, setCountdownDisplay] = useState<number>(0);
+  const [showAnswerReveal, setShowAnswerReveal] = useState(false);
+  const [currentAnswer, setCurrentAnswer] = useState<{questionId: string, correctAnswer: string, userAnswers: Array<{userId: string, answerId: string, isCorrect: boolean, points: number}>} | null>(null);
+  const [showQuestionComplete, setShowQuestionComplete] = useState(false);
+  const [showNextQuestion, setShowNextQuestion] = useState(false);
+  
+  // Notifications
+  const [participantLeaveNotification, setParticipantLeaveNotification] = useState<string>('');
+  const [participantJoinNotification, setParticipantJoinNotification] = useState<string>('');
+  const [messageSentNotification, setMessageSentNotification] = useState<string>('');
+  
+  // Admin features
+  const [adminMessage, setAdminMessage] = useState<string>('');
+  const [showAdminMessageModal, setShowAdminMessageModal] = useState(false);
+  const [tvMessage, setTvMessage] = useState<string>('');
+  const [showAdminMessage, setShowAdminMessage] = useState(false);
+  const [adminMessageDisplay, setAdminMessageDisplay] = useState<string>('');
+  const [messageProgress, setMessageProgress] = useState<number>(100);
+  const [messageDuration, setMessageDuration] = useState<number>(5000);
+  const [messageTimeout, setMessageTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [fadeTimeout, setFadeTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Future start countdown
+  const [futureStartCountdown, setFutureStartCountdown] = useState<number | null>(null);
+  const [showFutureStartCountdown, setShowFutureStartCountdown] = useState(false);
+  
+  // Participant display
+  const [participantTabs, setParticipantTabs] = useState<Array<{id: string, name: string, address: string, isAdmin: boolean}>>([]);
+  
+  // Rewards
+  const [showRewardsSection, setShowRewardsSection] = useState(false);
+  const [rewardsDistributed, setRewardsDistributed] = useState(false);
+  const [distributingRewards, setDistributingRewards] = useState(false);
+  
+  // Quiz timing
+  const [quizStartTime, setQuizStartTime] = useState<Date | null>(null);
+  
+  // Socket configuration
   const socketConfig: SocketConfig | null = roomId && address ? {
     roomId,
     walletAddress: address,
@@ -119,41 +169,8 @@ export default function QuizRoomPage() {
     timeout: 20000,
     transports: ['websocket', 'polling']
   } : null;
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
-  const [questionTimeLeft, setQuestionTimeLeft] = useState<number>(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
-  const [gameState, setGameState] = useState<'waiting' | 'countdown' | 'playing' | 'finished'>('waiting');
-  const [leaderboard, setLeaderboard] = useState<Array<{userId: string, score: number, name: string}>>([]);
-  const [tvMessage, setTvMessage] = useState<string>('');
-  const [showCountdownModal, setShowCountdownModal] = useState(false);
-  const [countdownTime, setCountdownTime] = useState<number>(5);
-  const [showAdminControls, setShowAdminControls] = useState(false);
-  const [quizStartTime, setQuizStartTime] = useState<Date | null>(null);
-  const [showCountdownDisplay, setShowCountdownDisplay] = useState(false);
-  const [countdownDisplay, setCountdownDisplay] = useState<number>(0);
-  const [adminMessageDisplay, setAdminMessageDisplay] = useState<string>('');
-  const [showAdminMessage, setShowAdminMessage] = useState(false);
-  const [participantTabs, setParticipantTabs] = useState<Array<{id: string, name: string, address: string, isReady: boolean, isAdmin: boolean}>>([]);
-  const [showAnswerReveal, setShowAnswerReveal] = useState(false);
-  const [currentAnswer, setCurrentAnswer] = useState<{questionId: string, correctAnswer: string, userAnswers: Array<{userId: string, answerId: string, isCorrect: boolean, points: number}>} | null>(null);
-  const [showQuestionComplete, setShowQuestionComplete] = useState(false);
-  const [showNextQuestion, setShowNextQuestion] = useState(false);
-  const [participantLeaveNotification, setParticipantLeaveNotification] = useState<string>('');
-  const [participantJoinNotification, setParticipantJoinNotification] = useState<string>('');
-  const [adminMessage, setAdminMessage] = useState<string>('');
-  const [showAdminMessageModal, setShowAdminMessageModal] = useState(false);
-  const [messageSentNotification, setMessageSentNotification] = useState<string>('');
-  const [showRewardsSection, setShowRewardsSection] = useState(false);
-  const [rewardsDistributed, setRewardsDistributed] = useState(false);
-  const [distributingRewards, setDistributingRewards] = useState(false);
-  const [messageProgress, setMessageProgress] = useState<number>(100);
-  const [messageDuration, setMessageDuration] = useState<number>(5000);
-  const [messageTimeout, setMessageTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [fadeTimeout, setFadeTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [futureStartCountdown, setFutureStartCountdown] = useState<number | null>(null);
-  const [showFutureStartCountdown, setShowFutureStartCountdown] = useState(false);
-  // Use the new socket hook
+
+  // Use the socket hook
   const {
     socket,
     state: socketState,
@@ -190,20 +207,16 @@ export default function QuizRoomPage() {
       setError('Failed to connect to quiz server. Please refresh the page and try again.');
     },
     onParticipantJoined: (participant) => {
-      // Enhanced safety check for participant data
       console.log('Participant joined data received:', participant);
       if (participant && participant.user?.address) {
         setParticipants(prev => [...prev, participant]);
-        // Add to animated tabs
         setParticipantTabs(prev => [...prev, {
           id: participant.id,
           name: participant.name || (participant.user?.address ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}` : 'Unknown'),
           address: participant.user?.address || 'Unknown',
-          isReady: participant.isReady,
           isAdmin: participant.isAdmin
         }]);
         
-        // Show join notification
         const shortAddress = participant.user?.address 
           ? `${participant.user.address.slice(0, 6)}...${participant.user.address.slice(-4)}`
           : 'Unknown';
@@ -214,22 +227,17 @@ export default function QuizRoomPage() {
       }
     },
     onParticipantLeft: (participantId) => {
-      // Find the participant who left before removing them
       const leavingParticipant = participants.find(p => p.id === participantId);
       const participantName = leavingParticipant && leavingParticipant.user?.address 
         ? `${leavingParticipant.user.address.slice(0, 6)}...${leavingParticipant.user.address.slice(-4)}` 
         : 'Unknown';
       
-      // Remove participant from local state
       setParticipants(prev => prev.filter(p => p.id !== participantId));
       setParticipantTabs(prev => prev.filter(p => p.id !== participantId));
-      
-      // Remove from leaderboard if they were there
       setLeaderboard(prev => prev.filter(p => {
         return leavingParticipant ? p.userId !== leavingParticipant.userId : true;
       }));
       
-      // Show leave notification
       setParticipantLeaveNotification(`${participantName} left the room`);
       setTimeout(() => {
         setParticipantLeaveNotification('');
@@ -237,44 +245,8 @@ export default function QuizRoomPage() {
       
       console.log('Participant left:', participantId);
     },
-    onParticipantReady: (participantId) => {
-      setParticipants(prev => 
-        prev.map(p => p.id === participantId ? { ...p, isReady: true } : p)
-      );
-      // Update animated tabs
-      setParticipantTabs(prev => 
-        prev.map(p => p.id === participantId ? { ...p, isReady: true } : p)
-      );
-    },
-    onParticipantReadyUpdated: (data) => {
-      console.log('Received participantReadyUpdated:', data);
-      console.log('Current participants before update:', participants);
-      console.log('Current user address:', address);
-      
-      // Update participants list with the new ready status
-      setParticipants(prev => {
-        const updated = prev.map(p => p.id === data.participantId ? { ...p, isReady: data.isReady } : p);
-        console.log('Participants after update:', updated);
-        return updated;
-      });
-      
-      // Update animated tabs
-      setParticipantTabs(prev => 
-        prev.map(p => p.id === data.participantId ? { ...p, isReady: data.isReady } : p)
-      );
-      
-      // If this is the current user, update their ready status
-      // Check if the updated participant is the current user by comparing wallet address
-      const updatedParticipant = participants.find(p => p.id === data.participantId);
-      if (updatedParticipant && updatedParticipant.user?.address?.toLowerCase() === address?.toLowerCase()) {
-        console.log(`Current user ready status updated to: ${data.isReady}`);
-        setIsReady(data.isReady);
-      }
-      
-      console.log(`Participant ${data.participantId} ready status updated to: ${data.isReady}`);
-    },
+
     onRoomStatsUpdate: (data) => {
-      // Update room stats
       setRoom(prev => prev ? {
         ...prev,
         currentParticipants: data.currentParticipants,
@@ -284,26 +256,14 @@ export default function QuizRoomPage() {
         isWaiting: data.isWaiting
       } : null);
       
-      // Update participants list by merging with existing data to preserve individual updates
       setParticipants(prev => {
         if (!data.participants || !Array.isArray(data.participants)) {
           return prev;
         }
         
-        // Create a map of existing participants by ID to preserve any local updates
         const existingParticipantsMap = new Map(prev.map(p => [p.id, p]));
         
-        // Merge with new data, preserving existing ready status if it's more recent
         const mergedParticipants = data.participants.map((newParticipant: any) => {
-          const existing = existingParticipantsMap.get(newParticipant.id);
-          if (existing) {
-            // Keep existing participant data but update other fields
-            return {
-              ...newParticipant,
-              // Preserve existing ready status if it was recently updated
-              isReady: existing.isReady !== undefined ? existing.isReady : newParticipant.isReady
-            };
-          }
           return newParticipant;
         });
         
@@ -311,18 +271,15 @@ export default function QuizRoomPage() {
         return mergedParticipants;
       });
       
-      // Update participant tabs for TV display with enhanced safety checks
       if (data.participants && Array.isArray(data.participants)) {
         setParticipantTabs(data.participants.map((p: any) => ({
           id: p.id || 'unknown',
           name: p.user?.name || (p.user?.address ? `${p.user.address.slice(0, 6)}...${p.user.address.slice(-4)}` : 'Unknown'),
           address: p.user?.address || 'Unknown',
-          isReady: p.isReady || false,
           isAdmin: p.isAdmin || false
         })));
       }
       
-      // Log stats update
       console.log('Stats updated with merged participant data');
     },
     onGameStarting: (countdownTime) => {
@@ -336,7 +293,6 @@ export default function QuizRoomPage() {
       setShowCountdownDisplay(true);
       setQuizStartTime(new Date());
       
-      // Close the future start countdown when admin starts the countdown
       setShowFutureStartCountdown(false);
       setFutureStartCountdown(null);
       
@@ -353,7 +309,6 @@ export default function QuizRoomPage() {
       setCountdown(timeLeft);
       setCountdownDisplay(timeLeft);
       
-      // When countdown reaches 0, transition to playing state
       if (timeLeft <= 0) {
         console.log('Countdown finished, transitioning to playing state');
         setGameState('playing');
@@ -363,21 +318,47 @@ export default function QuizRoomPage() {
       
       console.log('=== countdownUpdate event processed ===');
     },
+    onCountdownRestarted: (data) => {
+      console.log('=== countdownRestarted event received ===');
+      console.log('Countdown restarted data:', data);
+      
+      setParticipantJoinNotification(data.message);
+      setTimeout(() => {
+        setParticipantJoinNotification('');
+      }, 5000);
+      
+      console.log('=== countdownRestarted event processed ===');
+    },
+    onRoomReset: (data) => {
+      console.log('=== roomReset event received ===');
+      console.log('Room reset data:', data);
+      
+      setParticipantJoinNotification(data.message);
+      setTimeout(() => {
+        setParticipantJoinNotification('');
+      }, 5000);
+      
+      setGameState('waiting');
+      setCountdown(null);
+      setShowCountdownDisplay(false);
+      setCurrentQuestion(null);
+      setQuestionTimeLeft(0);
+      setSelectedAnswers([]);
+      setLeaderboard([]);
+      
+      console.log('=== roomReset event processed ===');
+    },
     onAdminMessage: (data) => {
       setAdminMessageDisplay(data.message);
       setShowAdminMessage(true);
-      // Also update the TV message
       setTvMessage(data.message);
       
-      // Calculate duration based on word count: min 5s, max 10s
       const wordCount = data.message.split(' ').length;
-      const duration = Math.min(Math.max(wordCount * 0.5, 5), 10) * 1000; // Convert to milliseconds
+      const duration = Math.min(Math.max(wordCount * 0.5, 5), 10) * 1000;
       
-      // Set message duration and start progress animation
       setMessageDuration(duration);
       setMessageProgress(100);
       
-      // Animate progress bar smoothly
       const startTime = Date.now();
       const animateProgress = () => {
         const elapsed = Date.now() - startTime;
@@ -390,12 +371,9 @@ export default function QuizRoomPage() {
       };
       requestAnimationFrame(animateProgress);
       
-      // Auto-hide after calculated duration
       const timeout = setTimeout(() => {
         setShowAdminMessage(false);
-        // Start fade out by reducing progress to 0
         setMessageProgress(0);
-        // Wait for fade out animation then clear message
         const fadeOut = setTimeout(() => {
           setTvMessage('');
           setMessageProgress(100);
@@ -418,90 +396,120 @@ export default function QuizRoomPage() {
       setShowQuestionComplete(false);
       setShowNextQuestion(false);
     },
-    onQuestionEnd: () => {
-      setCurrentQuestion(null);
-      setQuestionTimeLeft(0);
-    },
     onQuestionTimeUpdate: (timeLeft) => {
       setQuestionTimeLeft(timeLeft);
     },
     onAnswerReveal: (data) => {
       setShowAnswerReveal(true);
       setCurrentAnswer(data);
+      setShowQuestionComplete(true);
       
-      // Hide answer reveal after 10 seconds and show question complete state
       setTimeout(() => {
-        setShowAnswerReveal(false);
-        setCurrentAnswer(null);
-        setShowQuestionComplete(true);
+        setShowQuestionComplete(false);
+        setShowNextQuestion(true);
         
-        // Hide question complete state after 3 seconds and show next question indicator
         setTimeout(() => {
-          setShowQuestionComplete(false);
-          setShowNextQuestion(true);
-          
-          // Hide next question indicator after 2 seconds
-          setTimeout(() => {
-            setShowNextQuestion(false);
-          }, 2000);
+          setShowNextQuestion(false);
         }, 3000);
-      }, 10000);
+      }, 5000);
     },
     onLeaderboardUpdate: (newLeaderboard) => {
       setLeaderboard(newLeaderboard);
     },
-    onRedirectToLeaderboard: (data) => {
-      // Show redirect message
-      setTvMessage(data.message);
-      
-      // Redirect to leaderboard after 3 seconds
-      setTimeout(() => {
-        router.push(`/quiz/${data.snarkelId}/leaderboard`);
-      }, 3000);
-    },
-    onRewardsDistributed: (data) => {
-      setDistributingRewards(false);
-      
-      if (data.success) {
-        // Show success notification
-        setTvMessage(`🎉 ${data.message}`);
-        setRewardsDistributed(true);
-        // Refresh rewards data
-        // The useSessionRewards hook will automatically refetch
-      } else {
-        // Show error notification
-        setTvMessage(`❌ ${data.message}: ${data.error}`);
-      }
-      
-      // Clear notification after 5 seconds
-      setTimeout(() => {
-        setTvMessage('');
-      }, 5000);
-    },
     onGameEnd: (results) => {
       setGameState('finished');
       setLeaderboard(results);
-      // Start distributing rewards if enabled
-      if (room?.snarkel?.rewardsEnabled) {
-        setDistributingRewards(true);
-      }
     },
     onRoomEmpty: () => {
-      setGameState('waiting');
-      setCurrentQuestion(null);
-      setQuestionTimeLeft(0);
-      setSelectedAnswers([]);
-      setShowAnswerReveal(false);
-      setCurrentAnswer(null);
-      setLeaderboard([]);
       setError('All participants have left the room. The quiz has been reset.');
-    },
-    onConnectionHealth: (health) => {
-      console.log('Connection health:', health);
     }
-  }, {
-    autoConnect: true
   });
+
+  // Helper functions
+
+  const confirmStartGame = () => {
+    if (socket && isAdmin) {
+      console.log('=== confirmStartGame started ===');
+      console.log('Socket:', socket);
+      console.log('Is admin:', isAdmin);
+      console.log('Countdown time (minutes):', countdownTime);
+      
+      const countdownSeconds = countdownTime * 60;
+      console.log('Countdown time (seconds):', countdownSeconds);
+      
+      socketEmit('startGame', { countdownTime: countdownSeconds });
+      
+      console.log('Closing countdown modal');
+      setShowCountdownModal(false);
+      
+      console.log('=== confirmStartGame completed ===');
+    } else {
+      console.log('Cannot start game:', { hasSocket: !!socket, isAdmin });
+    }
+  };
+
+  const sendMessage = () => {
+    if (!socketConnected) {
+      console.log('Cannot send message: socket not connected');
+      setError('Connection lost. Please wait for reconnection or refresh the page.');
+      return;
+    }
+    
+    if (socket && isAdmin && adminMessage.trim()) {
+      const message = adminMessage.trim();
+      
+      console.log('Sending message:', message);
+      console.log('Socket connected:', socketConnected);
+      console.log('Is admin:', isAdmin);
+      
+      setTvMessage('');
+      setMessageProgress(100);
+      setShowAdminMessage(false);
+      
+      socketEmit('sendMessage', { message });
+      
+      setMessageSentNotification('Message sent successfully!');
+      setAdminMessage('');
+      setShowAdminMessageModal(false);
+      
+      setTimeout(() => {
+        setMessageSentNotification('');
+      }, 3000);
+    } else {
+      console.log('Cannot send message:', { 
+        hasSocket: !!socket, 
+        isAdmin, 
+        hasMessage: !!adminMessage.trim(),
+        socketConnected: socketConnected 
+      });
+    }
+  };
+
+  const selectAnswer = (optionId: string) => {
+    if (selectedAnswers.includes(optionId)) {
+      setSelectedAnswers(prev => prev.filter(id => id !== optionId));
+    } else {
+      setSelectedAnswers(prev => [...prev, optionId]);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const leaveRoom = () => {
+    if (socket) {
+      console.log('Leaving room, disconnecting socket...');
+      socketDisconnect();
+    }
+    
+    setError(null);
+    setJoinError(null);
+    
+    router.push('/join');
+  };
 
   useEffect(() => {
     // Call sdk.actions.ready() to hide Farcaster Mini App splash screen
@@ -568,8 +576,7 @@ export default function QuizRoomPage() {
       );
       
       if (currentParticipant) {
-        console.log('🔍 Setting initial isReady state:', currentParticipant.isReady);
-        setIsReady(currentParticipant.isReady);
+        console.log('🔍 Participant found:', currentParticipant);
       }
     }
   }, [participants, address]);
@@ -687,14 +694,12 @@ export default function QuizRoomPage() {
         setSnarkel(data.snarkel);
         setParticipants(data.participants);
         setIsAdmin(data.isAdmin);
-        setIsReady(data.isReady);
         
         // Initialize participant tabs with existing participants
         setParticipantTabs(data.participants.map((p: any) => ({
           id: p.id,
           name: `${p.user.address.slice(0, 6)}...${p.user.address.slice(-4)}`,
           address: p.user.address,
-          isReady: p.isReady,
           isAdmin: p.isAdmin
         })));
         
@@ -724,126 +729,8 @@ export default function QuizRoomPage() {
 
   // All socket event handling is now managed by the useSocket hook
 
-  // All socket event handling is now managed by the useSocket hook
-
-  const toggleReady = () => {
-    if (!socketConnected) {
-      console.log('Cannot toggle ready: socket not connected');
-      return;
-    }
-    
-    console.log('🔍 toggleReady called');
-    console.log('🔍 Current isReady state:', isReady);
-    console.log('🔍 Current user address:', address);
-    
-    if (socket) {
-      console.log('🔍 Emitting toggleReady event');
-      socketEmit('toggleReady');
-      // Don't update local state immediately - wait for server response
-      // setIsReady(!isReady); // This line is removed
-      console.log('🔍 toggleReady event emitted, waiting for server response');
-    }
-  };
-
-  const confirmStartGame = () => {
-    console.log('=== confirmStartGame called ===');
-    console.log('Socket exists:', !!socket);
-    console.log('Is admin:', isAdmin);
-    console.log('Current countdownTime (minutes):', countdownTime);
-    console.log('Current gameState:', gameState);
-    
-    if (!socketConnected) {
-      console.log('Cannot start game: socket not connected');
-      setError('Connection lost. Please wait for reconnection or refresh the page.');
-      return;
-    }
-    
-    if (socket && isAdmin) {
-      // Convert minutes to seconds before sending to server
-      const countdownSeconds = countdownTime * 60;
-      console.log(`Converting ${countdownTime} minutes to ${countdownSeconds} seconds`);
-      console.log(`Emitting startGame event with countdownTime: ${countdownSeconds}`);
-      
-      socketEmit('startGame', { countdownTime: countdownSeconds });
-      
-      console.log('Closing countdown modal');
-      setShowCountdownModal(false);
-      
-      console.log('=== confirmStartGame completed ===');
-    } else {
-      console.log('Cannot start game:', { hasSocket: !!socket, isAdmin });
-    }
-  };
-
-  const sendMessage = () => {
-    if (!socketConnected) {
-      console.log('Cannot send message: socket not connected');
-      setError('Connection lost. Please wait for reconnection or refresh the page.');
-      return;
-    }
-    
-    if (socket && isAdmin && adminMessage.trim()) {
-      const message = adminMessage.trim();
-      
-      console.log('Sending message:', message);
-      console.log('Socket connected:', socketConnected);
-      console.log('Is admin:', isAdmin);
-      
-      // Clear previous message and reset progress
-      setTvMessage('');
-      setMessageProgress(100);
-      setShowAdminMessage(false);
-      
-      // Emit the socket event - let the socket event handle setting tvMessage
-      socketEmit('sendMessage', { message });
-      
-      setMessageSentNotification('Message sent successfully!');
-      setAdminMessage('');
-      setShowAdminMessageModal(false);
-      
-      // Clear notification after 3 seconds
-      setTimeout(() => {
-        setMessageSentNotification('');
-      }, 3000);
-    } else {
-      console.log('Cannot send message:', { 
-        hasSocket: !!socket, 
-        isAdmin, 
-        hasMessage: !!adminMessage.trim(),
-        socketConnected: socketConnected 
-      });
-    }
-  };
-
-  const selectAnswer = (optionId: string) => {
-    if (selectedAnswers.includes(optionId)) {
-      setSelectedAnswers(prev => prev.filter(id => id !== optionId));
-    } else {
-      setSelectedAnswers(prev => [...prev, optionId]);
-    }
-  };
-
   // Answer submission is now handled immediately when option is clicked
   // No separate submit function needed
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const leaveRoom = () => {
-    if (socket) {
-      console.log('Leaving room, disconnecting socket...');
-      socketDisconnect();
-    }
-    
-    // Clear any error states
-    setError(null);
-    setJoinError(null);
-    
-    router.push('/join');
-  };
 
   if (!isConnected) {
     return (
@@ -1161,22 +1048,13 @@ export default function QuizRoomPage() {
                 ) : gameState === 'waiting' && !showFutureStartCountdown ? (
                   <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6 mb-4">
                     <h3 className="text-2xl font-handwriting font-bold text-white mb-4">🎯 Quiz Room Ready</h3>
-                    <div className="grid grid-cols-2 gap-6 text-center">
-                      <div>
-                        <div className="text-4xl font-bold text-yellow-400 mb-2">{participants.length}</div>
-                        <p className="text-blue-200">Participants</p>
-                      </div>
-                      <div>
-                        <div className="text-4xl font-bold text-green-400 mb-2">{participants.filter(p => p.isReady).length}</div>
-                        <p className="text-blue-200">Ready</p>
-                      </div>
+                    <div className="text-center">
+                      <div className="text-6xl font-bold text-yellow-400 mb-2">{participants.length}</div>
+                      <p className="text-blue-200 text-xl">Participants</p>
                     </div>
                     <div className="mt-4 text-center">
                       <p className="text-blue-200 text-lg">
-                        {participants.filter(p => p.isReady).length >= (room?.minParticipants || 1) 
-                          ? '✅ Ready to start!' 
-                          : `⏳ Need ${(room?.minParticipants || 1) - participants.filter(p => p.isReady).length} more ready`
-                        }
+                        ✅ Ready to start! Anyone can join and play immediately.
                       </p>
                     </div>
                   </div>
@@ -1495,8 +1373,6 @@ export default function QuizRoomPage() {
                           className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all duration-500 hover:scale-105 ${
                             participant.isAdmin 
                               ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black shadow-lg border-2 border-yellow-300' 
-                              : participant.isReady
-                              ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-black shadow-lg border-2 border-green-300'
                               : 'bg-gradient-to-r from-blue-400 to-purple-500 text-black shadow-lg border-2 border-blue-300'
                           }`}
                           style={{
@@ -1507,8 +1383,6 @@ export default function QuizRoomPage() {
                           <div className="w-5 h-5 rounded-full bg-white bg-opacity-30 flex items-center justify-center">
                             {participant.isAdmin ? (
                               <Crown className="w-3 h-3" />
-                            ) : participant.isReady ? (
-                              <CheckCircle className="w-3 h-3" />
                             ) : (
                               <Users className="w-3 h-3" />
                             )}
@@ -1612,10 +1486,10 @@ export default function QuizRoomPage() {
 
 
 
-                 {/* Answer Grid for All Participants */}
+                 {/* Mobile-First Answer Options */}
          {gameState === 'playing' && currentQuestion && (
-           <div className="mt-6">
-             <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-2xl mx-auto">
+           <div className="mt-4 sm:mt-6 px-2 sm:px-0">
+             <div className="space-y-2 sm:space-y-3 max-w-2xl mx-auto">
                {currentQuestion.options.map((option, index) => (
                  <button
                    key={option.id}
@@ -1631,35 +1505,35 @@ export default function QuizRoomPage() {
                      setSelectedAnswers([option.id]);
                    }}
                    disabled={selectedAnswers.length > 0}
-                   className={`p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all duration-300 text-left font-handwriting text-sm sm:text-base md:text-lg ${
+                   className={`w-full p-2 sm:p-3 rounded-lg border-2 transition-all duration-300 text-left font-handwriting text-xs sm:text-sm md:text-base ${
                      selectedAnswers.includes(option.id)
-                       ? 'border-green-500 bg-green-50 shadow-lg scale-105'
+                       ? 'border-green-500 bg-green-50 shadow-lg scale-[1.02]'
                        : selectedAnswers.length > 0
                        ? 'border-gray-300 bg-gray-100 opacity-50 cursor-not-allowed'
-                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:scale-105'
+                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:scale-[1.01]'
                    }`}
                  >
                    <div className="flex items-center gap-2 sm:gap-3">
-                     <div className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center ${
+                     <div className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                        selectedAnswers.includes(option.id)
                          ? 'border-green-500 bg-green-500'
                          : 'border-gray-300'
                      }`}>
                        {selectedAnswers.includes(option.id) && (
-                         <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white" />
+                         <CheckCircle className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 text-white" />
                        )}
                      </div>
-                     <span className="font-medium text-gray-800">{option.text}</span>
+                     <span className="font-medium text-gray-800 leading-tight">{option.text}</span>
                    </div>
                  </button>
                ))}
              </div>
              
              {selectedAnswers.length > 0 && (
-               <div className="mt-6 text-center">
-                 <div className="inline-flex items-center gap-2 px-6 py-3 bg-green-100 text-green-800 rounded-lg">
-                   <CheckCircle className="w-5 h-5" />
-                   <span className="font-handwriting font-bold">Answer Submitted!</span>
+               <div className="mt-4 sm:mt-6 text-center">
+                 <div className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-green-100 text-green-800 rounded-lg">
+                   <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                   <span className="font-handwriting font-bold text-sm sm:text-base">Answer Submitted!</span>
                  </div>
                </div>
              )}
@@ -1667,76 +1541,9 @@ export default function QuizRoomPage() {
          )}
 
         {/* Ready Button and Participant Controls for All Non-Admin Users */}
-        {!isAdmin && room && snarkel && gameState === 'waiting' && (
-          <div className="mb-6">
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-l-4 border-blue-400">
-              <div className="text-center">
-                <h3 className="text-lg sm:text-xl font-handwriting font-bold text-gray-800 mb-3 sm:mb-4 flex items-center justify-center gap-2">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
-                  {isReady ? '🎮 Ready to Play!' : '👀 Spectator Mode'}
-                </h3>
-                
-                <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
-                  {isReady 
-                    ? 'You are ready and waiting for the quiz to start!' 
-                    : 'You are currently in spectator mode. Click below to join as a player when ready.'
-                  }
-                </p>
-                
-                <button
-                  onClick={toggleReady}
-                  className={`px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-xl font-handwriting font-bold text-sm sm:text-base md:text-lg transition-all duration-300 transform hover:scale-105 ${
-                    isReady
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:from-green-400 hover:to-emerald-500'
-                      : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg hover:from-blue-400 hover:to-purple-500'
-                  }`}
-                >
-                  {isReady ? (
-                    <>
-                      <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 inline mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Ready ✓</span>
-                      <span className="sm:hidden">Ready</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 inline mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Join as Player</span>
-                      <span className="sm:hidden">Join</span>
-                    </>
-                  )}
-                </button>
-                
-                {!isReady && (
-                  <p className="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4">
-                    💡 You can still watch the quiz and see all participants while in spectator mode
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Show Participant Room for non-admin users */}
-        {!isAdmin && room && snarkel && (
-          <ParticipantRoom
-            socket={socket}
-            room={room}
-            snarkel={snarkel}
-            participants={participants}
-            isReady={isReady}
-            onToggleReady={toggleReady}
-            gameState={gameState}
-            currentQuestion={currentQuestion}
-            questionTimeLeft={questionTimeLeft}
-            selectedAnswers={selectedAnswers}
-            onSelectAnswer={selectAnswer}
-            onSubmitAnswer={() => {}} // Not needed anymore - immediate submission
-            leaderboard={leaderboard}
-            tvMessage={tvMessage}
-            countdown={countdown}
-            onLeaveRoom={leaveRoom}
-          />
-        )}
+
+
 
         {/* Show Admin Interface for admin users */}
         {isAdmin && (
@@ -1746,51 +1553,7 @@ export default function QuizRoomPage() {
             {gameState === 'waiting' && (
               <div className="space-y-6">
 
-                {/* Ready Button for Admin */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-4 sm:p-6 border-l-4 border-blue-400">
-                  <div className="text-center">
-                    <h3 className="text-lg sm:text-xl font-handwriting font-bold text-gray-800 mb-3 sm:mb-4 flex items-center justify-center gap-2">
-                      <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
-                      {isReady ? '🎮 Admin Ready!' : '👑 Admin Spectator Mode'}
-                    </h3>
-                    
-                    <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
-                      {isReady 
-                        ? 'You are ready as an admin and can start the quiz when participants are ready!' 
-                        : 'You are in admin spectator mode. Click below to join as a player when ready.'
-                      }
-                    </p>
-                    
-                    <button
-                      onClick={toggleReady}
-                      className={`px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-xl font-handwriting font-bold text-sm sm:text-base md:text-lg transition-all duration-300 transform hover:scale-105 ${
-                        isReady
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:from-green-400 hover:to-emerald-500'
-                          : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg hover:from-blue-400 hover:to-purple-500'
-                      }`}
-                    >
-                      {isReady ? (
-                        <>
-                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 inline mr-1 sm:mr-2" />
-                          <span className="hidden sm:inline">Ready ✓</span>
-                          <span className="sm:hidden">Ready</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 inline mr-1 sm:mr-2" />
-                          <span className="hidden sm:inline">Join as Player</span>
-                          <span className="sm:hidden">Join</span>
-                        </>
-                      )}
-                    </button>
-                    
-                    {!isReady && (
-                      <p className="text-sm text-gray-500 mt-3 sm:mt-4">
-                        💡 As an admin, you can still control the quiz while in spectator mode
-                      </p>
-                    )}
-                  </div>
-                </div>
+
 
                 {/* Future Start Time Info for Admin */}
                 {showFutureStartCountdown && futureStartCountdown !== null && (
@@ -1870,8 +1633,8 @@ export default function QuizRoomPage() {
                             <span className="font-bold">{participants.length}/{room?.maxParticipants}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Ready:</span>
-                            <span className="font-bold text-green-600">{participants.filter(p => p.isReady).length}</span>
+                            <span className="text-gray-600">Status:</span>
+                            <span className="font-bold text-green-600">Ready to Start</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Min Required:</span>
@@ -1902,8 +1665,7 @@ export default function QuizRoomPage() {
                     <div className="flex flex-wrap gap-2 sm:gap-3">
                       <button
                         onClick={() => setShowCountdownModal(true)}
-                        disabled={participants.filter(p => p.isReady).length < (room?.minParticipants || 1)}
-                        className="flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-400 hover:to-emerald-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 font-handwriting font-bold shadow-md text-sm sm:text-base"
+                        className="flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-400 hover:to-emerald-500 transition-all duration-300 font-handwriting font-bold shadow-md text-sm sm:text-base"
                       >
                         <Play size={16} className="sm:w-[18px] sm:h-[18px]" />
                         <span className="hidden sm:inline">Start Quiz</span>

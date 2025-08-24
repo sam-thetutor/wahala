@@ -47,6 +47,10 @@ const activeRooms = new Map();
 const questionAnswers = new Map(); // roomId -> Map(questionId -> answers)
 const roomScores = new Map(); // roomId -> Map(userId -> score)
 
+// Enhanced countdown tracking
+const activeCountdowns = new Map(); // roomId -> { interval, timeLeft, originalTime, isActive }
+const countdownGracePeriods = new Map(); // roomId -> gracePeriodEndTime
+
 // Helper function to check if user is already connected to a room
 function isUserAlreadyConnected(roomId, walletAddress, currentSocketId = null) {
   const roomConnections = activeConnections.get(roomId);
@@ -139,28 +143,102 @@ async function getRoomParticipantsWithNames(roomId) {
             address: true
           }
         }
-      },
-      orderBy: { joinedAt: 'asc' }
+      }
     });
 
     return participants.map(p => ({
       id: p.id,
       userId: p.userId,
-      walletAddress: p.user.address,
-      name: p.user.name || 'Unknown User',
       isAdmin: p.isAdmin,
       isReady: p.isReady,
       joinedAt: p.joinedAt,
       user: {
         id: p.user.id,
         address: p.user.address,
-        name: p.user.name || 'Unknown User'
+        name: p.user.name
       }
     }));
   } catch (error) {
     console.error('Error getting room participants with names:', error);
     return [];
   }
+}
+
+// Helper function to start or restart countdown with grace period
+function startCountdown(roomId, countdownTime, isRestart = false) {
+  console.log(`Starting countdown for room ${roomId} with ${countdownTime}s${isRestart ? ' (restart)' : ''}`);
+  
+  // Clear existing countdown if any
+  if (activeCountdowns.has(roomId)) {
+    const existing = activeCountdowns.get(roomId);
+    if (existing.interval) {
+      clearInterval(existing.interval);
+    }
+  }
+  
+  // Set grace period for late joiners (30 seconds)
+  const gracePeriodEnd = Date.now() + 30000; // 30 seconds
+  countdownGracePeriods.set(roomId, gracePeriodEnd);
+  
+  // Start countdown
+  let timeLeft = countdownTime;
+  const originalTime = countdownTime;
+  
+  const interval = setInterval(() => {
+    timeLeft--;
+    
+    // Emit countdown update
+    io.to(roomId).emit('countdownUpdate', timeLeft);
+    
+    if (timeLeft <= 0) {
+      console.log(`Countdown finished for room ${roomId}, starting quiz`);
+      clearInterval(interval);
+      
+      // Clean up countdown tracking
+      activeCountdowns.delete(roomId);
+      countdownGracePeriods.delete(roomId);
+      
+      // Start the quiz
+      startQuiz(roomId);
+    }
+  }, 1000);
+  
+  // Store countdown info
+  activeCountdowns.set(roomId, {
+    interval,
+    timeLeft,
+    originalTime,
+    isActive: true
+  });
+  
+  // Emit game starting event
+  io.to(roomId).emit('gameStarting', countdownTime);
+  
+  return { interval, timeLeft, originalTime };
+}
+
+// Helper function to check if countdown is active for a room
+function isCountdownActive(roomId) {
+  return activeCountdowns.has(roomId) && activeCountdowns.get(roomId).isActive;
+}
+
+// Helper function to restart countdown for late joiners
+function restartCountdownForLateJoiner(roomId) {
+  if (!isCountdownActive(roomId)) return false;
+  
+  const countdown = activeCountdowns.get(roomId);
+  const gracePeriod = countdownGracePeriods.get(roomId);
+  
+  // Check if we're still in grace period
+  if (gracePeriod && Date.now() < gracePeriod) {
+    console.log(`Restarting countdown for room ${roomId} due to late joiner`);
+    
+    // Restart with original time
+    startCountdown(roomId, countdown.originalTime, true);
+    return true;
+  }
+  
+  return false;
 }
 
 // Helper function to safely disconnect a socket
@@ -370,6 +448,19 @@ io.on('connection', (socket) => {
 
       // Emit room stats update when user joins
       emitRoomStatsUpdate(joinRoomId);
+      
+      // Check if there's an active countdown and restart it for late joiners
+      if (isCountdownActive(joinRoomId)) {
+        const wasRestarted = restartCountdownForLateJoiner(joinRoomId);
+        if (wasRestarted) {
+          console.log(`Countdown restarted for late joiner in room ${joinRoomId}`);
+          // Notify all participants about the countdown restart
+          io.to(joinRoomId).emit('countdownRestarted', {
+            message: 'Countdown restarted for new participant!',
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
 
     } catch (error) {
       console.error('Error during room join:', error);
@@ -702,7 +793,7 @@ io.on('connection', (socket) => {
     try {
       console.log('=== startGame event received on server ===');
       console.log('Data received:', data);
-      const { countdownTime = 5 } = data || {};
+      const { countdownTime = 10 } = data || {};
       console.log('Countdown time:', countdownTime);
       
       const userInfo = socketToUser.get(socket.id);
@@ -717,26 +808,10 @@ io.on('connection', (socket) => {
       const participant = await getParticipantInfo(roomId, userId);
 
       if (participant && participant.isAdmin) {
-        console.log('Admin verified, emitting gameStarting event');
-        // Emit gameStarting event to show countdown
-        io.to(roomId).emit('gameStarting', countdownTime);
-        console.log('gameStarting event emitted with countdown:', countdownTime);
+        console.log('Admin verified, starting countdown with new system');
         
-        // Start countdown with custom time
-        let countdown = countdownTime || 10;
-        console.log('Starting countdown from:', countdown);
-        
-        const countdownInterval = setInterval(() => {
-          console.log('Countdown update:', countdown);
-          io.to(roomId).emit('countdownUpdate', countdown);
-          countdown--;
-
-          if (countdown < 0) {
-            console.log('Countdown finished, starting quiz');
-            clearInterval(countdownInterval);
-            startQuiz(roomId);
-          }
-        }, 1000);
+        // Use the new countdown system
+        startCountdown(roomId, countdownTime);
       } else {
         console.log('User is not admin');
       }
@@ -814,17 +889,8 @@ io.on('connection', (socket) => {
       
       console.log(`Auto-starting game for room: ${roomId}`);
       
-      // Start countdown
-      let countdown = countdownTime * 60; // Convert to seconds
-      const countdownInterval = setInterval(() => {
-        io.to(roomId).emit('countdownUpdate', countdown);
-        countdown--;
-
-        if (countdown < 0) {
-          clearInterval(countdownInterval);
-          startQuiz(roomId);
-        }
-      }, 1000);
+      // Use the new countdown system
+      startCountdown(roomId, countdownTime * 60); // Convert to seconds
       
     } catch (error) {
       console.error('Error auto-starting game:', error);
@@ -986,27 +1052,66 @@ io.on('connection', (socket) => {
           where: { roomId }
         });
         
+        // Get current room info to check status
+        const currentRoom = await prisma.room.findUnique({
+          where: { id: roomId }
+        });
+        
+        // If quiz is active and participants drop below minimum, end the quiz
+        if (currentRoom && currentRoom.isStarted && remainingParticipants < (currentRoom.minParticipants || 1)) {
+          console.log(`Room ${roomId} has insufficient participants during quiz, ending quiz`);
+          
+          // Clean up countdown if active
+          if (activeCountdowns.has(roomId)) {
+            const countdown = activeCountdowns.get(roomId);
+            if (countdown.interval) {
+              clearInterval(countdown.interval);
+            }
+            activeCountdowns.delete(roomId);
+            countdownGracePeriods.delete(roomId);
+          }
+          
+          // End the quiz immediately
+          endQuiz(roomId);
+          return;
+        }
+        
         if (remainingParticipants === 0) {
-          console.log(`Room ${roomId} is now empty, closing room`);
+          console.log(`Room ${roomId} is now empty, resetting room`);
+          
           // Clean up any active quiz state
           questionAnswers.delete(roomId);
           roomScores.delete(roomId);
           
-          // Close the room (mark as inactive and finished)
+          // Clean up any active countdowns
+          if (activeCountdowns.has(roomId)) {
+            const countdown = activeCountdowns.get(roomId);
+            if (countdown.interval) {
+              clearInterval(countdown.interval);
+            }
+            activeCountdowns.delete(roomId);
+            countdownGracePeriods.delete(roomId);
+          }
+          
+          // Reset the room to initial state (not delete, just reset)
           await prisma.room.update({
             where: { id: roomId },
             data: {
               isStarted: false,
-              isWaiting: false,
-              isFinished: true,
-              isActive: false,
+              isWaiting: true,
+              isFinished: false,
+              isActive: true,
               currentParticipants: 0,
-              endTime: new Date()
+              actualStartTime: null,
+              endTime: null
             }
           });
           
           // Notify remaining clients (if any)
-          io.to(roomId).emit('roomEmpty');
+          io.to(roomId).emit('roomReset', {
+            message: 'Room has been reset and is ready for new participants',
+            timestamp: new Date().toISOString()
+          });
         }
       }
     } catch (error) {
@@ -1281,6 +1386,16 @@ async function endQuiz(roomId) {
         endTime: new Date()
       }
     });
+    
+    // Clean up any active countdowns
+    if (activeCountdowns.has(roomId)) {
+      const countdown = activeCountdowns.get(roomId);
+      if (countdown.interval) {
+        clearInterval(countdown.interval);
+      }
+      activeCountdowns.delete(roomId);
+      countdownGracePeriods.delete(roomId);
+    }
 
     // Get final leaderboard
     const scores = roomScores.get(roomId);
@@ -1393,11 +1508,21 @@ async function endQuiz(roomId) {
       }
     }
 
-    // Clean up room data
-    questionAnswers.delete(roomId);
-    roomScores.delete(roomId);
+          // Clean up room data
+      questionAnswers.delete(roomId);
+      roomScores.delete(roomId);
+      
+      // Clean up countdown tracking
+      if (activeCountdowns.has(roomId)) {
+        const countdown = activeCountdowns.get(roomId);
+        if (countdown.interval) {
+          clearInterval(countdown.interval);
+        }
+        activeCountdowns.delete(roomId);
+        countdownGracePeriods.delete(roomId);
+      }
 
-    console.log(`Room ${roomId} finished and closed. New sessions will create new rooms.`);
+      console.log(`Room ${roomId} finished and closed. New sessions will create new rooms.`);
 
   } catch (error) {
     console.error('Error ending quiz:', error);

@@ -39,6 +39,7 @@ export interface SocketEventHandlers {
   onRoomStatsUpdate?: (data: any) => void;
   onGameStarting?: (countdownTime: number) => void;
   onCountdownUpdate?: (timeLeft: number) => void;
+  onCountdownRestarted?: (data: { message: string; timestamp: string }) => void;
   onAdminMessage?: (data: { message: string; timestamp: string }) => void;
   onQuestionStart?: (question: any) => void;
   onQuestionEnd?: () => void;
@@ -49,6 +50,7 @@ export interface SocketEventHandlers {
   onRewardsDistributed?: (data: { success: boolean; message: string; results?: any[]; error?: string }) => void;
   onGameEnd?: (results: any) => void;
   onRoomEmpty?: () => void;
+  onRoomReset?: (data: { message: string; timestamp: string }) => void;
   onConnectionHealth?: (health: { latency: number; status: string }) => void;
 }
 
@@ -294,6 +296,10 @@ export class SocketManager {
       this.eventHandlers.onCountdownUpdate?.(timeLeft);
     });
 
+    this.socket.on('countdownRestarted', (data: { message: string; timestamp: string }) => {
+      this.eventHandlers.onCountdownRestarted?.(data);
+    });
+
     this.socket.on('adminMessageReceived', (data: { message: string; timestamp: string }) => {
       this.eventHandlers.onAdminMessage?.(data);
     });
@@ -364,6 +370,10 @@ export class SocketManager {
 
     this.socket.on('roomEmpty', () => {
       this.eventHandlers.onRoomEmpty?.();
+    });
+
+    this.socket.on('roomReset', (data: { message: string; timestamp: string }) => {
+      this.eventHandlers.onRoomReset?.(data);
     });
 
     this.socket.on('error', (error: string) => {
