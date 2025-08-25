@@ -4,6 +4,7 @@ import { TokenSelector } from './TokenSelector';
 import { ChainSelector } from './ChainSelector';
 import { ProgressModal } from './ProgressModal';
 import { useRewardCreation } from '@/hooks/useRewardCreation';
+import { EnhancedTokenSelector } from './EnhancedTokenSelector'
 
 interface RewardConfig {
   enabled: boolean;
@@ -201,7 +202,7 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
             disabled={isCreating}
           />
 
-          {/* Token Selection with Presets */}
+          {/* Token Selection */}
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="block font-handwriting text-sm font-medium text-gray-700 mb-2">
@@ -224,12 +225,23 @@ export const RewardConfigurationSection: React.FC<RewardConfigurationSectionProp
                 }
               </div>
               
-              <TokenSelector
+              <EnhancedTokenSelector
                 value={rewardConfig.tokenAddress}
-                onChange={handleTokenAddressChange}
+                onChange={(address, tokenInfo) => {
+                  if (tokenInfo) {
+                    updateRewardConfig({ 
+                      tokenAddress: address,
+                      tokenSymbol: tokenInfo.symbol,
+                      tokenName: tokenInfo.name,
+                      tokenDecimals: tokenInfo.decimals
+                    });
+                  } else {
+                    updateRewardConfig({ tokenAddress: address });
+                  }
+                }}
                 chainId={rewardConfig.chainId}
-                error={validationErrors.rewardsToken}
                 disabled={isCreating}
+                showBalance={true}
               />
             </div>
           </div>

@@ -39,6 +39,7 @@ import WalletConnectButton from '@/components/WalletConnectButton';
 import { MiniAppHeader } from '@/components/MiniAppHeader';
 import { MiniAppContextDisplay } from '@/components/MiniAppContextDisplay';
 import { sdk } from '@farcaster/miniapp-sdk';
+import FarcasterUserProfile from '@/components/FarcasterUserProfile'
 
 interface QuizHistory {
   id: string;
@@ -259,6 +260,11 @@ export default function ProfilePage() {
       {/* Mini App Header */}
       <div className="max-w-6xl mx-auto px-4 pt-4">
         <MiniAppHeader />
+      </div>
+
+      {/* Farcaster User Profile - Show when in Farcaster context */}
+      <div className="max-w-6xl mx-auto px-4 pt-4">
+        <FarcasterUserProfile variant="card" showPfp={true} showEmoji={true} showFid={true} />
       </div>
 
       {/* Main Content */}

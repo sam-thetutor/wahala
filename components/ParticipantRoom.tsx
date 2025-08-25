@@ -22,6 +22,9 @@ import {
   Home
 } from 'lucide-react';
 
+import useFarcasterCelebration from '@/hooks/useFarcasterCelebration'
+import FarcasterCelebration from '@/components/FarcasterCelebration'
+
 interface Participant {
   id: string;
   userId: string;
@@ -105,6 +108,8 @@ export default function ParticipantRoom({
   countdown,
   onLeaveRoom
 }: ParticipantRoomProps) {
+  const { showCelebration, celebration, hideCelebration } = useFarcasterCelebration()
+
   const [showParticipants, setShowParticipants] = useState(false);
   const [showCountdownDisplay, setShowCountdownDisplay] = useState(false);
   const [countdownDisplay, setCountdownDisplay] = useState<number>(0);
@@ -165,6 +170,34 @@ export default function ParticipantRoom({
       socket.off('adminMessageReceived', handleAdminMessage);
     };
   }, [socket]);
+
+  // Show celebration when quiz is finished
+  useEffect(() => {
+    if (gameState === 'finished' && leaderboard && leaderboard.length > 0) {
+      // Find current user's position - we'll use the first participant as current user for now
+      // In a real implementation, you'd get this from user context
+      const currentUser = participants[0] // Assuming first participant is current user
+      if (currentUser) {
+        const userPosition = leaderboard.findIndex(entry => entry.userId === currentUser.userId) + 1
+        const userScore = leaderboard.find(entry => entry.userId === currentUser.userId)?.score || 0
+        
+        // Determine celebration type based on position
+        let celebrationType: 'quiz_completed' | 'high_score' | 'first_win' = 'quiz_completed'
+        
+        if (userPosition === 1) {
+          celebrationType = 'first_win'
+        } else if (userScore >= 8) { // Assuming 8+ is high score
+          celebrationType = 'high_score'
+        }
+        
+        showCelebration(celebrationType, {
+          score: userScore,
+          maxScore: snarkel?.totalQuestions || 10,
+          position: userPosition
+        })
+      }
+    }
+  }, [gameState, leaderboard, participants, snarkel, showCelebration])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
@@ -553,6 +586,17 @@ export default function ParticipantRoom({
           </div>
         </div>
       </div>
+
+      {/* Farcaster Celebration Modal */}
+      {celebration.type && (
+        <FarcasterCelebration
+          type={celebration.type}
+          score={celebration.score}
+          maxScore={celebration.maxScore}
+          position={celebration.position}
+          onClose={hideCelebration}
+        />
+      )}
     </div>
   );
 } 

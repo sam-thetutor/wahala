@@ -146,8 +146,8 @@ interface UseQuizContractReturn {
     amount: string;
   }) => Promise<{ success: boolean; transactionHash?: string; error?: string }>;
   // Read functions
-  getTokenBalance: (tokenAddress: Address, userAddress: Address) => Promise<string>;
-  getTokenAllowance: (tokenAddress: Address, ownerAddress: Address, spenderAddress: Address) => Promise<string>;
+  getTokenBalance: (tokenAddress: Address, userAddress: Address, tokenChainId?: number) => Promise<string>;
+  getTokenAllowance: (tokenAddress: Address, ownerAddress: Address, spenderAddress: Address, tokenChainId?: number) => Promise<string>;
   // Security check functions
   areRewardsDistributed: (snarkelCode: string) => Promise<boolean>;
   getExpectedRewardToken: (sessionId: number) => Promise<Address>;

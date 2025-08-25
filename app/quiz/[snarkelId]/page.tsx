@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import WalletConnectButton from '@/components/WalletConnectButton';
+import FarcasterUserProfile from '@/components/FarcasterUserProfile'
 
 interface Quiz {
   id: string;
@@ -219,7 +220,10 @@ export default function QuizPage() {
       <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Farcaster User Profile - Show when in Farcaster context */}
+            <FarcasterUserProfile variant="inline" showPfp={true} showEmoji={true} />
+
             {/* Quiz Details */}
             <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
               <h2 className="text-lg sm:text-xl font-handwriting font-bold text-gray-800 mb-4">

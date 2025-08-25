@@ -38,6 +38,7 @@ import {
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { useAccount } from 'wagmi';
 import { sdk } from '@farcaster/miniapp-sdk';
+import FarcasterUserProfile from '@/components/FarcasterUserProfile'
 
 // Snarkel type definition - Updated to match actual API response
 interface Snarkel {
@@ -327,6 +328,11 @@ export default function FeaturedPage() {
 
       {/* Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
+        {/* Farcaster User Profile - Show when in Farcaster context */}
+        <div className="mb-6">
+          <FarcasterUserProfile variant="inline" showPfp={true} showEmoji={true} />
+        </div>
+
         {/* Search and Filters */}
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-xl border border-white/30">
           <div className="flex flex-col gap-4 sm:gap-6">

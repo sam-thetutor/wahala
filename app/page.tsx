@@ -265,7 +265,7 @@ export default function HomePage() {
                 </Link>
                 
                 {/* Clickable reference text below button */}
-                <Link href="/join" className="block mt-4">
+                <Link href="/featured" className="block mt-4">
                   <p className="text-gray-500 text-sm font-handwriting hover:text-blue-600 transition-colors cursor-pointer underline">
                     explore featured snarkels
                   </p>

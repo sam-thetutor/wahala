@@ -7,11 +7,15 @@ interface FarcasterContextType {
   isFarcasterApp: boolean
   isReady: boolean
   context: any
-  shareApp: () => void
   showToast: (message: string) => void
   composeCast: (text: string, embeds?: [] | [string] | [string, string]) => void
-  addToFarcaster: () => void
-  callReady: () => Promise<void> // Add manual ready function
+  callReady: () => Promise<void>
+  // New enhanced features
+  getUserDisplayName: () => string
+  getUserEmoji: () => string
+  getRandomEmoji: () => string
+  isInFarcasterContext: () => boolean
+  getLocationContext: () => string
 }
 
 const FarcasterContext = createContext<FarcasterContextType | undefined>(undefined)
@@ -32,6 +36,12 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
   const [isFarcasterApp, setIsFarcasterApp] = useState(false)
   const [isReady, setIsReady] = useState(false)
   const [context, setContext] = useState<any>(null)
+
+  // Cool emojis for Farcaster users
+  const farcasterEmojis = ['🚀', '✨', '🎯', '🔥', '💫', '🌟', '⚡', '🎪', '🎭', '🎨', '🎵', '🎮', '🏆', '💎', '🌈', '🎊', '🎉', '🎁', '🎈', '🎠', '🎡', '🎢', '🎣', '🎤', '🎥', '🎦', '🎧', '🎨', '🎩', '🎪', '🎫', '🎬', '🎭', '🎮', '🎯', '🎲', '🎳', '🎴', '🎵', '🎶', '🎷', '🎸', '🎹', '🎺', '🎻', '🎼', '🎽', '🎾', '🎿', '🏀', '🏁', '🏂', '🏃', '🏄', '🏅', '🏆', '🏇', '🏈', '🏉', '🏊', '🏋️', '🏌️', '🏍️', '🏎️', '🏏', '🏐', '🏑', '🏒', '🏓', '🏔️', '🏕️', '🏖️', '🏗️', '🏘️', '🏙️', '🏚️', '🏛️', '🏜️', '🏝️', '🏞️', '🏟️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏧', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏮', '🏯', '🏰', '🏱', '🏲', '🏳️', '🏴', '🏵️', '🏶', '🏷️', '🏸', '🏹', '🏺', '🏻', '🏼', '🏽', '🏾', '🏿']
+
+  // Random emojis for non-Farcaster users
+  const randomEmojis = ['🎯', '🧠', '💡', '🎪', '🎭', '🎨', '🎵', '🎮', '🏆', '💎', '🌈', '🎊', '🎉', '🎁', '🎈', '🎠', '🎡', '🎢', '🎣', '🎤', '🎥', '🎦', '🎧', '🎨', '🎩', '🎪', '🎫', '🎬', '🎭', '🎮', '🎯', '🎲', '🎳', '🎴', '🎵', '🎶', '🎷', '🎸', '🎹', '🎺', '🎻', '🎼', '🎽', '🎾', '🎿', '🏀', '🏁', '🏂', '🏃', '🏄', '🏅', '🏆', '🏇', '🏈', '🏉', '🏊', '🏋️', '🏌️', '🏍️', '🏎️', '🏏', '🏐', '🏑', '🏒', '🏓', '🏔️', '🏕️', '🏖️', '🏗️', '🏘️', '��️', '🏚️', '🏛️', '🏜️', '🏝️', '🏞️', '🏟️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏧', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏮', '🏯', '🏰', '🏱', '🏲', '🏳️', '🏴', '🏵️', '🏶', '🏷️', '🏸', '🏹', '🏺', '🏻', '🏼', '🏽', '🏾', '🏿']
 
   useEffect(() => {
     const detectFarcasterApp = async () => {
@@ -100,41 +110,6 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
     detectFarcasterApp()
   }, [])
 
-  const addToFarcaster = async () => {
-    if (isFarcasterApp) {
-      try {
-        await sdk.actions.addMiniApp()
-        alert('App added to Farcaster!')
-      } catch (error: any) {
-        console.error('Error adding app to Farcaster:', error)
-        if (error.message?.includes('RejectedByUser')) {
-          alert('You cancelled adding the app to Farcaster')
-        } else if (error.message?.includes('InvalidDomainManifestJson')) {
-          alert('Cannot add app in development mode. Deploy to production first.')
-        } else {
-          alert('Failed to add app to Farcaster')
-        }
-      }
-    }
-  }
-
-  const shareApp = async () => {
-    if (isFarcasterApp) {
-      try {
-        await sdk.actions.composeCast({
-          text: "🎯 Just discovered Snarkels - a quiz platform with crypto rewards! Join me in some brain-bending challenges!",
-          embeds: ["https://snarkels.lol"]
-        })
-      } catch (error) {
-        console.error('Error sharing app:', error)
-        alert('Failed to share app')
-      }
-    } else {
-      // Fallback for non-Farcaster environments
-      alert('Share feature available in Farcaster Mini App')
-    }
-  }
-
   const composeCast = async (text: string, embeds?: [] | [string] | [string, string]) => {
     if (isFarcasterApp) {
       try {
@@ -160,6 +135,14 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
   }
 
   const showToast = async (message: string) => {
+    if (isFarcasterApp && context?.features?.haptics) {
+      try {
+        // Use Farcaster haptics if available
+        await sdk.haptics.impactOccurred('medium')
+      } catch (error) {
+        console.log('Haptics not available, using fallback')
+      }
+    }
     // Fallback to browser alert for now
     alert(message)
   }
@@ -174,15 +157,68 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
     }
   }
 
+  // Enhanced Farcaster-specific functions
+  const getUserDisplayName = (): string => {
+    if (!isFarcasterApp || !context?.user) return ''
+    
+    const user = context.user
+    if (user.displayName) return user.displayName
+    if (user.username) return user.username
+    return `FID: ${user.fid}`
+  }
+
+  const getUserEmoji = (): string => {
+    if (!isFarcasterApp || !context?.user) return getRandomEmoji()
+    
+    // Use FID to generate consistent emoji for the same user
+    const user = context.user
+    const emojiIndex = user.fid % farcasterEmojis.length
+    return farcasterEmojis[emojiIndex]
+  }
+
+  const getRandomEmoji = (): string => {
+    const randomIndex = Math.floor(Math.random() * randomEmojis.length)
+    return randomEmojis[randomIndex]
+  }
+
+  const isInFarcasterContext = (): boolean => {
+    return isFarcasterApp && !!context?.user
+  }
+
+  const getLocationContext = (): string => {
+    if (!isFarcasterApp || !context?.location) return 'Social Feed'
+    
+    const location = context.location
+    switch (location.type) {
+      case 'cast_embed':
+        return `Cast by ${location.cast?.author?.displayName || location.cast?.author?.username || 'Unknown'}`
+      case 'cast_share':
+        return `Shared from ${location.cast?.author?.displayName || location.cast?.author?.username || 'Unknown'}`
+      case 'notification':
+        return 'Notification'
+      case 'launcher':
+        return 'Launcher'
+      case 'channel':
+        return `Channel: ${location.channel?.name || 'Unknown'}`
+      case 'open_miniapp':
+        return `From ${location.referrerDomain}`
+      default:
+        return 'Social Feed'
+    }
+  }
+
   const value: FarcasterContextType = {
     isFarcasterApp,
     isReady,
     context,
-    shareApp,
     showToast,
     composeCast,
-    addToFarcaster,
     callReady,
+    getUserDisplayName,
+    getUserEmoji,
+    getRandomEmoji,
+    isInFarcasterContext,
+    getLocationContext,
   }
 
   return (

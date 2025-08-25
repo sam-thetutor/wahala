@@ -14,6 +14,9 @@ import MiniAppContextDisplay from '@/components/MiniAppContextDisplay';
 import SocialShareButton from '@/components/SocialShareButton';
 import { useAccount } from 'wagmi';
 import toast from 'react-hot-toast';
+import FarcasterUserProfile from '@/components/FarcasterUserProfile'
+import useFarcasterCelebration from '@/hooks/useFarcasterCelebration'
+import FarcasterCelebration from '@/components/FarcasterCelebration'
 
 // Progress Modal Component
 interface ProgressStep {
@@ -313,6 +316,7 @@ export default function SnarkelCreationPage() {
   // Use the custom hook for snarkel creation
   const { isSubmitting, error, validationErrors, setValidationErrors, createSnarkel, clearErrors } = useSnarkelCreation();
   const { address, isConnected, chain } = useAccount();
+  const { showCelebration, celebration, hideCelebration } = useFarcasterCelebration()
   
   const [snarkel, setSnarkel] = useState<SnarkelData>({
     title: '',
@@ -950,13 +954,16 @@ export default function SnarkelCreationPage() {
           setSuccessData({ snarkelCode: result.snarkelCode!, rewardsEnabled: !!snarkelData.rewards.enabled, chainId: snarkelData.rewards.chainId });
           setShowSuccessModal(true);
         }, 600);
+
+        // Show celebration for successful quiz creation
+        showCelebration('quiz_created')
       } else {
         updateProgressStep(1, 'error', result.error || 'Failed to create quiz');
       }
     } catch (error: any) {
       updateProgressStep(currentProgressStep, 'error', error.message || 'An unexpected error occurred');
     }
-  }, [isConnected, address, validationErrors, validateDetailsTab, validateQuestionsTab, validateRewardsTab, validateAntiSpamTab, snarkel, createSnarkel, currentProgressStep]);
+  }, [isConnected, address, validationErrors, validateDetailsTab, validateQuestionsTab, validateRewardsTab, validateAntiSpamTab, snarkel, createSnarkel, currentProgressStep, showCelebration]);
 
   const updateProgressStep = useCallback((stepIndex: number, status: 'pending' | 'loading' | 'completed' | 'error', error?: string) => {
     setProgressSteps(prev => prev.map((step, index) => 
@@ -1197,7 +1204,14 @@ export default function SnarkelCreationPage() {
         <MiniAppContextDisplay />
         
         {/* Mini App Header - Shows social context when running as Mini App */}
-        <MiniAppHeader />
+        <div className="max-w-6xl mx-auto px-4 pt-4">
+          <MiniAppHeader />
+        </div>
+
+        {/* Farcaster User Profile - Show when in Farcaster context */}
+        <div className="max-w-6xl mx-auto px-4 pt-4">
+          <FarcasterUserProfile variant="inline" showPfp={true} showEmoji={true} />
+        </div>
         
         {/* Main content card */}
         <div className={`transition-all duration-1000 delay-300 ${
@@ -2224,6 +2238,17 @@ export default function SnarkelCreationPage() {
          }
        }
      `}</style>
+
+     {/* Farcaster Celebration Modal */}
+     {celebration.type && (
+       <FarcasterCelebration
+         type={celebration.type}
+         score={celebration.score}
+         maxScore={celebration.maxScore}
+         position={celebration.position}
+         onClose={() => hideCelebration()}
+       />
+     )}
    </div>
    </ErrorBoundary>
  );

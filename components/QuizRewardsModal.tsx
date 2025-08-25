@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Trophy, Target, Zap, Plus, Trash2, Coins, Users, Award, Info, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { TokenSelector } from './TokenSelector';
 import { ChainSelector } from './ChainSelector';
+import { EnhancedTokenSelector } from './EnhancedTokenSelector'
 
 interface QuizRewardsModalProps {
   isOpen: boolean;
@@ -369,7 +370,7 @@ export const QuizRewardsModal: React.FC<QuizRewardsModalProps> = ({
                       }
                     </div>
                     
-                    <TokenSelector
+                    <EnhancedTokenSelector
                       value={rewardConfig.tokenAddress}
                       onChange={(address, tokenInfo) => {
                         if (tokenInfo) {
@@ -385,6 +386,7 @@ export const QuizRewardsModal: React.FC<QuizRewardsModalProps> = ({
                       }}
                       chainId={rewardConfig.chainId}
                       disabled={isSubmitting}
+                      showBalance={true}
                     />
                   </div>
                 </div>

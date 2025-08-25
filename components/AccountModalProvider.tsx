@@ -1,12 +1,14 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAccount } from 'wagmi'
+import { useFarcaster } from './FarcasterProvider'
 
 type Props = { children: React.ReactNode }
 
 export default function AccountModalProvider({ children }: Props) {
   const { address, isConnected } = useAccount()
+  const { isInFarcasterContext, getUserDisplayName, getUserEmoji } = useFarcaster()
   const [isOpen, setIsOpen] = useState(false)
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,6 +18,15 @@ export default function AccountModalProvider({ children }: Props) {
     let aborted = false
     async function ensureAccount() {
       if (!isConnected || !wallet) return
+      
+      // If in Farcaster context, auto-fill the name
+      if (isInFarcasterContext()) {
+        const farcasterName = getUserDisplayName()
+        if (farcasterName) {
+          setName(farcasterName)
+        }
+      }
+      
       try {
         const res = await fetch(`/api/account?wallet=${wallet}`, { cache: 'no-store' })
         const data = await res.json()
@@ -35,7 +46,7 @@ export default function AccountModalProvider({ children }: Props) {
     return () => {
       aborted = true
     }
-  }, [isConnected, wallet])
+  }, [isConnected, wallet, isInFarcasterContext, getUserDisplayName])
 
   async function saveProfile() {
     if (!wallet) return
@@ -54,6 +65,13 @@ export default function AccountModalProvider({ children }: Props) {
     }
   }
 
+  // Auto-save if in Farcaster context and we have a name
+  useEffect(() => {
+    if (isInFarcasterContext() && name && isConnected && wallet && !isOpen) {
+      saveProfile()
+    }
+  }, [isInFarcasterContext, name, isConnected, wallet, isOpen])
+
   return (
     <>
       {children}
@@ -61,11 +79,16 @@ export default function AccountModalProvider({ children }: Props) {
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
             <h2 className="mb-2 text-xl font-bold">Create your profile</h2>
-            <p className="mb-4 text-sm text-gray-600">Set a display name. You can use emojis. You can change it later.</p>
+            <p className="mb-4 text-sm text-gray-600">
+              {isInFarcasterContext() 
+                ? "We'll use your Farcaster profile. You can customize it below if you'd like."
+                : "Set a display name. You can use emojis. You can change it later."
+              }
+            </p>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your name ✨"
+              placeholder={isInFarcasterContext() ? "Your name ✨" : "Your name ✨"}
               className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
             />
             <div className="flex items-center justify-end gap-2">
