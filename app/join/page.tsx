@@ -226,9 +226,10 @@ export default function JoinPage() {
         onSuccess={handleVerificationSuccess}
         snarkelId={currentSnarkelId || undefined}
       />
-      
-      {/* Bottom Navigation */}
-      <BottomNavigation />
     </div>
+      
+    {/* Bottom Navigation */}
+    <BottomNavigation />
+  </div>
   );
 }
