@@ -23,26 +23,19 @@ import {
 export default function FarcasterDemoPage() {
   const { 
     isMiniApp, 
-    isLoading, 
-    isReady,
-    callReady,
     context, 
     userFid, 
     username, 
     displayName, 
     pfpUrl, 
     isAdded, 
-    location, 
-    platformType,
-    clientFid,
-    safeAreaInsets,
-    features 
+    location
   } = useMiniApp();
 
   const { 
     isFarcasterApp, 
-    isMiniAppReady, 
-    miniAppError 
+    isReady, 
+    callReady
   } = useFarcaster();
 
   // Show loading state while detecting Mini App environment
@@ -57,32 +50,10 @@ export default function FarcasterDemoPage() {
     );
   }
 
-  // Show error state if Mini App initialization failed
-  if (miniAppError) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-white text-2xl">⚠️</span>
-          </div>
-          <h2 className="text-xl font-bold text-red-800 mb-2">Mini App Initialization Error</h2>
-          <p className="text-red-700 mb-4">Failed to initialize Farcaster Mini App</p>
-          <div className="bg-red-100 border border-red-200 rounded-lg p-3 text-sm text-red-800">
-            <strong>Error:</strong> {miniAppError}
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+
 
   // Show ready state while Mini App is initializing
-  if (isMiniApp && !isMiniAppReady) {
+  if (isMiniApp && !isReady) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -142,7 +113,7 @@ export default function FarcasterDemoPage() {
             <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-blue-800">Ready Status:</span>
-                {isMiniAppReady ? (
+                {isReady ? (
                   <div className="flex items-center gap-1 text-green-600">
                     <CheckCircle className="w-4 h-4" />
                     <span className="text-sm">Ready (Splash Screen Hidden)</span>
@@ -165,7 +136,7 @@ export default function FarcasterDemoPage() {
             <div className="mt-2 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-yellow-800">SDK Status:</span>
-                {isMiniAppReady ? (
+                {isReady ? (
                   <div className="flex items-center gap-1 text-green-600">
                     <CheckCircle className="w-4 h-4" />
                     <span className="text-sm">SDK Ready & Interface Prepared</span>
@@ -178,7 +149,7 @@ export default function FarcasterDemoPage() {
                 )}
               </div>
               <p className="text-xs text-yellow-600 mt-1">
-                {isMiniAppReady ? 'Interface is ready and splash screen should be hidden' : 'Preparing interface to avoid jitter and content reflowing...'}
+                {isReady ? 'Interface is ready and splash screen should be hidden' : 'Preparing interface to avoid jitter and content reflowing...'}
               </p>
             </div>
           )}
