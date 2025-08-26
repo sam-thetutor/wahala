@@ -26,105 +26,15 @@ import {
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { FarcasterUI } from '@/components/FarcasterUI';
-import { useAccount, useDisconnect } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { useFarcaster } from '@/components/FarcasterProvider';
 import { useMiniApp } from '@/hooks/useMiniApp';
 import FarcasterUserProfile from '@/components/FarcasterUserProfile';
+import BottomNavigation from '@/components/BottomNavigation';
 
 
-// Action Bar Component
-const ActionBar = ({ isConnected, disconnect }: { isConnected: boolean; disconnect: () => void }) => {
-  const { isInFarcasterContext, getUserDisplayName, getUserEmoji, context } = useFarcaster();
-  const { isMiniApp, userFid, username, displayName, pfpUrl } = useMiniApp();
-  
-  return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-slate-100 via-blue-50 to-slate-100 shadow-2xl z-50 border-t-2 border-slate-300 rounded-t-3xl md:left-1/2 md:transform md:-translate-x-1/2 md:w-4/5 lg:w-3/5">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-0 left-0 w-32 h-32 bg-blue-200 rounded-full -translate-x-16 -translate-y-16"></div>
-        <div className="absolute bottom-0 right-0 w-24 h-24 bg-purple-200 rounded-full translate-x-12 translate-y-12"></div>
-      </div>
-      
-      <div className="relative z-10 p-4 sm:p-5">
-        <div className="flex items-center justify-center gap-3 sm:gap-4 lg:gap-6">
-          {/* Host a Snarkel - Hidden on mobile when wallet not connected */}
-          <div className={`relative flex-1 min-w-0 ${!isConnected ? 'hidden md:block' : ''}`}>
-            <Link href="/create">
-              <div className="group bg-white shadow-lg hover:shadow-xl rounded-2xl p-3 sm:p-4 transform hover:scale-105 transition-all duration-300 border-2 border-slate-300 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <span className="font-handwriting text-xs sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-3 relative z-10 truncate text-slate-700 font-semibold">
-                  <Plus className="w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-slate-600" />
-                  <span className="hidden sm:inline">Create Snarkel</span>
-                  <span className="sm:hidden">Create</span>
-                </span>
-              </div>
-            </Link>
-          </div>
-          
-          {/* Profile - Show user PFP and Farcaster name when in Farcaster context, otherwise show profile icon */}
-          <div className={`relative flex-1 min-w-0 ${!isConnected ? 'hidden md:block' : ''}`}>
-            <Link href="/profile">
-              <div className="group bg-white shadow-lg hover:shadow-xl rounded-2xl p-3 sm:p-4 transform hover:scale-105 transition-all duration-300 border-2 border-slate-300 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="flex items-center justify-center gap-2 relative z-10">
-                  {(isInFarcasterContext() || isMiniApp) ? (
-                    <>
-                      {/* User PFP */}
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-slate-300 overflow-hidden">
-                        {(context?.user?.pfpUrl || pfpUrl) ? (
-                          <img 
-                            src={context?.user?.pfpUrl || pfpUrl} 
-                            alt="Profile" 
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
-                            <User className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-white" />
-                          </div>
-                        )}
-                      </div>
-                      {/* Farcaster Name */}
-                      <span className="font-handwriting text-xs sm:text-sm lg:text-base text-slate-700 font-semibold truncate">
-                        {getUserDisplayName() || displayName || username || `FID: ${userFid}`}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <User className="w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-slate-600" />
-                      <span className="hidden sm:inline font-handwriting text-xs sm:text-base lg:text-lg text-slate-700 font-semibold">Profile</span>
-                      <span className="sm:hidden font-handwriting text-xs text-slate-700 font-semibold">Profile</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </Link>
-          </div>
-          
-          {/* Wallet Connect - Only visible when not connected */}
-          {!isConnected && (
-            <div className="flex-shrink-0">
-              <WalletConnectButton />
-            </div>
-          )}
-          
-          {/* Logout Button - Only visible when connected */}
-          {isConnected && (
-            <div className="flex-shrink-0">
-              <button
-                onClick={() => disconnect()}
-                className="p-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-xl transition-all duration-300 text-white hover:scale-105 transform shadow-lg hover:shadow-xl"
-                title="Disconnect Wallet"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
+
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -143,7 +53,6 @@ export default function HomePage() {
   // Action bar is always visible, no need for open/close state
 
   const { isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
   const { isInFarcasterContext } = useFarcaster();
   const { isMiniApp, context: miniAppContext, userFid, username, displayName, pfpUrl } = useMiniApp();
 
@@ -287,8 +196,9 @@ export default function HomePage() {
                 </div>
               </div>
               
-              {/* Play Button */}
-              <div className="text-center px-2">
+              {/* Action Buttons */}
+              <div className="text-center px-2 space-y-4">
+                {/* Play Button */}
                 <Link
                   href="/join"
                   className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-black text-lg text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-blue-400/80 to-purple-500/80 hover:from-blue-300/90 hover:to-purple-400/90 overflow-hidden group"
@@ -297,17 +207,29 @@ export default function HomePage() {
                   <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 
-                {/* Clickable reference text below button */}
-                <Link href="/featured" className="block mt-4">
-                  <p className="text-gray-500 text-sm font-handwriting hover:text-blue-600 transition-colors cursor-pointer underline">
-                    explore featured snarkels
-                  </p>
-                </Link>
+                {/* Two Buttons Row */}
+                <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                  <Link
+                    href="/featured"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-base text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-emerald-500/80 to-teal-500/80 hover:from-emerald-400/90 hover:to-teal-400/90 overflow-hidden group"
+                  >
+                    <span className="font-handwriting">Explore Featured</span>
+                    <Star className="h-4 w-4 group-hover:rotate-12 transition-transform" />
+                  </Link>
+                  
+                  <Link
+                    href="/create"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-base text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-orange-500/80 to-red-500/80 hover:from-orange-400/90 hover:to-red-400/90 overflow-hidden group"
+                  >
+                    <span className="font-handwriting">Create Snarkel</span>
+                    <Plus className="h-4 w-4 group-hover:rotate-12 transition-transform" />
+                  </Link>
+                </div>
               </div>
             </div>
             
-            {/* Action Bar */}
-            <ActionBar isConnected={isConnected} disconnect={disconnect} />
+            {/* Bottom Navigation */}
+            <BottomNavigation />
           </div>
         ) : (
           /* Desktop Layout */
@@ -342,8 +264,9 @@ export default function HomePage() {
             }`}>
 
               
-              {/* Play Button */}
-              <div className="text-center">
+              {/* Action Buttons */}
+              <div className="text-center space-y-6">
+                {/* Play Button */}
                 <Link
                   href="/join"
                   className="inline-flex items-center justify-center gap-3 px-12 py-4 rounded-xl font-black text-2xl text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-blue-400/80 to-purple-500/80 hover:from-blue-300/90 hover:to-purple-400/90 overflow-hidden group"
@@ -352,31 +275,24 @@ export default function HomePage() {
                   <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 
-                {/* Clickable reference text below button */}
-                <Link 
-                  href="/featured" 
-                  className="block mt-6 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-all duration-300" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    console.log('🔍 Featured link clicked, navigating to /featured');
-                    router.push('/featured');
-                  }}
-                >
-                  <p className="text-blue-700 text-base font-handwriting hover:text-blue-800 transition-colors cursor-pointer font-semibold">
-                    🏆 Explore Featured Snarkels
-                  </p>
-                </Link>
-                
-                {/* Alternative navigation method for debugging */}
-                <button 
-                  onClick={() => {
-                    console.log('🔍 Featured button clicked, using router.push');
-                    router.push('/featured');
-                  }}
-                  className="block mt-2 text-gray-400 text-sm font-handwriting hover:text-blue-600 transition-colors cursor-pointer underline"
-                >
-                  (debug: click here if link above doesn't work)
-                </button>
+                {/* Two Buttons Row */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <Link
+                    href="/featured"
+                    className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-semibold text-lg text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-emerald-500/80 to-teal-500/80 hover:from-emerald-400/90 hover:to-teal-400/90 overflow-hidden group"
+                  >
+                    <span className="font-handwriting">Explore Featured</span>
+                    <Star className="h-5 w-5 group-hover:rotate-12 transition-transform" />
+                  </Link>
+                  
+                  <Link
+                    href="/create"
+                    className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-semibold text-lg text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-orange-500/80 to-red-500/80 hover:from-orange-400/90 hover:to-red-400/90 overflow-hidden group"
+                  >
+                    <span className="font-handwriting">Create Snarkel</span>
+                    <Plus className="h-5 w-5 group-hover:rotate-12 transition-transform" />
+                  </Link>
+                </div>
               </div>
             </div>
 
@@ -433,8 +349,8 @@ export default function HomePage() {
               </div>
             </div>
             
-            {/* Action Bar */}
-            <ActionBar isConnected={isConnected} disconnect={disconnect} />
+            {/* Bottom Navigation */}
+            <BottomNavigation />
           </div>
         )}
 

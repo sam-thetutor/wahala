@@ -39,7 +39,8 @@ import WalletConnectButton from '@/components/WalletConnectButton';
 import { MiniAppHeader } from '@/components/MiniAppHeader';
 import { MiniAppContextDisplay } from '@/components/MiniAppContextDisplay';
 import { sdk } from '@farcaster/miniapp-sdk';
-import FarcasterUserProfile from '@/components/FarcasterUserProfile'
+import FarcasterUserProfile from '@/components/FarcasterUserProfile';
+import BottomNavigation from '@/components/BottomNavigation';
 
 interface QuizHistory {
   id: string;
@@ -802,6 +803,9 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+      
+      {/* Bottom Navigation */}
+      <BottomNavigation />
     </div>
   );
 }

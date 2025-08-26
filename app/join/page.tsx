@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import SelfVerificationModal from '../../components/verification/SelfVerificationModal';
 import WalletConnectButton from '../../components/WalletConnectButton';
+import BottomNavigation from '@/components/BottomNavigation';
 
 export default function JoinPage() {
   const router = useRouter();
@@ -116,12 +117,48 @@ export default function JoinPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Join Snarkel</h1>
-          <p className="text-gray-600">Enter the code to join a quiz</p>
-        </div>
+    <div className="min-h-screen overflow-hidden relative">
+      {/* Enhanced textured background */}
+      <div className="fixed inset-0 opacity-40 pointer-events-none">
+        <div 
+          className="w-full h-full"
+          style={{
+            backgroundImage: `
+              repeating-linear-gradient(
+                transparent,
+                transparent 24px,
+                #E7E3D4 24px,
+                #E7E3D4 26px
+              ),
+              radial-gradient(circle at 20% 80%, rgba(252, 255, 82, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(86, 223, 124, 0.15) 0%, transparent 50%),
+              radial-gradient(ellipse 200px 100px at center, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+              repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255, 255, 255, 0.03) 1deg, transparent 2deg)
+            `,
+            backgroundSize: '100% 26px, 600px 600px, 800px 800px, 400px 200px, 60px 60px',
+            filter: 'contrast(1.1) brightness(0.98)'
+          }}
+        />
+        {/* Paper texture overlay */}
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `
+              radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0),
+              repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px)
+            `,
+            backgroundSize: '20px 20px, 30px 30px'
+          }}
+        />
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 max-w-md w-full border border-white/30">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-handwriting font-bold text-gray-800 mb-2">Join Snarkel</h1>
+            <p className="text-gray-600">Enter the code to join a quiz</p>
+          </div>
 
         {!isConnected ? (
           <div className="space-y-6">
@@ -189,6 +226,9 @@ export default function JoinPage() {
         onSuccess={handleVerificationSuccess}
         snarkelId={currentSnarkelId || undefined}
       />
+      
+      {/* Bottom Navigation */}
+      <BottomNavigation />
     </div>
   );
 }

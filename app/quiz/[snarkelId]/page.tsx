@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import WalletConnectButton from '@/components/WalletConnectButton';
-import FarcasterUserProfile from '@/components/FarcasterUserProfile'
+import FarcasterUserProfile from '@/components/FarcasterUserProfile';
+import BottomNavigation from '@/components/BottomNavigation';
 
 interface Quiz {
   id: string;
@@ -434,6 +435,9 @@ export default function QuizPage() {
           </div>
         </div>
       </div>
+      
+      {/* Bottom Navigation */}
+      <BottomNavigation />
     </div>
   );
 }

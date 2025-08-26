@@ -38,7 +38,8 @@ import {
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { useAccount } from 'wagmi';
 import { sdk } from '@farcaster/miniapp-sdk';
-import FarcasterUserProfile from '@/components/FarcasterUserProfile'
+import FarcasterUserProfile from '@/components/FarcasterUserProfile';
+import BottomNavigation from '@/components/BottomNavigation';
 
 // Snarkel type definition - Updated to match actual API response
 interface Snarkel {
@@ -516,6 +517,9 @@ export default function FeaturedPage() {
           </div>
         </div>
       </div>
+      
+      {/* Bottom Navigation */}
+      <BottomNavigation />
     </div>
   );
 }

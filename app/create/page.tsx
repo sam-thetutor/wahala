@@ -14,9 +14,10 @@ import MiniAppContextDisplay from '@/components/MiniAppContextDisplay';
 import SocialShareButton from '@/components/SocialShareButton';
 import { useAccount } from 'wagmi';
 import toast from 'react-hot-toast';
-import FarcasterUserProfile from '@/components/FarcasterUserProfile'
-import useFarcasterCelebration from '@/hooks/useFarcasterCelebration'
-import FarcasterCelebration from '@/components/FarcasterCelebration'
+import FarcasterUserProfile from '@/components/FarcasterUserProfile';
+import useFarcasterCelebration from '@/hooks/useFarcasterCelebration';
+import FarcasterCelebration from '@/components/FarcasterCelebration';
+import BottomNavigation from '@/components/BottomNavigation';
 
 // Progress Modal Component
 interface ProgressStep {
@@ -2249,6 +2250,9 @@ export default function SnarkelCreationPage() {
          onClose={() => hideCelebration()}
        />
      )}
+     
+     {/* Bottom Navigation */}
+     <BottomNavigation />
    </div>
    </ErrorBoundary>
  );
