@@ -28,10 +28,14 @@ import WalletConnectButton from '@/components/WalletConnectButton';
 import { FarcasterUI } from '@/components/FarcasterUI';
 import { useAccount, useDisconnect } from 'wagmi';
 import { sdk } from '@farcaster/miniapp-sdk';
+import { useFarcaster } from '@/components/FarcasterProvider';
+import FarcasterUserProfile from '@/components/FarcasterUserProfile';
 
 
 // Action Bar Component
 const ActionBar = ({ isConnected, disconnect }: { isConnected: boolean; disconnect: () => void }) => {
+  const { isInFarcasterContext, getUserDisplayName, getUserEmoji, context } = useFarcaster();
+  
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-slate-100 via-blue-50 to-slate-100 shadow-2xl z-50 border-t-2 border-slate-300 rounded-t-3xl md:left-1/2 md:transform md:-translate-x-1/2 md:w-4/5 lg:w-3/5">
       {/* Background pattern */}
@@ -56,16 +60,41 @@ const ActionBar = ({ isConnected, disconnect }: { isConnected: boolean; disconne
             </Link>
           </div>
           
-          {/* Profile - Hidden on mobile when wallet not connected */}
+          {/* Profile - Show user PFP and Farcaster name when in Farcaster context, otherwise show profile icon */}
           <div className={`relative flex-1 min-w-0 ${!isConnected ? 'hidden md:block' : ''}`}>
             <Link href="/profile">
               <div className="group bg-white shadow-lg hover:shadow-xl rounded-2xl p-3 sm:p-4 transform hover:scale-105 transition-all duration-300 border-2 border-slate-300 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <span className="font-handwriting text-xs sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-3 relative z-10 truncate text-slate-700 font-semibold">
-                  <User className="w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-slate-600" />
-                  <span className="hidden sm:inline">Profile</span>
-                  <span className="sm:hidden">Profile</span>
-                </span>
+                <div className="flex items-center justify-center gap-2 relative z-10">
+                  {isInFarcasterContext() ? (
+                    <>
+                      {/* User PFP */}
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-slate-300 overflow-hidden">
+                        {context?.user?.pfpUrl ? (
+                          <img 
+                            src={context.user.pfpUrl} 
+                            alt="Profile" 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
+                            <User className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      {/* Farcaster Name */}
+                      <span className="font-handwriting text-xs sm:text-sm lg:text-base text-slate-700 font-semibold truncate">
+                        {getUserDisplayName()}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-slate-600" />
+                      <span className="hidden sm:inline font-handwriting text-xs sm:text-base lg:text-lg text-slate-700 font-semibold">Profile</span>
+                      <span className="sm:hidden font-handwriting text-xs text-slate-700 font-semibold">Profile</span>
+                    </>
+                  )}
+                </div>
               </div>
             </Link>
           </div>
@@ -113,6 +142,7 @@ export default function HomePage() {
 
   const { isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+  const { isInFarcasterContext } = useFarcaster();
 
   // Contract addresses - Base and Celo mainnet
   const CELO_CONTRACT = '0x8b8fb708758dc8185ef31e685305c1aa0827ea65';
@@ -238,8 +268,14 @@ export default function HomePage() {
             
             {/* Mobile Header */}
 
+            {/* Farcaster User Profile - Show when in Farcaster context */}
+            {isInFarcasterContext() && (
+              <div className="mb-6">
+                <FarcasterUserProfile variant="inline" showPfp={true} showEmoji={true} />
+              </div>
+            )}
 
-                        {/* Featured Snarkels Section */}
+            {/* Featured Snarkels Section */}
             <div className={`flex-1 flex flex-col items-center justify-center transition-all duration-1500 delay-300 ${
               isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
             }`}>
@@ -280,6 +316,15 @@ export default function HomePage() {
           /* Desktop Layout */
           <div className="relative z-10 min-h-screen p-8 lg:p-16 pb-24">
 
+
+            {/* Farcaster User Profile - Show when in Farcaster context */}
+            {isInFarcasterContext() && (
+              <div className={`absolute top-8 right-8 lg:top-16 lg:right-16 transition-all duration-1500 delay-200 ${
+                isLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
+              }`}>
+                <FarcasterUserProfile variant="inline" showPfp={true} showEmoji={true} />
+              </div>
+            )}
 
             {/* Logo - Image in left upper */}
             <div className={`absolute top-8 left-8 lg:top-16 lg:left-16 transition-all duration-1500 delay-100 ${

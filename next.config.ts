@@ -125,8 +125,8 @@ const nextConfig: NextConfig = {
     // Enable server components HMR cache for better performance
     serverComponentsHmrCache: true,
     
-    // Disable source maps in production builds
-    forceSwcTransforms: true,
+    // Note: forceSwcTransforms removed to be compatible with Turbopack
+    // forceSwcTransforms: true,
   },
   
   // Performance optimizations
