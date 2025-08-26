@@ -39,7 +39,8 @@ export default function FarcasterDemoPage() {
   } = useFarcaster();
 
   // Show loading state while detecting Mini App environment
-  if (isLoading) {
+  // Fix: Use isReady from useFarcaster to determine loading state
+  if (!isReady) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -236,8 +237,8 @@ export default function FarcasterDemoPage() {
                   <div className="bg-purple-50 rounded-lg p-4">
                     <h4 className="font-medium text-purple-800 mb-2">Client Information</h4>
                     <div className="space-y-2 text-sm">
-                      <p><span className="font-medium">Platform:</span> {platformType || 'Unknown'}</p>
-                      <p><span className="font-medium">Client FID:</span> {clientFid || 'Unknown'}</p>
+                      <p><span className="font-medium">Platform:</span> {context?.client?.platformType || 'Unknown'}</p>
+                      <p><span className="font-medium">Client FID:</span> {context?.client?.clientFid || 'Unknown'}</p>
                       <p><span className="font-medium">Added to Favorites:</span> {isAdded ? 'Yes' : 'No'}</p>
                     </div>
                   </div>
@@ -260,8 +261,8 @@ export default function FarcasterDemoPage() {
                   <div className="bg-orange-50 rounded-lg p-4">
                     <h4 className="font-medium text-orange-800 mb-2">Available Features</h4>
                     <div className="space-y-2 text-sm">
-                      <p><span className="font-medium">Haptics:</span> {features?.haptics ? 'Yes' : 'No'}</p>
-                      <p><span className="font-medium">Camera/Mic:</span> {features?.cameraAndMicrophoneAccess ? 'Yes' : 'No'}</p>
+                      <p><span className="font-medium">Haptics:</span> {context?.features?.haptics ? 'Yes' : 'No'}</p>
+                      <p><span className="font-medium">Camera/Mic:</span> {context?.features?.cameraAndMicrophoneAccess ? 'Yes' : 'No'}</p>
                     </div>
                   </div>
                 </div>
@@ -269,7 +270,7 @@ export default function FarcasterDemoPage() {
             )}
 
             {/* Safe Area Insets - Only show when we have context */}
-            {hasValidContext && safeAreaInsets && (
+            {hasValidContext && context?.client?.safeAreaInsets && (
               <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-blue-600" />
@@ -277,19 +278,19 @@ export default function FarcasterDemoPage() {
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">{safeAreaInsets.top}</p>
+                    <p className="text-2xl font-bold text-blue-600">{context?.client?.safeAreaInsets?.top}</p>
                     <p className="text-sm text-gray-600">Top</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">{safeAreaInsets.bottom}</p>
+                    <p className="text-2xl font-bold text-blue-600">{context?.client?.safeAreaInsets?.bottom}</p>
                     <p className="text-sm text-gray-600">Bottom</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">{safeAreaInsets.left}</p>
+                    <p className="text-2xl font-bold text-blue-600">{context?.client?.safeAreaInsets?.left}</p>
                     <p className="text-sm text-gray-600">Left</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">{safeAreaInsets.right}</p>
+                    <p className="text-2xl font-bold text-blue-600">{context?.client?.safeAreaInsets?.right}</p>
                     <p className="text-sm text-gray-600">Right</p>
                   </div>
                 </div>
@@ -515,8 +516,8 @@ export default function FarcasterDemoPage() {
                       </span>
                     </p>
                     <p><span className="font-medium">isLoading:</span> 
-                      <span className={`px-2 py-1 rounded text-xs ${isLoading ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
-                        {isLoading ? 'true' : 'false'}
+                      <span className={`px-2 py-1 rounded text-xs ${isReady ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                        {isReady ? 'true' : 'false'}
                       </span>
                     </p>
                     <p><span className="font-medium">Hook isReady:</span> 
@@ -525,22 +526,22 @@ export default function FarcasterDemoPage() {
                       </span>
                     </p>
                     <p><span className="font-medium">Interface Ready:</span> 
-                      <span className={`px-2 py-1 rounded text-xs ${isMiniAppReady ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {isMiniAppReady ? 'true' : 'false'}
+                      <span className={`px-2 py-1 rounded text-xs ${isReady ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {isReady ? 'true' : 'false'}
                       </span>
                     </p>
                     <p><span className="font-medium">Ready Called:</span> 
-                      <span className={`px-2 py-1 rounded text-xs ${isMiniAppReady ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {isMiniAppReady ? 'true' : 'false'}
+                      <span className={`px-2 py-1 rounded text-xs ${isReady ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {isReady ? 'true' : 'false'}
                       </span>
                     </p>
                     <p><span className="font-medium">Context Monitoring:</span> 
-                      <span className={`px-2 py-1 rounded text-xs ${isMiniAppReady ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {isMiniAppReady ? 'inactive' : 'inactive'}
+                      <span className={`px-2 py-1 rounded text-xs ${isReady ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {isReady ? 'inactive' : 'inactive'}
                       </span>
                     </p>
                     <p><span className="font-medium">Context Retries:</span> 
-                      <span className={`px-2 py-1 rounded text-xs ${isMiniAppReady ? 'bg-gray-100 text-gray-800' : 'bg-gray-100 text-gray-800'}`}>
+                      <span className={`px-2 py-1 rounded text-xs ${isReady ? 'bg-gray-100 text-gray-800' : 'bg-gray-100 text-gray-800'}`}>
                         {0}
                       </span>
                     </p>
