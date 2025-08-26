@@ -29,12 +29,14 @@ import { FarcasterUI } from '@/components/FarcasterUI';
 import { useAccount, useDisconnect } from 'wagmi';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { useFarcaster } from '@/components/FarcasterProvider';
+import { useMiniApp } from '@/hooks/useMiniApp';
 import FarcasterUserProfile from '@/components/FarcasterUserProfile';
 
 
 // Action Bar Component
 const ActionBar = ({ isConnected, disconnect }: { isConnected: boolean; disconnect: () => void }) => {
   const { isInFarcasterContext, getUserDisplayName, getUserEmoji, context } = useFarcaster();
+  const { isMiniApp, userFid, username, displayName, pfpUrl } = useMiniApp();
   
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-slate-100 via-blue-50 to-slate-100 shadow-2xl z-50 border-t-2 border-slate-300 rounded-t-3xl md:left-1/2 md:transform md:-translate-x-1/2 md:w-4/5 lg:w-3/5">
@@ -66,13 +68,13 @@ const ActionBar = ({ isConnected, disconnect }: { isConnected: boolean; disconne
               <div className="group bg-white shadow-lg hover:shadow-xl rounded-2xl p-3 sm:p-4 transform hover:scale-105 transition-all duration-300 border-2 border-slate-300 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="flex items-center justify-center gap-2 relative z-10">
-                  {isInFarcasterContext() ? (
+                  {(isInFarcasterContext() || isMiniApp) ? (
                     <>
                       {/* User PFP */}
                       <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-slate-300 overflow-hidden">
-                        {context?.user?.pfpUrl ? (
+                        {(context?.user?.pfpUrl || pfpUrl) ? (
                           <img 
-                            src={context.user.pfpUrl} 
+                            src={context?.user?.pfpUrl || pfpUrl} 
                             alt="Profile" 
                             className="w-full h-full object-cover"
                           />
@@ -84,7 +86,7 @@ const ActionBar = ({ isConnected, disconnect }: { isConnected: boolean; disconne
                       </div>
                       {/* Farcaster Name */}
                       <span className="font-handwriting text-xs sm:text-sm lg:text-base text-slate-700 font-semibold truncate">
-                        {getUserDisplayName()}
+                        {getUserDisplayName() || displayName || username || `FID: ${userFid}`}
                       </span>
                     </>
                   ) : (
@@ -143,12 +145,7 @@ export default function HomePage() {
   const { isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { isInFarcasterContext } = useFarcaster();
-
-  // Contract addresses - Base and Celo mainnet
-  const CELO_CONTRACT = '0x8b8fb708758dc8185ef31e685305c1aa0827ea65';
-  const BASE_CONTRACT = '0xd2c5d1cf9727da34bcb6465890e4fb5c413bbd40';
-
-  const formatAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  const { isMiniApp, context: miniAppContext, userFid, username, displayName, pfpUrl } = useMiniApp();
 
 
 
@@ -268,8 +265,8 @@ export default function HomePage() {
             
             {/* Mobile Header */}
 
-            {/* Farcaster User Profile - Show when in Farcaster context */}
-            {isInFarcasterContext() && (
+            {/* Farcaster User Profile - Show when in Farcaster context OR Mini App context */}
+            {(isInFarcasterContext() || isMiniApp) && (
               <div className="mb-6">
                 <FarcasterUserProfile variant="inline" showPfp={true} showEmoji={true} />
               </div>
@@ -317,8 +314,8 @@ export default function HomePage() {
           <div className="relative z-10 min-h-screen p-8 lg:p-16 pb-24">
 
 
-            {/* Farcaster User Profile - Show when in Farcaster context */}
-            {isInFarcasterContext() && (
+            {/* Farcaster User Profile - Show when in Farcaster context OR Mini App context */}
+            {(isInFarcasterContext() || isMiniApp) && (
               <div className={`absolute top-8 right-8 lg:top-16 lg:right-16 transition-all duration-1500 delay-200 ${
                 isLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
               }`}>
