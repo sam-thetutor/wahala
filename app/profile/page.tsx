@@ -1,811 +1,657 @@
-'use client';
+'use client'
 
 import React, { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
-import { 
-  Trophy, 
-  Users, 
-  Clock, 
-  Star, 
-  Eye, 
-  Copy, 
-  ExternalLink,
-  Gamepad2,
-  Sparkles,
-  TrendingUp,
-  Award,
-  Calendar,
-  BarChart3,
-  Wallet,
-  Coins,
-  CheckCircle,
-  XCircle,
-  Play,
-  Activity,
-  Zap,
-  Shield,
-  Target,
-  Crown,
-  Gift,
-  ArrowRight,
-  ChevronRight,
-  ChevronDown,
-  MapPin,
-  Link,
-  User,
-  X
-} from 'lucide-react';
-import WalletConnectButton from '@/components/WalletConnectButton';
-import { MiniAppHeader } from '@/components/MiniAppHeader';
-import { MiniAppContextDisplay } from '@/components/MiniAppContextDisplay';
-import { sdk } from '@farcaster/miniapp-sdk';
-import FarcasterUserProfile from '@/components/FarcasterUserProfile';
-import BottomNavigation from '@/components/BottomNavigation';
+import { useAccount, useBalance } from 'wagmi';
+import { useRouter } from 'next/navigation';
+import { useMiniApp } from '@/contexts/MiniAppContext';
+import { MiniAppProvider } from '@/contexts/MiniAppContext';
+import { useFarcaster } from '@/components/FarcasterProvider';
+import NotificationContainer, { useNotifications } from '@/components/NotificationContainer';
+import { CreatorFeeClaim } from '@/components/CreatorFeeClaim';
+import { formatEther } from 'viem';
+import Link from 'next/link';
+import { useUserActivity } from '@/hooks/useUserActivity';
+import { useUserStats } from '@/hooks/useUserStats';
+import { useUserEvents } from '@/hooks/useUserEvents';
+import { UserActivity, UserStats, ACTIVITY_CONFIG, MARKET_STATUS_CONFIG } from '@/types/profile';
+import { formatVolume, formatDate, shortenAddress, formatPercentage } from '@/lib/utils';
 
-interface QuizHistory {
-  id: string;
-  snarkelCode: string;
-  title: string;
-  score: number;
-  totalPoints: number;
-  position: number;
-  completedAt: string;
-  chainId: number;
-  networkName: string;
-  rewardAmount?: string;
-  rewardToken?: string;
-  rewardClaimed: boolean;
-  rewardClaimedAt?: string;
-  rewardTxHash?: string;
-}
+const ProfileContent: React.FC = () => {
+  const router = useRouter();
+  const { isConnected, address } = useAccount();
+  const { 
+    isMiniApp, 
+    addToFarcaster,
+    triggerHaptic
+  } = useMiniApp();
+  const { isFarcasterApp, getUserDisplayName, getUserEmoji } = useFarcaster();
+  const { notifications, removeNotification } = useNotifications();
+  
+  // Fetch Celo balance
+  const { data: balance, isLoading: balanceLoading } = useBalance({
+    address: address,
+    chainId: 42220
+  });
+  
+  // Use new hooks for enhanced data
+  const { 
+    activities, 
+    stats: activityStats, 
+    loading: activitiesLoading, 
+    error: activitiesError,
+    refetch: refetchActivities,
+    loadMore,
+    hasMore,
+    setFilters: setActivityFilters,
+    filters: activityFilters
+  } = useUserActivity();
+  
+  const { 
+    stats: userStats, 
+    loading: statsLoading, 
+    error: statsError,
+    refetch: refetchStats
+  } = useUserStats();
+  
+  const { 
+    events, 
+    loading: eventsLoading, 
+    error: eventsError,
+    refetch: refetchEvents
+  } = useUserEvents();
+  
+  const [activeTab, setActiveTab] = useState<'overview' | 'activities' | 'markets' | 'events'>('overview');
+  const [isPolling, setIsPolling] = useState(false);
 
-interface RewardSummary {
-  totalQuizzes: number;
-  totalRewards: number;
-  claimedRewards: number;
-  pendingRewards: number;
-  networks: Array<{
-    chainId: number;
-    name: string;
-    count: number;
-    totalAmount: string;
-  }>;
-}
+  // Get markets created by user from activities
+  const userMarkets = activities.filter(activity => activity.type === 'market_created');
+  
+  // Combined loading state
+  const loading = activitiesLoading || statsLoading;
+  
+  // Combined error state
+  const error = activitiesError || statsError;
 
-export default function ProfilePage() {
-  const { address, isConnected } = useAccount();
-  const [quizHistory, setQuizHistory] = useState<QuizHistory[]>([]);
-  const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedQuiz, setSelectedQuiz] = useState<QuizHistory | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'rewards'>('overview');
-  const [expandedNetworks, setExpandedNetworks] = useState<Set<number>>(new Set());
-
+  // Polling effect for real-time updates
   useEffect(() => {
-    if (isConnected && address) {
-      fetchQuizHistory();
-      fetchRewardSummary();
-      sdk.actions.ready();
-    } else {
-      setLoading(false);
-    }
-  }, [isConnected, address]);
+    if (!address) return;
 
-  const fetchQuizHistory = async () => {
-    try {
-      setError(null);
-      const response = await fetch('/api/profile/quiz-history', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userAddress: address }),
+    const pollInterval = setInterval(() => {
+      setIsPolling(true);
+      Promise.all([
+        refetchActivities(),
+        refetchStats(),
+        refetchEvents()
+      ]).finally(() => {
+        setIsPolling(false);
       });
+    }, 30000); // Poll every 30 seconds
 
-      const data = await response.json();
-      if (data.success) {
-        setQuizHistory(data.quizzes);
-      } else {
-        setError('Failed to fetch quiz history');
-      }
-    } catch (error) {
-      console.error('Error fetching quiz history:', error);
-      setError('Network error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => clearInterval(pollInterval);
+  }, [address, refetchActivities, refetchStats, refetchEvents]);
 
-  const fetchRewardSummary = async () => {
-    try {
-      const response = await fetch('/api/profile/reward-summary', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userAddress: address }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setRewardSummary(data.summary);
-      }
-    } catch (error) {
-      console.error('Error fetching reward summary:', error);
-    }
-  };
-
-  const handleClaimReward = async (quizId: string) => {
-    try {
-      const response = await fetch('/api/profile/claim-reward', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          quizId,
-          userAddress: address 
-        }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        // Refresh data
-        fetchQuizHistory();
-        fetchRewardSummary();
-      } else {
-        setError(data.error || 'Failed to claim reward');
-      }
-    } catch (error) {
-      console.error('Error claiming reward:', error);
-      setError('Network error occurred');
-    }
-  };
-
-  const toggleNetworkExpansion = (chainId: number) => {
-    const newExpanded = new Set(expandedNetworks);
-    if (newExpanded.has(chainId)) {
-      newExpanded.delete(chainId);
-    } else {
-      newExpanded.add(chainId);
-    }
-    setExpandedNetworks(newExpanded);
-  };
-
-  const getNetworkIcon = (chainId: number) => {
-    switch (chainId) {
-      case 8453: return '🔵'; // Base
-      case 42220: return '🟡'; // Celo
-      default: return '🔘';
-    }
-  };
-
-  const getNetworkName = (chainId: number) => {
-    switch (chainId) {
-      case 8453: return 'Base';
-      case 42220: return 'Celo';
-      default: return `Chain ${chainId}`;
-    }
-  };
-
-  const getPositionIcon = (position: number) => {
-    if (position === 1) return <Crown className="w-4 h-4 text-yellow-500" />;
-    if (position === 2) return <Award className="w-4 h-4 text-gray-400" />;
-    if (position === 3) return <Trophy className="w-4 h-4 text-orange-500" />;
-    return <Star className="w-4 h-4 text-blue-500" />;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
-  if (!isConnected) {
+  // Handle wallet not connected
+  if (!isConnected || !address) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="text-center">
-            <div className="mb-8">
-              <Gamepad2 className="w-16 h-16 mx-auto text-purple-600 mb-4" />
-              <h1 className="text-3xl font-handwriting font-bold text-gray-800 mb-2">
-                Your Quiz Profile
-              </h1>
-              <p className="text-gray-600">Connect your wallet to view your quiz history and rewards</p>
-            </div>
-            <WalletConnectButton />
+      <div className="py-6 px-3 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-semibold text-yellow-800 mb-2">
+              {isMiniApp ? 'Embedded Wallet Not Connected' : 'Wallet Not Connected'}
+            </h2>
+            <p className="text-sm md:text-base text-yellow-700">
+              {isMiniApp 
+                ? 'The embedded wallet is not connected. Please try refreshing the app.'
+                : 'Please connect your wallet to view your profile and activities.'
+              }
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
-      {/* Mini App Context Display */}
-      <MiniAppContextDisplay />
-      
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-                <User className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-handwriting font-bold text-gray-800">
-                  Quiz Profile
-                </h1>
-                <p className="text-gray-600 text-sm">
-                  Your quiz history and rewards
-                </p>
+    <div className="py-6 px-3 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Profile Header - Mobile Optimized */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 mb-4 md:mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div className="mb-4 md:mb-0">
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Profile</h1>
+              <div className="flex items-center space-x-3">
+                {isFarcasterApp ? (
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-lg">
+                    {getUserEmoji()}
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-lg">
+                    {address.slice(2, 4).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  {isFarcasterApp ? (
+                    <>
+                      <p className="text-sm md:text-base lg:text-lg font-medium text-gray-900">
+                        {getUserDisplayName()}
+                      </p>
+                      <p className="text-xs md:text-sm text-gray-500">
+                        Farcaster User • {shortenAddress(address)}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm md:text-base lg:text-lg font-medium text-gray-900">
+                        {shortenAddress(address)}
+                      </p>
+                      <p className="text-xs md:text-sm text-gray-500">Connected Wallet</p>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <WalletConnectButton />
+            
+            <div className="flex items-center space-x-2 md:space-x-3">
+              {/* Polling Indicator */}
+              {isPolling && (
+                <div className="flex items-center text-xs text-gray-500">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600 mr-1"></div>
+                  Updating...
+                </div>
+              )}
+              
+              {isMiniApp && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await addToFarcaster();
+                      await triggerHaptic('medium');
+                    } catch (error) {
+                      console.error('Failed to add to Farcaster:', error);
+                    }
+                  }}
+                  className="px-3 md:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs md:text-sm"
+                >
+                  Add to Farcaster
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  refetchActivities();
+                  refetchStats();
+                  refetchEvents();
+                }}
+                className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs md:text-sm"
+              >
+                Refresh
+              </button>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Mini App Header */}
-      <div className="max-w-6xl mx-auto px-4 pt-4">
-        <MiniAppHeader />
-      </div>
-
-      {/* Farcaster User Profile - Show when in Farcaster context */}
-      <div className="max-w-6xl mx-auto px-4 pt-4">
-        <FarcasterUserProfile variant="card" showPfp={true} showEmoji={true} showFid={true} />
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Tab Navigation */}
-        <div className="mb-6">
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md font-handwriting font-medium transition-all ${
-                activeTab === 'overview'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              <BarChart3 size={16} />
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md font-handwriting font-medium transition-all ${
-                activeTab === 'history'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              <Activity size={16} />
-              Quiz History ({quizHistory.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('rewards')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md font-handwriting font-medium transition-all ${
-                activeTab === 'rewards'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              <Trophy size={16} />
-              Rewards
-            </button>
-          </div>
+        {/* Navigation Tabs - Mobile Optimized */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-1 mb-4 md:mb-6">
+          <nav className="flex space-x-1">
+            {[
+              { id: 'overview', label: 'Overview', count: null },
+              { id: 'activities', label: 'Activities', count: userStats?.totalTrades || 0 },
+              { id: 'markets', label: 'My Markets', count: userStats?.totalMarketsCreated || 0 },
+              { id: 'events', label: 'Events', count: events.length },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-1 px-2 md:px-4 py-2 text-xs md:text-sm font-medium rounded-md transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                {tab.label}
+                {tab.count !== null && (
+                  <span className="ml-1 md:ml-2 bg-gray-200 text-gray-700 px-1 md:px-2 py-0.5 rounded-full text-xs">
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
         </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-12">
-            <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600 font-handwriting">Loading your profile...</p>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-2">
-              <XCircle className="w-5 h-5 text-red-600" />
-              <span className="font-handwriting text-red-700">{error}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Overview Tab */}
-        {activeTab === 'overview' && rewardSummary && (
-          <div className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Gamepad2 className="w-5 h-5 text-blue-600" />
+        {/* Content based on active tab */}
+        {activeTab === 'overview' && (
+          <div className="space-y-4 md:space-y-6 mb-4 md:mb-6">
+            {/* Enhanced Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+              {/* Balance Card */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-emerald-100 rounded-lg">
+                    <span className="text-lg md:text-xl">💎</span>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600 font-handwriting">Total Quizzes</p>
-                    <p className="text-2xl font-bold text-gray-900">{rewardSummary.totalQuizzes}</p>
+                  <div className="ml-3">
+                    <p className="text-xs font-medium text-gray-600">Balance</p>
+                    <p className="text-sm md:text-lg font-bold text-gray-900">
+                      {balanceLoading ? '...' : balance ? `${parseFloat(balance.formatted).toFixed(3)} ${balance.symbol}` : '0 CELO'}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Trophy className="w-5 h-5 text-green-600" />
+              {/* Markets Created */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <span className="text-lg md:text-xl">📊</span>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600 font-handwriting">Total Rewards</p>
-                    <p className="text-2xl font-bold text-gray-900">{rewardSummary.totalRewards}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 font-handwriting">Claimed</p>
-                    <p className="text-2xl font-bold text-gray-900">{rewardSummary.claimedRewards}</p>
+                  <div className="ml-3">
+                    <p className="text-xs font-medium text-gray-600">Markets</p>
+                    <p className="text-sm md:text-lg font-bold text-gray-900">{userStats?.totalMarketsCreated || 0}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <Gift className="w-5 h-5 text-yellow-600" />
+              {/* Total Trades */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <span className="text-lg md:text-xl">💰</span>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600 font-handwriting">Pending</p>
-                    <p className="text-2xl font-bold text-gray-900">{rewardSummary.pendingRewards}</p>
+                  <div className="ml-3">
+                    <p className="text-xs font-medium text-gray-600">Trades</p>
+                    <p className="text-sm md:text-lg font-bold text-gray-900">{userStats?.totalTrades || 0}</p>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Network Breakdown */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-handwriting font-bold text-gray-800 flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
-                  Rewards by Network
-                </h3>
+              {/* Total Volume */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <span className="text-lg md:text-xl">📈</span>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-xs font-medium text-gray-600">Volume</p>
+                    <p className="text-sm md:text-lg font-bold text-gray-900">{formatVolume(userStats?.totalVolume || '0')}</p>
+                  </div>
+                </div>
               </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  {rewardSummary.networks.map((network) => (
-                    <div key={network.chainId} className="border border-gray-200 rounded-lg">
-                      <button
-                        onClick={() => toggleNetworkExpansion(network.chainId)}
-                        className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{getNetworkIcon(network.chainId)}</span>
-                          <div className="text-left">
-                            <h4 className="font-handwriting font-bold text-gray-900">{network.name}</h4>
-                            <p className="text-sm text-gray-600">{network.count} quizzes</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className="font-handwriting font-bold text-gray-900">{network.totalAmount}</p>
-                            <p className="text-sm text-gray-600">Total earned</p>
-                          </div>
-                          {expandedNetworks.has(network.chainId) ? (
-                            <ChevronDown className="w-5 h-5 text-gray-400" />
-                          ) : (
-                            <ChevronRight className="w-5 h-5 text-gray-400" />
-                          )}
-                        </div>
-                      </button>
-                      
-                      {expandedNetworks.has(network.chainId) && (
-                        <div className="px-4 pb-4 border-t border-gray-200">
-                          <div className="pt-4 space-y-2">
-                            {quizHistory
-                              .filter(quiz => quiz.chainId === network.chainId)
-                              .map(quiz => (
-                                <div key={quiz.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-sm font-medium text-gray-700">{quiz.snarkelCode}</span>
-                                    <span className="text-sm text-gray-600">{quiz.title}</span>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-sm font-medium text-gray-900">
-                                      {quiz.rewardAmount || '0'} {quiz.rewardToken || 'tokens'}
-                                    </span>
-                                    {quiz.rewardClaimed ? (
-                                      <CheckCircle className="w-4 h-4 text-green-500" />
-                                    ) : (
-                                      <Gift className="w-4 h-4 text-yellow-500" />
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+
+              {/* Win Rate */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <span className="text-lg md:text-xl">🎯</span>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-xs font-medium text-gray-600">Win Rate</p>
+                    <p className="text-sm md:text-lg font-bold text-gray-900">{formatPercentage(userStats?.winRate || 0)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Winnings */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <span className="text-lg md:text-xl">🏆</span>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-xs font-medium text-gray-600">Winnings</p>
+                    <p className="text-sm md:text-lg font-bold text-gray-900">{formatVolume(userStats?.totalWinnings || '0')}</p>
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Additional Stats Row */}
+            {userStats && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                  <div className="text-center">
+                    <p className="text-xs font-medium text-gray-600">Avg Trade Size</p>
+                    <p className="text-sm md:text-base font-bold text-gray-900">{formatVolume(userStats.averageTradeSize)}</p>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                  <div className="text-center">
+                    <p className="text-xs font-medium text-gray-600">Trading Days</p>
+                    <p className="text-sm md:text-base font-bold text-gray-900">{userStats.tradingDays}</p>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                  <div className="text-center">
+                    <p className="text-xs font-medium text-gray-600">Risk Profile</p>
+                    <p className="text-sm md:text-base font-bold text-gray-900">{userStats.riskTolerance}</p>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                  <div className="text-center">
+                    <p className="text-xs font-medium text-gray-600">Success Rate</p>
+                    <p className="text-sm md:text-base font-bold text-gray-900">{formatPercentage(userStats.marketCreationSuccessRate)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* History Tab */}
-        {activeTab === 'history' && (
-          <div className="space-y-6">
-            {quizHistory.length === 0 ? (
-              <div className="text-center py-12">
-                <Gamepad2 className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-handwriting font-medium text-gray-900 mb-2">No quizzes played yet</h3>
-                <p className="text-gray-600">Start playing quizzes to build your history!</p>
+        {activeTab === 'activities' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900">Recent Activities</h2>
+              <div className="flex items-center space-x-2">
+                <select
+                  value={activityFilters.type || ''}
+                  onChange={(e) => setActivityFilters({ ...activityFilters, type: e.target.value as any || undefined })}
+                  className="text-xs md:text-sm border border-gray-300 rounded-md px-2 py-1"
+                >
+                  <option value="">All Activities</option>
+                  <option value="trading">Trading</option>
+                  <option value="market_created">Market Created</option>
+                  <option value="market_resolved">Market Resolved</option>
+                </select>
+                <button
+                  onClick={refetchActivities}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Refresh"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {quizHistory.map((quiz) => (
-                  <div key={quiz.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                    <div className="p-6">
-                      {/* Quiz Header */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <h3 className="font-handwriting font-bold text-gray-900 mb-1">{quiz.title}</h3>
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <span className="font-mono">{quiz.snarkelCode}</span>
-                            <button
-                              onClick={() => copyToClipboard(quiz.snarkelCode)}
-                              className="text-gray-400 hover:text-gray-600 transition-colors"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {getPositionIcon(quiz.position)}
-                          <span className="text-sm font-medium text-gray-700">#{quiz.position}</span>
-                        </div>
+            </div>
+            
+            {loading ? (
+              <div className="text-center py-6 md:py-8">
+                <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-blue-600 mx-auto mb-3 md:mb-4"></div>
+                <p className="text-sm md:text-base text-gray-600">Loading activities...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-6 md:py-8">
+                <div className="text-red-400 text-3xl md:text-4xl mb-3 md:mb-4">⚠️</div>
+                <h4 className="text-base md:text-lg font-medium text-gray-900 mb-2">Error Loading Activities</h4>
+                <p className="text-sm md:text-base text-gray-600 mb-4">{error}</p>
+                <button
+                  onClick={refetchActivities}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : activities.length > 0 ? (
+              <div className="space-y-3 md:space-y-4">
+                {activities.map((activity) => {
+                  const config = ACTIVITY_CONFIG[activity.type];
+                  const marketStatus = MARKET_STATUS_CONFIG[activity.marketStatus as keyof typeof MARKET_STATUS_CONFIG];
+                  const activityDate = activity.lastPurchaseAt || activity.createdAt;
+                  if (!activityDate) return null;
+                  
+                  // Ensure activityDate is a Date object
+                  const dateObj = activityDate instanceof Date ? activityDate : new Date(activityDate);
+                  
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex items-center p-3 md:p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div className={`text-lg md:text-2xl mr-3 md:mr-4 p-2 rounded-lg ${config.bgColor}`}>
+                        {config.icon}
                       </div>
-
-                      {/* Quiz Stats */}
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <p className="text-2xl font-bold text-blue-600">{quiz.score}</p>
-                          <p className="text-xs text-blue-600 font-handwriting">Score</p>
-                        </div>
-                        <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <p className="text-2xl font-bold text-green-600">{quiz.totalPoints}</p>
-                          <p className="text-xs text-green-600 font-handwriting">Points</p>
-                        </div>
-                      </div>
-
-                      {/* Network Info */}
-                      <div className="flex items-center gap-2 mb-4 p-2 bg-gray-50 rounded-lg">
-                        <span className="text-lg">{getNetworkIcon(quiz.chainId)}</span>
-                        <span className="text-sm font-medium text-gray-700">{getNetworkName(quiz.chainId)}</span>
-                        <span className="text-xs text-gray-500">• {formatDate(quiz.completedAt)}</span>
-                      </div>
-
-                      {/* Rewards Section */}
-                      {quiz.rewardAmount && (
-                        <div className="border-t border-gray-200 pt-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                Reward: {quiz.rewardAmount} {quiz.rewardToken}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-sm md:text-base text-gray-900">
+                              {config.label}
+                            </p>
+                            <p className="text-xs md:text-sm text-gray-600 mt-1">
+                              {activity.marketQuestion}
+                            </p>
+                            {activity.type === 'trading' && activity.totalInvestment && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Investment: {formatVolume(activity.totalInvestment)} • 
+                                {activity.primarySide === 'yes' ? ' Yes' : activity.primarySide === 'no' ? ' No' : ' Neutral'}
                               </p>
-                              <p className="text-xs text-gray-500">
-                                {quiz.rewardClaimed ? 'Claimed' : 'Available to claim'}
-                              </p>
-                            </div>
-                            {!quiz.rewardClaimed && (
-                              <button
-                                onClick={() => handleClaimReward(quiz.id)}
-                                className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all font-handwriting font-medium"
-                              >
-                                Claim
-                              </button>
                             )}
                           </div>
+                          <div className="text-right">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${marketStatus.bgColor} ${marketStatus.color}`}>
+                              {marketStatus.label}
+                            </span>
+                            <p className="text-xs md:text-sm text-gray-500 mt-1">
+                              {formatDate(dateObj.getTime() / 1000)}
+                            </p>
+                          </div>
                         </div>
-                      )}
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* Load More Button */}
+                {hasMore && (
+                  <div className="text-center pt-4">
+                    <button
+                      onClick={loadMore}
+                      disabled={loading}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm disabled:opacity-50"
+                    >
+                      {loading ? 'Loading...' : 'Load More'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6 md:py-8">
+                <div className="text-gray-400 text-3xl md:text-4xl mb-3 md:mb-4">📝</div>
+                <h4 className="text-base md:text-lg font-medium text-gray-900 mb-2">No Activities Yet</h4>
+                <p className="text-sm md:text-base text-gray-600 mb-4">
+                  Start participating in prediction markets to see your activities here.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Link
+                    href="/create-market"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    Create Market
+                  </Link>
+                  <Link
+                    href="/markets"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                  >
+                    Browse Markets
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
-                      {/* View Details Button */}
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <button
-                          onClick={() => setSelectedQuiz(quiz)}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-handwriting text-sm"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View Details
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
+        {activeTab === 'markets' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4">Markets Created</h2>
+            
+            {loading ? (
+              <div className="text-center py-6 md:py-8">
+                <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-blue-600 mx-auto mb-3 md:mb-4"></div>
+                <p className="text-sm md:text-base text-gray-600">Loading markets...</p>
+              </div>
+            ) : userMarkets.length > 0 ? (
+              <div className="space-y-3 md:space-y-4">
+                {userMarkets.map((activity) => {
+                  const market = activity.market;
+                  const marketStatus = MARKET_STATUS_CONFIG[market.status as keyof typeof MARKET_STATUS_CONFIG];
+                  
+                  return (
+                    <div
+                      key={market.id}
+                      className="border border-gray-200 rounded-lg p-3 md:p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-sm md:text-base text-gray-900 mb-2">
+                            {market.question}
+                          </h3>
+                          <div className="flex flex-col md:flex-row md:items-center md:space-x-4 text-xs md:text-sm text-gray-500 space-y-1 md:space-y-0">
+                            <span>Created: {formatDate(parseInt(market.createdat || '0'))}</span>
+                            <span>Market ID: {market.id}</span>
+                            <span>End Time: {formatDate(parseInt(market.endtime))}</span>
+                          </div>
+                          <div className="flex items-center space-x-4 mt-2 text-xs text-gray-600">
+                            <span>Pool: {formatVolume(market.totalpool)}</span>
+                            <span>Yes: {formatVolume(market.totalyes)}</span>
+                            <span>No: {formatVolume(market.totalno)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${marketStatus.bgColor} ${marketStatus.color}`}>
+                            {marketStatus.label}
+                          </span>
+                          <Link
+                            href={`/market/${market.id}`}
+                            className="px-2 md:px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            View
+                          </Link>
+                        </div>
+                      </div>
+                      
+                      {/* Creator Fee Claim for Resolved Markets */}
+                      {market.status === 1 && (
+                        <CreatorFeeClaim
+                          marketId={BigInt(market.id)}
+                          marketQuestion={market.question}
+                          className="mt-3"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-6 md:py-8">
+                <div className="text-gray-400 text-3xl md:text-4xl mb-3 md:mb-4">📊</div>
+                <h4 className="text-base md:text-lg font-medium text-gray-900 mb-2">No Markets Created</h4>
+                <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">
+                  Create your first prediction market to get started.
+                </p>
+                <Link
+                  href="/create-market"
+                  className="inline-block px-4 md:px-6 py-2 md:py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base"
+                >
+                  Create Market
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'events' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900">Blockchain Events</h2>
+              <div className="flex items-center space-x-2">
+                <select
+                  value={eventsLoading ? '' : 'all'}
+                  className="text-xs md:text-sm border border-gray-300 rounded-md px-2 py-1"
+                  disabled
+                >
+                  <option value="all">All Events</option>
+                </select>
+                <button
+                  onClick={refetchEvents}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Refresh"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            {eventsLoading ? (
+              <div className="text-center py-6 md:py-8">
+                <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-blue-600 mx-auto mb-3 md:mb-4"></div>
+                <p className="text-sm md:text-base text-gray-600">Loading events...</p>
+              </div>
+            ) : eventsError ? (
+              <div className="text-center py-6 md:py-8">
+                <div className="text-red-400 text-3xl md:text-4xl mb-3 md:mb-4">⚠️</div>
+                <h4 className="text-base md:text-lg font-medium text-gray-900 mb-2">Error Loading Events</h4>
+                <p className="text-sm md:text-base text-gray-600 mb-4">{eventsError}</p>
+                <button
+                  onClick={refetchEvents}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : events.length > 0 ? (
+              <div className="space-y-3 md:space-y-4">
+                {events.map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex items-center p-3 md:p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="text-lg md:text-2xl mr-3 md:mr-4 p-2 bg-blue-100 rounded-lg">
+                      🔗
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm md:text-base text-gray-900">
+                            {event.eventType}
+                          </p>
+                          <p className="text-xs md:text-sm text-gray-600 mt-1">
+                            {event.market.question}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Block: {event.blockNumber} • TX: {shortenAddress(event.transactionHash)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {event.eventType}
+                          </span>
+                          <p className="text-xs md:text-sm text-gray-500 mt-1">
+                            {formatDate(event.createdAt.getTime() / 1000)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+            ) : (
+              <div className="text-center py-6 md:py-8">
+                <div className="text-gray-400 text-3xl md:text-4xl mb-3 md:mb-4">🔗</div>
+                <h4 className="text-base md:text-lg font-medium text-gray-900 mb-2">No Events Found</h4>
+                <p className="text-sm md:text-base text-gray-600 mb-4">
+                  No blockchain events found for your address.
+                </p>
+              </div>
             )}
           </div>
         )}
 
-        {/* Rewards Tab */}
-        {activeTab === 'rewards' && (
-          <div className="space-y-6">
-            {rewardSummary && (
-              <>
-                {/* Rewards Summary */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-handwriting font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <Trophy className="w-5 h-5" />
-                    Rewards Overview
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <p className="text-3xl font-bold text-green-600">{rewardSummary.totalRewards}</p>
-                      <p className="text-sm text-green-600 font-handwriting">Total Earned</p>
-                    </div>
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <p className="text-3xl font-bold text-blue-600">{rewardSummary.claimedRewards}</p>
-                      <p className="text-sm text-blue-600 font-handwriting">Claimed</p>
-                    </div>
-                    <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                      <p className="text-3xl font-bold text-yellow-600">{rewardSummary.pendingRewards}</p>
-                      <p className="text-sm text-yellow-600 font-handwriting">Pending</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Claimable Rewards */}
-                {quizHistory.filter(q => !q.rewardClaimed && q.rewardAmount).length > 0 && (
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div className="p-6 border-b border-gray-200">
-                      <h3 className="text-lg font-handwriting font-bold text-gray-800 flex items-center gap-2">
-                        <Gift className="w-5 h-5" />
-                        Claimable Rewards
-                      </h3>
-                    </div>
-                    <div className="p-6">
-                      <div className="space-y-4">
-                        {quizHistory
-                          .filter(q => !q.rewardClaimed && q.rewardAmount)
-                          .map(quiz => (
-                            <div key={quiz.id} className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                              <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                                  <Trophy className="w-6 h-6 text-yellow-600" />
-                                </div>
-                                <div>
-                                  <h4 className="font-handwriting font-bold text-gray-900">{quiz.title}</h4>
-                                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                                    <span>Code: {quiz.snarkelCode}</span>
-                                    <span>Position: #{quiz.position}</span>
-                                    <span>Score: {quiz.score}/{quiz.totalPoints}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-handwriting font-bold text-gray-900 text-lg">
-                                  {quiz.rewardAmount} {quiz.rewardToken}
-                                </p>
-                                <button
-                                  onClick={() => handleClaimReward(quiz.id)}
-                                  className="mt-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all font-handwriting font-medium"
-                                >
-                                  Claim Reward
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Claimed Rewards History */}
-                {quizHistory.filter(q => q.rewardClaimed).length > 0 && (
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div className="p-6 border-b border-gray-200">
-                      <h3 className="text-lg font-handwriting font-bold text-gray-800 flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5" />
-                        Claimed Rewards History
-                      </h3>
-                    </div>
-                    <div className="p-6">
-                      <div className="space-y-4">
-                        {quizHistory
-                          .filter(q => q.rewardClaimed)
-                          .map(quiz => (
-                            <div key={quiz.id} className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
-                              <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                                  <CheckCircle className="w-6 h-6 text-green-600" />
-                                </div>
-                                <div>
-                                  <h4 className="font-handwriting font-bold text-gray-900">{quiz.title}</h4>
-                                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                                    <span>Code: {quiz.snarkelCode}</span>
-                                    <span>Position: #{quiz.position}</span>
-                                    <span>Claimed: {quiz.rewardClaimedAt ? formatDate(quiz.rewardClaimedAt) : 'Unknown'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-handwriting font-bold text-gray-900 text-lg">
-                                  {quiz.rewardAmount} {quiz.rewardToken}
-                                </p>
-                                {quiz.rewardTxHash && (
-                                  <a
-                                    href={`https://basescan.org/tx/${quiz.rewardTxHash}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-blue-600 hover:text-blue-800 font-mono"
-                                  >
-                                    View Transaction
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
+        <NotificationContainer 
+          notifications={notifications} 
+          onRemove={removeNotification} 
+        />
       </div>
-
-      {/* Quiz Detail Modal */}
-      {selectedQuiz && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-4 rounded-t-2xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Trophy className="w-6 h-6" />
-                  <div>
-                    <h3 className="font-handwriting text-xl font-bold">Quiz Details</h3>
-                    <p className="text-purple-100 text-sm">{selectedQuiz.title}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedQuiz(null)}
-                  className="text-white hover:text-purple-200 transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* Quiz Info */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-handwriting font-bold text-gray-900">Quiz Code</h4>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-gray-700">{selectedQuiz.snarkelCode}</span>
-                    <button
-                      onClick={() => copyToClipboard(selectedQuiz.snarkelCode)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <h4 className="font-handwriting font-bold text-gray-900">Position</h4>
-                  <div className="flex items-center gap-2">
-                    {getPositionIcon(selectedQuiz.position)}
-                    <span className="font-medium text-gray-700">#{selectedQuiz.position}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <h4 className="font-handwriting font-bold text-gray-900">Score</h4>
-                  <span className="font-medium text-gray-700">{selectedQuiz.score}/{selectedQuiz.totalPoints}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <h4 className="font-handwriting font-bold text-gray-900">Network</h4>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{getNetworkIcon(selectedQuiz.chainId)}</span>
-                    <span className="font-medium text-gray-700">{getNetworkName(selectedQuiz.chainId)}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <h4 className="font-handwriting font-bold text-gray-900">Completed</h4>
-                  <span className="font-medium text-gray-700">{formatDate(selectedQuiz.completedAt)}</span>
-                </div>
-              </div>
-
-              {/* Rewards Info */}
-              {selectedQuiz.rewardAmount && (
-                <div className="border-t border-gray-200 pt-6">
-                  <h4 className="font-handwriting font-bold text-gray-900 mb-4">Rewards</h4>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h5 className="font-handwriting font-medium text-gray-700">Amount</h5>
-                      <span className="font-bold text-gray-900 text-lg">
-                        {selectedQuiz.rewardAmount} {selectedQuiz.rewardToken}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <h5 className="font-handwriting font-medium text-gray-700">Status</h5>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        selectedQuiz.rewardClaimed 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {selectedQuiz.rewardClaimed ? 'Claimed' : 'Available to Claim'}
-                      </span>
-                    </div>
-
-                    {selectedQuiz.rewardClaimed && selectedQuiz.rewardClaimedAt && (
-                      <div className="flex items-center justify-between">
-                        <h5 className="font-handwriting font-medium text-gray-700">Claimed At</h5>
-                        <span className="font-medium text-gray-700">{formatDate(selectedQuiz.rewardClaimedAt)}</span>
-                      </div>
-                    )}
-
-                    {selectedQuiz.rewardTxHash && (
-                      <div className="flex items-center justify-between">
-                        <h5 className="font-handwriting font-medium text-gray-700">Transaction</h5>
-                        <a
-                          href={`https://basescan.org/tx/${selectedQuiz.rewardTxHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 font-mono text-sm"
-                        >
-                          {selectedQuiz.rewardTxHash.slice(0, 8)}...{selectedQuiz.rewardTxHash.slice(-6)}
-                          <ExternalLink className="w-3 h-3 inline ml-1" />
-                        </a>
-                      </div>
-                    )}
-                  </div>
-
-                  {!selectedQuiz.rewardClaimed && (
-                    <div className="mt-6 pt-6 border-t border-gray-200">
-                      <button
-                        onClick={() => handleClaimReward(selectedQuiz.id)}
-                        className="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all font-handwriting font-bold shadow-md"
-                      >
-                        <Gift className="w-4 h-4 inline mr-2" />
-                        Claim Reward
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Bottom Navigation */}
-      <BottomNavigation />
     </div>
   );
-}
+};
+
+const Profile: React.FC = () => {
+  return (
+    <MiniAppProvider>
+      <ProfileContent />
+    </MiniAppProvider>
+  );
+};
+
+export default Profile;

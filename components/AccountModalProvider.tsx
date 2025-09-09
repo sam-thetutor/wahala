@@ -31,15 +31,16 @@ export default function AccountModalProvider({ children }: Props) {
         const res = await fetch(`/api/account?wallet=${wallet}`, { cache: 'no-store' })
         const data = await res.json()
         if (!aborted) {
-          if (!data.exists) {
-            setIsOpen(true)
-          } else if (!data.name) {
-            setIsOpen(true)
-          }
+          // Modal disabled - no longer prompting users to set up profile name
+          // if (!data.exists) {
+          //   setIsOpen(true)
+          // } else if (!data.name) {
+          //   setIsOpen(true)
+          // }
         }
       } catch (e) {
-        // Open modal to allow user to retry creating
-        if (!aborted) setIsOpen(true)
+        // Modal disabled - no longer prompting users to set up profile name
+        // if (!aborted) setIsOpen(true)
       }
     }
     ensureAccount()

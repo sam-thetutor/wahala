@@ -1,11 +1,11 @@
 import type { Hex } from 'viem'
 
-const DIVVI_CONSUMER_ADDRESS: `0x${string}` = '0x53eaF4CD171842d8144e45211308e5D90B4b0088'
+const DIVVI_CONSUMER_ADDRESS: `0x${string}` = '0x21D654daaB0fe1be0e584980ca7C1a382850939f'
 
 // Always safe: return empty suffix if SDK is unavailable
 // @ts-ignore - downstream consumers accept Hex '0x' as no-op suffix
 export function getReferralDataSuffix(_providers: `0x${string}`[] = []): Hex {
-  return '0x' as Hex
+  return DIVVI_CONSUMER_ADDRESS as Hex
 }
 
 export async function submitDivviReferral(txHash: Hex, chainId: number): Promise<void> {

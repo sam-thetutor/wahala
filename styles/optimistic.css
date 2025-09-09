@@ -1,0 +1,196 @@
+/* Optimistic Update Styles */
+
+.shares-display {
+  transition: all 0.3s ease;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.shares-display.syncing {
+  opacity: 0.7;
+  background-color: #f0f8ff;
+  border-color: #3b82f6;
+  position: relative;
+}
+
+.shares-display.syncing::after {
+  content: "Syncing...";
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.75rem;
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+.shares-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.total-investment {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.total-investment .label {
+  color: #64748b;
+}
+
+.total-investment .value {
+  color: #1e293b;
+}
+
+.syncing-indicator {
+  color: #3b82f6;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+.shares-breakdown {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.yes-shares, .no-shares {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.yes-shares .label {
+  color: #059669;
+  font-weight: 500;
+}
+
+.yes-shares .value {
+  color: #047857;
+}
+
+.no-shares .label {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.no-shares .value {
+  color: #b91c1c;
+}
+
+/* Buy Button Styles */
+.buy-button {
+  position: relative;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.buy-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.buy-yes {
+  background-color: #059669;
+  color: white;
+}
+
+.buy-yes:hover:not(:disabled) {
+  background-color: #047857;
+  transform: translateY(-1px);
+}
+
+.buy-no {
+  background-color: #dc2626;
+  color: white;
+}
+
+.buy-no:hover:not(:disabled) {
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+}
+
+.buy-button.syncing {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.buy-button.market-ended {
+  background-color: #6b7280;
+  color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.buy-button.market-ended:hover {
+  background-color: #6b7280;
+  transform: none;
+}
+
+.buy-button.clicked {
+  transform: scale(0.95);
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.error-indicator {
+  width: 16px;
+  height: 16px;
+  background-color: #dc2626;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Pulse animation for syncing state */
+.syncing {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Success animation */
+.buy-button.success {
+  background-color: #059669;
+  animation: successPulse 0.6s ease-out;
+}
+
+@keyframes successPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}

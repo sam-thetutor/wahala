@@ -1,0 +1,16 @@
+{
+  "network": "celo-mainnet",
+  "chainId": 42220,
+  "deployedAt": "2025-09-08T21:43:51.355Z",
+  "deployer": "0x21D654daaB0fe1be0e584980ca7C1a382850939f",
+  "contracts": {
+    "PredictionMarketCore": {
+      "address": "0x13ad4e407c7317f2378f1ce900c21997d3e03822",
+      "note": "SIMULATED - Replace with real address after actual deployment"
+    },
+    "PredictionMarketClaims": {
+      "address": "0xb6ba795df040f4677d1302d97e760b38ea32b295",
+      "note": "SIMULATED - Replace with real address after actual deployment"
+    }
+  }
+}

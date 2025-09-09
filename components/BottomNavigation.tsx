@@ -90,7 +90,7 @@ export default function BottomNavigation() {
                       <span className={`font-handwriting text-xs sm:text-sm lg:text-base font-semibold truncate ${
                         isActive('/profile') ? 'text-white' : 'text-slate-700'
                       }`}>
-                        {getUserDisplayName() || displayName || username || `FID: ${userFid}`}
+                        {getUserDisplayName() || displayName || username || `FID: ${userFid}` || 'User'}
                       </span>
                     </>
                   ) : (

@@ -1,0 +1,23 @@
+{
+  "buildCommand": "pnpm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "installCommand": "pnpm install",
+  "functions": {
+    "app/api/polling/start/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/cron/sync-markets/route.ts": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/sync-markets",
+      "schedule": "0 0 * * *"
+    }
+  ],
+  "env": {
+    "ENABLE_POLLING": "true"
+  }
+}

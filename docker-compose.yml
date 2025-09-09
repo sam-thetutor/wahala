@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  zyn-app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - ENABLE_POLLING=true
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_PREDICTION_MARKET_ADDRESS_CELO=${NEXT_PUBLIC_PREDICTION_MARKET_ADDRESS_CELO}
+      - NEXT_PUBLIC_PREDICTION_MARKET_CLAIMS_ADDRESS_CELO=${NEXT_PUBLIC_PREDICTION_MARKET_CLAIMS_ADDRESS_CELO}
+    volumes:
+      - ./.env.local:/app/.env.local:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/polling/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

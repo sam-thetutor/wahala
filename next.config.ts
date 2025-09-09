@@ -11,28 +11,7 @@ const nextConfig: NextConfig = {
     PORT: '4000'
   },
   
-  // Enable Turbopack for faster development builds
-  turbopack: {
-    // Configure module resolution for better performance
-    resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.mjs', '.json'],
-    
-    // Configure aliases for cleaner imports and better performance
-    resolveAlias: {
-      '@': './',
-      '@/components': './components',
-      '@/hooks': './hooks',
-      '@/lib': './lib',
-      '@/context': './context',
-      '@/app': './app',
-      
-      // Conditional aliases for better browser optimization
-      'react': { browser: 'react' },
-      'react-dom': { browser: 'react-dom' },
-      
-      // Performance optimizations for common libraries
-      'lodash': 'lodash-es',
-    },
-  },
+  // Turbopack configuration moved to experimental section
   
   // Optimized webpack configuration for production builds
   webpack: (config, { isServer, dev }) => {
@@ -125,6 +104,40 @@ const nextConfig: NextConfig = {
     // Enable server components HMR cache for better performance
     serverComponentsHmrCache: true,
     
+    // Optimize package imports
+    optimizePackageImports: [
+      'lucide-react',
+      '@tanstack/react-query',
+      'framer-motion',
+      'viem',
+      'wagmi'
+    ],
+    
+    // Enable Turbopack for faster development builds
+    turbo: {
+      // Configure module resolution for better performance
+      resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.mjs', '.json'],
+      
+      // Configure aliases for cleaner imports and better performance
+      resolveAlias: {
+        '@': './',
+        '@/components': './components',
+        '@/hooks': './hooks',
+        '@/lib': './lib',
+        '@/context': './context',
+        '@/app': './app',
+      },
+      
+      // Additional Turbopack optimizations
+      rules: {
+        // Optimize large libraries
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+    
     // Note: forceSwcTransforms removed to be compatible with Turbopack
     // forceSwcTransforms: true,
   },
@@ -139,6 +152,14 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 60,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'a2ede-rqaaa-aaaal-ai6sq-cai.raw.icp0.io',
+        port: '',
+        pathname: '/uploads/**',
+      },
+    ],
   },
 };
 

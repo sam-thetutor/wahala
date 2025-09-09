@@ -2,7 +2,7 @@
 
 import React, { ReactNode } from 'react';
 import { MiniKitProvider } from '@coinbase/onchainkit/minikit';
-import { base } from '@reown/appkit/networks';
+import { celo } from '@reown/appkit/networks';
 
 interface MiniAppWrapperProps {
   children: ReactNode;
@@ -10,7 +10,7 @@ interface MiniAppWrapperProps {
 
 export const MiniAppWrapper: React.FC<MiniAppWrapperProps> = ({ children }) => {
   return (
-    <MiniKitProvider chain={base}>
+    <MiniKitProvider chain={celo}>
       {children}
     </MiniKitProvider>
   );

@@ -8,31 +8,32 @@ import type { AppKitNetwork } from '@reown/appkit/networks'
 import { coinbaseWallet } from 'wagmi/connectors'
 
 // Get projectId from https://dashboard.reown.com
-export const projectId = process.env.NEXT_PUBLIC_PROJECT_ID
+export const projectId = process.env.NEXT_PUBLIC_PROJECT_ID || "48f6c31f2547205456c0abfa1fe6d7e3"
 
 if (!projectId) {
   throw new Error('Project ID is not defined in config')
 }
 
-export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [base, celo] // Base first, then Celo
+export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [celo, base] // Celo first for mainnet, then Base
 
-// Create base wagmi config with only Farcaster
+// Create base wagmi config with Farcaster Mini App support
 export const baseWagmiConfig = {
   chains: networks,
   connectors: [
+    // Farcaster Mini App connector should be first for Mini App context
+    farcasterFrame(),
     coinbaseWallet({
-      appName: 'Snarkels',
-      appLogoUrl: 'https://snarkels.lol/logo.png',
+      appName: 'Zyn',
+      appLogoUrl: 'https://zynp.vercel.app/logo.png',
       preference: 'all', // Supports both EOA and Smart Wallet
       version: '4' // Use latest version
-    }),
-    farcasterFrame()
+    })
   ],
   storage: createStorage({
     storage: cookieStorage,
   }),
   transports: {
-    [celo.id]: http(),
+    [celo.id]: http('https://forno.celo.org'),
     [base.id]: http(),
   },
 }
@@ -44,40 +45,39 @@ export const wagmiAdapter = new WagmiAdapter({
   ssr: true
 })
 
-// Create AppKit instance with all features enabled
-// The conditional logic will be handled in the UI components
+// Create AppKit instance with Farcaster Mini App support
 export const appKit = createAppKit({
   adapters: [wagmiAdapter],
   networks,
   projectId,
-  defaultNetwork: base,
+  defaultNetwork: celo,
   metadata: {
-    name: 'Snarkels',
-    description: 'Snarkels - Create and host interactive quizzes',
-    url: 'https://snarkels.lol',
-    icons: ['https://snarkels.lol/logo.png']
+    name: 'Zyn',
+    description: 'Zyn - Create and trade on prediction markets',
+    url: 'https://zynp.vercel.app',
+    icons: ['https://zynp.vercel.app/logo.png']
   },
   featuredWalletIds: [
-    "fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa",
-    "c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96",
-    "d01c7758d741b363e637a817a09bcf579feae4db9f5bb16f599fdd1f66e2f974",
+    "fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa", // Farcaster first
+    "c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96", // Coinbase
+    "d01c7758d741b363e637a817a09bcf579feae4db9f5bb16f599fdd1f66e2f974", // MetaMask
   ],
   features: {
     analytics: true,
-    // Enable all authentication features by default
-    email: true,
+    // Enable Farcaster social login first
     socials: [
+      "farcaster", // Farcaster first for Mini App context
       "google",
       "x", 
       "github",
       "discord",
       "apple",
       "facebook",
-      "farcaster",
     ],
-    emailShowWallets: true,
+    email: true,
+    emailShowWallets: false, // Disable email wallets in Mini App context
   },
-  // Show all wallets
+  // Show all wallets but prioritize Farcaster
   allWallets: "SHOW",
   // Set theme to white
   themeMode: "light"

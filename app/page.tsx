@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
@@ -22,7 +22,9 @@ import {
   Lightbulb,
   HelpCircle,
   Home,
-  LogOut
+  LogOut,
+  TrendingUp,
+  BarChart3
 } from 'lucide-react';
 import WalletConnectButton from '@/components/WalletConnectButton';
 import { FarcasterUI } from '@/components/FarcasterUI';
@@ -31,12 +33,19 @@ import { sdk } from '@farcaster/miniapp-sdk';
 import { useFarcaster } from '@/components/FarcasterProvider';
 import { useMiniApp } from '@/hooks/useMiniApp';
 import FarcasterUserProfile from '@/components/FarcasterUserProfile';
-import BottomNavigation from '@/components/BottomNavigation';
+import { useAllMarketsApi } from '@/hooks/useMarketsApi';
+import { useMarketEventsWithStore } from '@/stores/eventsStore';
+import { useEventsStore } from '@/stores/eventsStore';
+import { formatEther } from 'viem';
+import NotificationContainer, { useNotifications } from '@/components/NotificationContainer';
+import ReferralBanner from '@/components/ReferralBanner';
+import { MiniAppProvider, useMiniApp as useMiniAppContext } from '@/contexts/MiniAppContext';
+// Removed BottomNavigation - now using TopNavbar
 
 
 
 
-export default function HomePage() {
+const HomePageContent: React.FC = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
   const [floatingElements, setFloatingElements] = useState<Array<{
@@ -50,15 +59,126 @@ export default function HomePage() {
   }>>([]);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
-  // Action bar is always visible, no need for open/close state
-
   const { isConnected } = useAccount();
   const { isInFarcasterContext } = useFarcaster();
-  const { isMiniApp, context: miniAppContext, userFid, username, displayName, pfpUrl } = useMiniApp();
+  const { isMiniApp, userFid, username, displayName, pfpUrl } = useMiniApp();
+  const { allMarkets, stats, loading: marketsLoading, refetch } = useAllMarketsApi();
+  const { logs, fetchAllLogs, isLoading: logsLoading } = useEventsStore();
+  const { addNotification } = useNotifications();
+  const { composeCast, triggerHaptic } = useMiniApp();
+
+  // Connect market events to store
+  useMarketEventsWithStore();
+
+  // Helper function to get total volume directly from contract
+  const getTotalVolumeFromContract = async () => {
+    try {
+      // This would require a direct contract call to get total volume
+      // For now, we'll calculate from available data
+      return 0n;
+    } catch (error) {
+      console.error('Error getting volume from contract:', error);
+      return 0n;
+    }
+  };
 
 
 
 
+
+  // Load events data when component mounts
+  useEffect(() => {
+    console.log('🔍 Homepage: Checking if events need to be fetched...', { logsLength: logs.length });
+    if (logs.length === 0) {
+      console.log('🔍 Homepage: Fetching all logs from deployment...');
+      fetchAllLogs();
+    }
+  }, [logs.length, fetchAllLogs]);
+
+  // Trigger event listener to check for new events on page load
+  useEffect(() => {
+    const triggerEventListener = async () => {
+      try {
+        console.log('🔄 Triggering event listener check...');
+        console.log('✅ Event listener triggered successfully');
+        
+        // Also refresh market data to ensure UI is up to date
+        refetch();
+      } catch (error) {
+        console.error('❌ Failed to trigger event listener:', error);
+      }
+    };
+
+    // Trigger immediately on page load
+    triggerEventListener();
+
+    // Also trigger every 30 seconds for real-time updates
+    const interval = setInterval(triggerEventListener, 30000);
+
+    return () => clearInterval(interval);
+  }, [refetch]);
+
+  // Use stats from API, but add active traders calculation and improved volume calculation
+  const enhancedStats = useMemo(() => {
+    // Count unique active traders from events
+    const uniqueTraders = new Set<string>();
+    allMarkets.forEach(market => {
+      if (market.creator && market.creator !== '0x0') {
+        uniqueTraders.add(market.creator.toLowerCase());
+      }
+    });
+    
+    // Add traders from events if available
+    const tradingEvents = logs.filter(log => 
+      log.eventName === 'SharesBought' || 
+      log.eventName === 'MarketCreated' ||
+      log.eventName === 'WinningsClaimed'
+    );
+
+    tradingEvents.forEach(event => {
+      const args = event.args || {};
+      if (args.creator) uniqueTraders.add(args.creator.toLowerCase());
+      if (args.buyer) uniqueTraders.add(args.buyer.toLowerCase());
+      if (args.claimant) uniqueTraders.add(args.claimant.toLowerCase());
+    });
+
+    // Calculate volume from trading events as a backup/additional check
+    let calculatedVolume = 0n;
+    const sharesBoughtEvents = logs.filter(log => log.eventName === 'SharesBought');
+    sharesBoughtEvents.forEach(event => {
+      const args = event.args || {};
+      if (args.amount) {
+        calculatedVolume += BigInt(args.amount);
+      }
+    });
+
+    // Use the higher of database-calculated volume or event-calculated volume
+    const databaseVolume = BigInt(stats.totalVolume || '0');
+    const finalVolume = calculatedVolume > databaseVolume ? calculatedVolume : databaseVolume;
+
+    console.log('📊 Volume calculation debug:', {
+      databaseVolume: databaseVolume.toString(),
+      calculatedVolume: calculatedVolume.toString(),
+      finalVolume: finalVolume.toString(),
+      sharesBoughtEventsCount: sharesBoughtEvents.length,
+      allMarketsCount: allMarkets.length
+    });
+
+    return {
+      ...stats,
+      activeTraders: uniqueTraders.size,
+      totalVolume: finalVolume
+    };
+  }, [stats, allMarkets, logs]);
+
+  // Get trending markets (most active)
+  const getTrendingMarkets = () => {
+    const currentTime = Math.floor(Date.now() / 1000);
+    return allMarkets
+      .filter((m) => m.status === 0 && Number(m.endtime) > currentTime) // Only active markets
+      .sort((a, b) => Number(b.totalpool) - Number(a.totalpool))
+      .slice(0, 3);
+  };
 
   useEffect(() => {
     setIsLoaded(true);
@@ -108,254 +228,258 @@ export default function HomePage() {
   }, []);
 
   return (
-    <FarcasterUI>
-      <div className="min-h-screen overflow-hidden relative">
-        {/* Enhanced textured background */}
-        <div className="fixed inset-0 opacity-40 pointer-events-none">
-          <div 
-            className="w-full h-full"
-            style={{
-              backgroundImage: `
-                repeating-linear-gradient(
-                  transparent,
-                  transparent 24px,
-                  #E7E3D4 24px,
-                  #E7E3D4 26px
-                ),
-                radial-gradient(circle at 20% 80%, rgba(252, 255, 82, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(86, 223, 124, 0.15) 0%, transparent 50%),
-                radial-gradient(ellipse 200px 100px at center, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-                repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255, 255, 255, 0.03) 1deg, transparent 2deg)
-              `,
-              backgroundSize: '100% 26px, 600px 600px, 800px 800px, 400px 200px, 60px 60px',
-              filter: 'contrast(1.1) brightness(0.98)'
-            }}
-          />
-          {/* Paper texture overlay */}
-          <div 
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: `
-                radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0),
-                repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px)
-              `,
-              backgroundSize: '20px 20px, 30px 30px'
-            }}
-          />
-        </div>
+    <div className="min-h-screen">
+      {/* Referral Banner */}
+      <ReferralBanner />
+      
+      {/* Hero Section - Mobile Optimized */}
+      <div className="relative overflow-hidden min-h-screen flex items-center justify-center">
+        <div className="relative px-3 sm:px-6 lg:px-8 text-center">
+          <div className="max-w-7xl mx-auto flex flex-col items-center justify-center text-center">
+            <img src="/logo.png" alt="Snarkels" className="w-12 h-12 md:w-20 md:h-20" />
+            <h1 className="text-lg md:text-4xl font-bold text-gray-900 mb-3">
+              Zyn Protocol
+            </h1>
+            <p className="text-xs md:text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
+              Decentralized prediction markets on Celo - where your insights
+              become rewards
+            </p>
 
-        {/* Floating elements */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          {floatingElements.map((element) => (
-            <div
-              key={element.id}
-              className="absolute pointer-events-none animate-float-quiz"
-              style={{
-                left: `${element.x}%`,
-                top: `${element.y}%`,
-                width: `${element.size}px`,
-                height: `${element.size}px`,
-                transform: isMobile ? 'none' : `translate(${(mousePosition.x - 50) * 0.02}px, ${(mousePosition.y - 50) * 0.02}px) rotate(${element.id * 30}deg)`,
-                animationDelay: `${element.delay}ms`,
-                animationDuration: `${element.duration}ms`,
-              }}
-            >
-              {element.type === 'brain' && <Brain className="w-full h-full text-blue-500" />}
-              {element.type === 'lightbulb' && <Lightbulb className="w-full h-full text-amber-500" />}
-              {element.type === 'question' && <HelpCircle className="w-full h-full text-purple-500" />}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link
+                href="/markets"
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 shadow-lg text-sm"
+              >
+                🚀 Start Trading Now
+              </Link>
+              <Link
+                href="/create-market"
+                className="px-6 py-3 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-50 transition-all duration-200 transform hover:scale-105 shadow-lg border-2 border-gray-200 text-sm"
+              >
+                📊 Create Market
+              </Link>
             </div>
-          ))}
-        </div>
 
-        {/* Mobile Layout */}
-        {isMobile ? (
-          <div className="relative z-10 min-h-screen p-4 sm:p-6 pb-28 flex flex-col overflow-x-hidden">
-
-            
-            {/* Mobile Header */}
-
-            {/* Farcaster User Profile - Show when in Farcaster context OR Mini App context */}
-            {(isInFarcasterContext() || isMiniApp) && (
-              <div className="mb-6">
-                <FarcasterUserProfile variant="inline" showPfp={true} showEmoji={true} />
-              </div>
-            )}
-
-            {/* Featured Snarkels Section */}
-            <div className={`flex-1 flex flex-col items-center justify-center transition-all duration-1500 delay-300 ${
-              isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
-            }`}>
-              {/* Logo above play button */}
-              <div className="mb-8 text-center transform translate-x-5 translate-y-2">
-                <div className="w-40 h-40 sm:w-48 sm:h-48">
-                  <img 
-                    src="/logo.png" 
-                    alt="Snarkels Logo" 
-                    className="w-full h-full object-contain"
-                  />
+            {/* Stats Dashboard in Hero - Mobile Optimized */}
+            <div className="grid grid-cols-2 md:grid-cols-4 mt-6 gap-3 mb-6 max-w-4xl mx-auto">
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-white/20">
+                <div className="text-lg md:text-2xl font-bold text-blue-600 mb-1">
+                  {marketsLoading ? '...' : enhancedStats.totalMarkets}
                 </div>
+                <p className="text-xs text-gray-700 font-medium">
+                  Total Markets
+                </p>
               </div>
-              
-              {/* Action Buttons */}
-              <div className="text-center px-2 space-y-4">
-                {/* Play Button */}
-                <Link
-                  href="/join"
-                  className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-black text-lg text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-blue-400/80 to-purple-500/80 hover:from-blue-300/90 hover:to-purple-400/90 overflow-hidden group"
-                >
-                  <span className="font-handwriting">Play a Snarkel</span>
-                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                
-                {/* Two Buttons Row */}
-                <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                  <Link
-                    href="/featured"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-base text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-emerald-500/80 to-teal-500/80 hover:from-emerald-400/90 hover:to-teal-400/90 overflow-hidden group"
-                  >
-                    <span className="font-handwriting">Explore Featured</span>
-                    <Star className="h-4 w-4 group-hover:rotate-12 transition-transform" />
-                  </Link>
-                  
-                  <Link
-                    href="/create"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-base text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-orange-500/80 to-red-500/80 hover:from-orange-400/90 hover:to-red-400/90 overflow-hidden group"
-                  >
-                    <span className="font-handwriting">Create Snarkel</span>
-                    <Plus className="h-4 w-4 group-hover:rotate-12 transition-transform" />
-                  </Link>
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-white/20">
+                <div className="text-lg md:text-2xl font-bold text-green-600 mb-1">
+                  {marketsLoading ? '...' : enhancedStats.activeTraders}
                 </div>
+                <p className="text-xs text-gray-700 font-medium">
+                  Active Traders
+                </p>
+              </div>
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-white/20">
+                <div className="text-lg md:text-2xl font-bold text-purple-600 mb-1">
+                  {marketsLoading ? '...' : (() => {
+                    const volume = enhancedStats.totalVolume;
+                    const volumeInCelo = formatEther(volume);
+                    const roundedVolume = parseFloat(volumeInCelo).toFixed(0);
+                    console.log('🔍 Volume display debug:', {
+                      rawVolume: volume.toString(),
+                      volumeInCelo: volumeInCelo,
+                      roundedVolume: roundedVolume,
+                      isBigInt: typeof volume === 'bigint'
+                    });
+                    return volume > 0n ? `${Number(roundedVolume)*10} CELO` : '0 CELO';
+                  })()}
+                </div>
+                <p className="text-xs text-gray-700 font-medium">
+                  {marketsLoading ? 'Loading...' : (enhancedStats.totalVolume > 0n ? 'Total Volume' : 'No Markets Yet')}
+                </p>
+              </div>
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-white/20">
+                <div className="text-lg md:text-2xl font-bold text-yellow-600 mb-1">
+                  {marketsLoading ? '...' : enhancedStats.resolvedMarkets}
+                </div>
+                <p className="text-xs text-gray-700 font-medium">
+                  Resolved markets
+                </p>
               </div>
             </div>
-            
-            {/* Bottom Navigation */}
-            <BottomNavigation />
           </div>
-        ) : (
-          /* Desktop Layout */
-          <div className="relative z-10 min-h-screen p-8 lg:p-16 pb-24">
-
-
-            {/* Farcaster User Profile - Show when in Farcaster context OR Mini App context */}
-            {(isInFarcasterContext() || isMiniApp) && (
-              <div className={`absolute top-8 right-8 lg:top-16 lg:right-16 transition-all duration-1500 delay-200 ${
-                isLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
-              }`}>
-                <FarcasterUserProfile variant="inline" showPfp={true} showEmoji={true} />
-              </div>
-            )}
-
-            {/* Logo - Image in left upper */}
-            <div className={`absolute top-8 left-8 lg:top-16 lg:left-16 transition-all duration-1500 delay-100 ${
-              isLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'
-            }`}>
-              <div className="w-40 h-40 lg:w-80 lg:h-80 transform lg:translate-x-32">
-                <img 
-                  src="/logo.png" 
-                  alt="Snarkels Logo" 
-                  className="w-full h-full object-contain"
-                />
               </div>
             </div>
 
-            {/* Featured Snarkels Section - Center */}
-            <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-1500 delay-700 ${
-              isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
-            }`}>
-
-              
-              {/* Action Buttons */}
-              <div className="text-center space-y-6">
-                {/* Play Button */}
+      {/* Trending Markets & Leaderboard - Mobile Optimized */}
+      <div className="py-8 px-3 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Trending Markets */}
+            <div className="lg:col-span-3">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+                  Trending Markets
+                </h2>
                 <Link
-                  href="/join"
-                  className="inline-flex items-center justify-center gap-3 px-12 py-4 rounded-xl font-black text-2xl text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-blue-400/80 to-purple-500/80 hover:from-blue-300/90 hover:to-purple-400/90 overflow-hidden group"
+                  href="/markets"
+                  className="text-blue-600 hover:text-blue-700 font-medium text-sm"
                 >
-                  <span className="font-handwriting">Play a Snarkel</span>
-                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  View All →
                 </Link>
-                
-                {/* Two Buttons Row */}
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                  <Link
-                    href="/featured"
-                    className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-semibold text-lg text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-emerald-500/80 to-teal-500/80 hover:from-emerald-400/90 hover:to-teal-400/90 overflow-hidden group"
-                  >
-                    <span className="font-handwriting">Explore Featured</span>
-                    <Star className="h-5 w-5 group-hover:rotate-12 transition-transform" />
-                  </Link>
-                  
-                  <Link
-                    href="/create"
-                    className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-semibold text-lg text-white hover:scale-105 transition-all duration-300 shadow-lg bg-gradient-to-r from-orange-500/80 to-red-500/80 hover:from-orange-400/90 hover:to-red-400/90 overflow-hidden group"
-                  >
-                    <span className="font-handwriting">Create Snarkel</span>
-                    <Plus className="h-5 w-5 group-hover:rotate-12 transition-transform" />
-                  </Link>
-                </div>
               </div>
+          {marketsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 animate-pulse"
+                >
+                  <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-2 bg-gray-200 rounded mb-3"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-3"></div>
+                  <div className="h-2 bg-gray-200 rounded"></div>
+                </div>
+              ))}
             </div>
-
-
-
-            {/* What you can do - positioned to avoid overlap */}
-            <div className={`absolute top-32 right-8 lg:top-52 lg:right-16 max-w-sm transition-all duration-1500 delay-300 ${
-              isLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
-            }`}>
-              <div className="text-center">
-                <h3 className="font-handwriting text-2xl lg:text-3xl mb-6 text-slate-800">
-                  What you can do:
-                </h3>
-                <div className="space-y-4 font-handwriting text-base lg:text-lg text-slate-700">
-                  <div className="flex items-center gap-4">
-                    <span className="text-2xl lg:text-3xl animate-pulse">✏️</span>
-                    <span>Create interactive quizzes</span>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {getTrendingMarkets().map((market) => (
+                <div
+                  key={market.id.toString()}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow"
+                >
+                  <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-sm">
+                    {market.question}
+                  </h3>
+                  <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+                    {market.description}
+                  </p>
+                  <div className="space-y-1 mb-3">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">YES:</span>
+                      <span className="font-medium text-green-600">
+                        {Number(market.totalyes) > 0 || Number(market.totalno) > 0
+                          ? `${(
+                              (Number(market.totalyes) /
+                                (Number(market.totalyes) +
+                                  Number(market.totalno))) *
+                              100
+                            ).toFixed(1)}%`
+                          : "50.0%"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">NO:</span>
+                      <span className="font-medium text-red-600">
+                        {Number(market.totalyes) > 0 || Number(market.totalno) > 0
+                          ? `${(
+                              (Number(market.totalno) /
+                                (Number(market.totalyes) +
+                                  Number(market.totalno))) *
+                              100
+                            ).toFixed(1)}%`
+                          : "50.0%"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-2xl lg:text-3xl animate-bounce">🎮</span>
-                    <span>Join real-time battles</span>
+                  <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
+                    <span>Pool: {formatEther(BigInt(market.totalpool))} CELO</span>
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                      {market.category}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-2xl lg:text-3xl animate-spin-slow">⚡</span>
-                    <span>Speed = more points!</span>
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/market/${market.id}`}
+                      className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-lg hover:bg-blue-700 transition-colors text-center block text-xs"
+                    >
+                      View Market
+                    </Link>
+                    {isMiniApp && (
+                      <button
+                        onClick={async () => {
+                          await triggerHaptic('light');
+                          await composeCast(
+                            `Check out this prediction market: "${market.question}" on @snarkels! 🚀`,
+                            [`https://snarkels.lol/market/${market.id}`]
+                          );
+                        }}
+                        className="bg-green-600 text-white py-2 px-2 rounded-lg hover:bg-green-700 transition-colors text-xs"
+                        title="Share on Farcaster"
+                      >
+                        📢
+                      </button>
+                    )}
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
-
-            {/* Rewards section - positioned to avoid overlap */}
-            <div className={`absolute bottom-16 lg:bottom-32 left-8 lg:left-16 max-w-sm transition-all duration-1500 delay-500 ${
-              isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-            }`}>
-              <div className="text-center">
-                <div className="flex items-center gap-4 mb-6 justify-center">
-                  <Trophy className="w-8 lg:w-10 h-8 lg:h-10 text-slate-600 animate-spin-slow" />
-                  <h3 className="font-handwriting text-2xl lg:text-3xl text-slate-800">Earn Rewards!</h3>
-                </div>
-                <div className="space-y-3 font-handwriting text-base lg:text-lg text-slate-700">
-                  <div className="flex items-center gap-3">
-                    <Zap className="w-5 lg:w-6 h-5 lg:h-6 text-slate-500 animate-pulse" />
-                    <span>ERC20 tokens</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Star className="w-5 lg:w-6 h-5 lg:h-6 text-emerald-500 animate-pulse" />
-                    <span>Speed bonuses</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Shield className="w-5 lg:w-6 h-5 lg:h-6 text-slate-500 animate-pulse" />
-                    <span>Leaderboards</span>
-                  </div>
-                </div>
-              </div>
+          )}
             </div>
-            
-            {/* Bottom Navigation */}
-            <BottomNavigation />
           </div>
-        )}
-
-
+        </div>
       </div>
+
+      {/* How It Works - Mobile Optimized */}
+      <div className="py-8 px-3 mb-6 sm:px-6 lg:px-8 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-xl md:text-2xl font-bold text-center text-gray-900 mb-8">
+            How It Works
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-lg font-bold text-blue-600">1</span>
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">
+                Browse Markets
+              </h3>
+              <p className="text-sm text-gray-600">
+                Find interesting prediction questions that match your expertise
+              </p>
+            </div>
+              <div className="text-center">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-lg font-bold text-green-600">2</span>
+                </div>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">
+                Buy Shares
+              </h3>
+              <p className="text-sm text-gray-600">
+                Invest in YES or NO outcomes based on your predictions
+              </p>
+                  </div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-lg font-bold text-yellow-600">3</span>
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">
+                Claim Winnings
+              </h3>
+              <p className="text-sm text-gray-600">
+                Get rewarded when your predictions turn out to be correct
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Main component with providers
+export default function HomePage() {
+  const { notifications, removeNotification } = useNotifications();
+
+  return (
+    <FarcasterUI>
+      <MiniAppProvider>
+        <HomePageContent />
+        <NotificationContainer 
+          notifications={notifications} 
+          onRemove={removeNotification} 
+        />
+      </MiniAppProvider>
     </FarcasterUI>
   );
 }
