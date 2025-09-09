@@ -11,7 +11,6 @@ import { cookies } from 'next/headers'
 import ClientLayout from '@/components/ClientLayout'
 import TopNavbar from '@/components/TopNavbar'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { startPollingService } from '@/lib/startup'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -20,8 +19,6 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Start polling service for production deployments
-  startPollingService()
   
   // Get cookies for wagmi state persistence
   const cookieStore = await cookies()

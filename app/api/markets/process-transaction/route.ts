@@ -24,6 +24,15 @@ export async function POST(request: NextRequest) {
     
     const { transactionHash, marketId } = body
 
+    console.log('🔍 Validating inputs:', {
+      transactionHash,
+      marketId,
+      transactionHashType: typeof transactionHash,
+      marketIdType: typeof marketId,
+      transactionHashLength: transactionHash?.length,
+      transactionHashStartsWith0x: transactionHash?.startsWith('0x')
+    });
+
     if (!transactionHash || !marketId) {
       console.log('❌ Missing required fields')
       return NextResponse.json(
@@ -35,11 +44,20 @@ export async function POST(request: NextRequest) {
     console.log(`🔄 Processing transaction ${transactionHash} for market ${marketId}`)
 
     // Fetch transaction receipt from blockchain
+    console.log('🔍 Fetching transaction receipt for:', transactionHash);
     const receipt = await client.getTransactionReceipt({
       hash: transactionHash as `0x${string}`
     })
 
+    console.log('📊 Transaction receipt result:', {
+      receipt: receipt ? 'found' : 'not found',
+      status: receipt?.status,
+      blockNumber: receipt?.blockNumber?.toString(),
+      logsCount: receipt?.logs?.length
+    });
+
     if (!receipt) {
+      console.log('❌ Transaction not found on blockchain');
       return NextResponse.json(
         { error: 'Transaction not found' },
         { status: 404 }
@@ -76,7 +94,7 @@ export async function POST(request: NextRequest) {
     let totalNo = sharesBoughtEvent.totalNo
     
     // If we don't have totals from the event (manual decoding), fetch from contract
-    if (totalYes === 0n && totalNo === 0n) {
+    if (totalYes === BigInt(0) && totalNo === BigInt(0)) {
       console.log('🔄 Fetching current market totals from contract...')
       try {
         const marketData = await client.readContract({
@@ -233,8 +251,8 @@ function parseSharesBoughtEvent(receipt: any, expectedMarketId: string) {
         buyer,
         side,
         amount,
-        totalYes: 0n, // Will be updated by fetching from contract
-        totalNo: 0n   // Will be updated by fetching from contract
+        totalYes: BigInt(0), // Will be updated by fetching from contract
+        totalNo: BigInt(0)   // Will be updated by fetching from contract
       }
       
     } catch (manualError) {

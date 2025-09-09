@@ -76,18 +76,28 @@ const ProfileContent: React.FC = () => {
   useEffect(() => {
     if (!address) return;
 
-    const pollInterval = setInterval(() => {
-      setIsPolling(true);
-      Promise.all([
-        refetchActivities(),
-        refetchStats(),
-        refetchEvents()
-      ]).finally(() => {
-        setIsPolling(false);
-      });
-    }, 30000); // Poll every 30 seconds
+    let timeoutId: NodeJS.Timeout;
+    
+    const debouncedPoll = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsPolling(true);
+        Promise.all([
+          refetchActivities(),
+          refetchStats(),
+          refetchEvents()
+        ]).finally(() => {
+          setIsPolling(false);
+        });
+      }, 2000); // 2 second debounce
+    };
 
-    return () => clearInterval(pollInterval);
+    const pollInterval = setInterval(debouncedPoll, 300000); // Poll every 5 minutes (further reduced)
+
+    return () => {
+      clearInterval(pollInterval);
+      clearTimeout(timeoutId);
+    };
   }, [address, refetchActivities, refetchStats, refetchEvents]);
 
   // Handle wallet not connected

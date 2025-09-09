@@ -9,7 +9,7 @@ interface UseSmartPollingOptions {
 
 export const useSmartPolling = ({
   enabled = true,
-  interval = 3000, // 3 seconds
+  interval = 30000, // 30 seconds
   onPoll,
   dependencies = []
 }: UseSmartPollingOptions) => {

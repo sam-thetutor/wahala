@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount, useBalance } from 'wagmi';
 import { usePredictionMarket } from '@/hooks/usePredictionMarket';
-import { useEventsStore } from '@/stores/eventsStore';
 import { useNotificationHelpers } from '@/hooks/useNotificationHelpers';
 import { useMiniApp } from '@/contexts/MiniAppContext';
 import { useReferral } from '@/contexts/ReferralContext';
@@ -28,7 +27,6 @@ const CreateMarketContent: React.FC = () => {
   const router = useRouter();
   const { isConnected, address } = useAccount();
   const { createMarket, contractState } = usePredictionMarket();
-  const { fetchAllLogs } = useEventsStore();
   const { isMiniApp, composeCast, triggerHaptic } = useMiniApp();
   const { referralCode, submitReferral } = useReferral();
   
@@ -156,7 +154,6 @@ const CreateMarketContent: React.FC = () => {
       
       // Refresh logs to include the new market (with delay to ensure transaction is processed)
       setTimeout(() => {
-        fetchAllLogs();
       }, 5000);
       
       // Submit referral if user was referred
@@ -181,7 +178,7 @@ const CreateMarketContent: React.FC = () => {
         router.push('/markets');
       }, 4000);
     }
-  }, [contractState.success, contractState.transactionHash, router, formData.question, notifyMarketCreated, isMiniApp, composeCast, triggerHaptic, referralCode, submitReferral, fetchAllLogs, formData.description, formData.category, formData.image, formData.source, formData.endTime, address]);
+  }, [contractState.success, contractState.transactionHash, router, formData.question, notifyMarketCreated, isMiniApp, composeCast, triggerHaptic, referralCode, submitReferral, formData.description, formData.category, formData.image, formData.source, formData.endTime, address]);
 
   const validateForm = (): boolean => {
     const errors: Partial<CreateMarketForm> = {};
@@ -446,9 +443,9 @@ const CreateMarketContent: React.FC = () => {
                   className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black"
                   style={{ color: 'black !important' }}
                 />
-                <p className="mt-1 text-xs md:text-sm text-gray-500">
+                {/* <p className="mt-1 text-xs md:text-sm text-gray-500">
                   Leave empty to use a default image
-                </p>
+                </p> */}
               </div>
             </div>
 

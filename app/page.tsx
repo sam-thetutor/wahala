@@ -34,8 +34,6 @@ import { useFarcaster } from '@/components/FarcasterProvider';
 import { useMiniApp } from '@/hooks/useMiniApp';
 import FarcasterUserProfile from '@/components/FarcasterUserProfile';
 import { useAllMarketsApi } from '@/hooks/useMarketsApi';
-import { useMarketEventsWithStore } from '@/stores/eventsStore';
-import { useEventsStore } from '@/stores/eventsStore';
 import { formatEther } from 'viem';
 import NotificationContainer, { useNotifications } from '@/components/NotificationContainer';
 import ReferralBanner from '@/components/ReferralBanner';
@@ -63,12 +61,8 @@ const HomePageContent: React.FC = () => {
   const { isInFarcasterContext } = useFarcaster();
   const { isMiniApp, userFid, username, displayName, pfpUrl } = useMiniApp();
   const { allMarkets, stats, loading: marketsLoading, refetch } = useAllMarketsApi();
-  const { logs, fetchAllLogs, isLoading: logsLoading } = useEventsStore();
   const { addNotification } = useNotifications();
   const { composeCast, triggerHaptic } = useMiniApp();
-
-  // Connect market events to store
-  useMarketEventsWithStore();
 
   // Helper function to get total volume directly from contract
   const getTotalVolumeFromContract = async () => {
@@ -86,17 +80,11 @@ const HomePageContent: React.FC = () => {
 
 
 
-  // Load events data when component mounts
-  useEffect(() => {
-    console.log('🔍 Homepage: Checking if events need to be fetched...', { logsLength: logs.length });
-    if (logs.length === 0) {
-      console.log('🔍 Homepage: Fetching all logs from deployment...');
-      fetchAllLogs();
-    }
-  }, [logs.length, fetchAllLogs]);
 
   // Trigger event listener to check for new events on page load
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const triggerEventListener = async () => {
       try {
         console.log('🔄 Triggering event listener check...');
@@ -109,67 +97,43 @@ const HomePageContent: React.FC = () => {
       }
     };
 
+    // Debounced trigger function
+    const debouncedTrigger = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(triggerEventListener, 1000); // 1 second debounce
+    };
+
     // Trigger immediately on page load
     triggerEventListener();
 
-    // Also trigger every 30 seconds for real-time updates
-    const interval = setInterval(triggerEventListener, 30000);
+    // Also trigger every 3 minutes for real-time updates (further reduced frequency)
+    const interval = setInterval(debouncedTrigger, 180000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeoutId);
+    };
   }, [refetch]);
 
-  // Use stats from API, but add active traders calculation and improved volume calculation
+  // Use stats from API with simplified active traders calculation
   const enhancedStats = useMemo(() => {
-    // Count unique active traders from events
+    // Count unique active traders from markets
     const uniqueTraders = new Set<string>();
     allMarkets.forEach(market => {
       if (market.creator && market.creator !== '0x0') {
         uniqueTraders.add(market.creator.toLowerCase());
       }
     });
-    
-    // Add traders from events if available
-    const tradingEvents = logs.filter(log => 
-      log.eventName === 'SharesBought' || 
-      log.eventName === 'MarketCreated' ||
-      log.eventName === 'WinningsClaimed'
-    );
-
-    tradingEvents.forEach(event => {
-      const args = event.args || {};
-      if (args.creator) uniqueTraders.add(args.creator.toLowerCase());
-      if (args.buyer) uniqueTraders.add(args.buyer.toLowerCase());
-      if (args.claimant) uniqueTraders.add(args.claimant.toLowerCase());
-    });
-
-    // Calculate volume from trading events as a backup/additional check
-    let calculatedVolume = 0n;
-    const sharesBoughtEvents = logs.filter(log => log.eventName === 'SharesBought');
-    sharesBoughtEvents.forEach(event => {
-      const args = event.args || {};
-      if (args.amount) {
-        calculatedVolume += BigInt(args.amount);
-      }
-    });
-
-    // Use the higher of database-calculated volume or event-calculated volume
-    const databaseVolume = BigInt(stats.totalVolume || '0');
-    const finalVolume = calculatedVolume > databaseVolume ? calculatedVolume : databaseVolume;
-
-    console.log('📊 Volume calculation debug:', {
-      databaseVolume: databaseVolume.toString(),
-      calculatedVolume: calculatedVolume.toString(),
-      finalVolume: finalVolume.toString(),
-      sharesBoughtEventsCount: sharesBoughtEvents.length,
-      allMarketsCount: allMarkets.length
-    });
 
     return {
       ...stats,
       activeTraders: uniqueTraders.size,
-      totalVolume: finalVolume
+      totalVolume: BigInt(stats.totalVolume || '0')
     };
-  }, [stats, allMarkets, logs]);
+  }, [stats, allMarkets]);
+
+  // console.log('🔍 Unique enhanced stats:', enhancedStats);
+
 
   // Get trending markets (most active)
   const getTrendingMarkets = () => {
@@ -281,9 +245,10 @@ const HomePageContent: React.FC = () => {
               <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-white/20">
                 <div className="text-lg md:text-2xl font-bold text-purple-600 mb-1">
                   {marketsLoading ? '...' : (() => {
+                    console.log('🔍 Enhanced stats:', enhancedStats);
                     const volume = enhancedStats.totalVolume;
                     const volumeInCelo = formatEther(volume);
-                    const roundedVolume = parseFloat(volumeInCelo).toFixed(0);
+                    const roundedVolume = parseFloat(volumeInCelo).toFixed(5);
                     console.log('🔍 Volume display debug:', {
                       rawVolume: volume.toString(),
                       volumeInCelo: volumeInCelo,

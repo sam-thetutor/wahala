@@ -82,13 +82,25 @@ export function usePredictionMarket(): UsePredictionMarketReturn {
     success: false
   });
 
-  const { writeContract, writeContractAsync, isPending, error: writeError } = useWriteContract();
+  const { writeContract, writeContractAsync, isPending, error: writeError, data: transactionHash } = useWriteContract();
   const { data: hash, isPending: isConfirming, isSuccess: isConfirmed, data: receipt } = useWaitForTransactionReceipt({
-    hash: contractState.transactionHash as `0x${string}`,
+    hash: transactionHash as `0x${string}`,
+    query: {
+      enabled: !!transactionHash
+    }
   });
 
   // Update contract state when transaction status changes
   useEffect(() => {
+    console.log('🔄 Contract state update:', {
+      isPending,
+      writeError: writeError?.message,
+      isConfirmed,
+      hash,
+      transactionHash,
+      currentTransactionHash: contractState.transactionHash
+    });
+    
     if (isPending) {
       setContractState(prev => ({ ...prev, isLoading: true, error: null }));
     } else if (writeError) {
@@ -99,14 +111,16 @@ export function usePredictionMarket(): UsePredictionMarketReturn {
         success: false
       }));
     } else if (isConfirmed && hash) {
+      console.log('✅ Transaction confirmed!', { hash, receipt });
       setContractState(prev => ({ 
         ...prev, 
         isLoading: false, 
         success: true,
+        transactionHash: transactionHash as string,
         receipt: hash
       }));
     }
-  }, [isPending, writeError, isConfirmed, hash]);
+  }, [isPending, writeError, isConfirmed, hash, transactionHash]);
 
   // Helper function to handle contract calls
   const handleContractCall = useCallback(async (
@@ -230,66 +244,58 @@ export function usePredictionMarket(): UsePredictionMarketReturn {
   // Separate function to update database after transaction confirmation
   const updateDatabaseAfterPurchase = useCallback(async (params: MarketTradingData, transactionHash: string) => {
     try {
-      console.log(`🔄 Updating database for confirmed transaction ${transactionHash}...`);
+      console.log(`🔄 updateDatabaseAfterPurchase called:`, {
+        marketId: params.marketId,
+        outcome: params.outcome,
+        amount: params.amount,
+        transactionHash
+      });
       
-      // Fetch current market data to get updated totals
-      const marketData = await getMarketData(params.marketId);
-      
-      if (marketData) {
-        // Update market totals
-        const updateResponse = await fetch('/api/markets/update', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            marketId: params.marketId,
-            type: 'update_totals',
-            data: {
-              totalPool: marketData.totalPool,
-              totalYes: marketData.totalYes,
-              totalNo: marketData.totalNo
-            }
-          }),
-        });
-
-        if (updateResponse.ok) {
-          console.log('✅ Market totals updated');
-        } else {
-          const errorData = await updateResponse.json();
-          console.error('❌ Failed to update market totals:', errorData);
-        }
+      // Validate transaction hash
+      if (!transactionHash) {
+        console.error('❌ No transaction hash provided');
+        return false;
       }
-
-      // Update participant data
-      const participantResponse = await fetch('/api/markets/update-participant', {
+      
+      if (!transactionHash.startsWith('0x') || transactionHash.length !== 66) {
+        console.error('❌ Invalid transaction hash format:', transactionHash);
+        return false;
+      }
+      
+      // Use the process-transaction API which fetches real data from blockchain
+      const processResponse = await fetch('/api/markets/process-transaction', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          marketId: params.marketId,
-          address: address,
-          outcome: params.outcome,
-          amount: params.amount,
-          transactionHash: transactionHash
+          transactionHash: transactionHash,
+          marketId: params.marketId
         }),
       });
 
-      if (participantResponse.ok) {
-        console.log('✅ Participant data updated');
+      console.log('📡 Process response status:', processResponse.status);
+      console.log('📡 Process response ok:', processResponse.ok);
+      
+      if (processResponse.ok) {
+        const result = await processResponse.json();
+        console.log('✅ Transaction processed successfully:', result);
         return true;
       } else {
-        const errorData = await participantResponse.json();
-        console.error('❌ Failed to update participant data:', errorData);
+        const errorData = await processResponse.json();
+        console.error('❌ Failed to process transaction:', {
+          status: processResponse.status,
+          statusText: processResponse.statusText,
+          errorData
+        });
         return false;
       }
 
     } catch (error) {
-      console.error('❌ Error updating database:', error);
+      console.error('❌ Error processing transaction:', error);
       return false;
     }
-  }, [address, getMarketData]);
+  }, []);
 
   // Resolve market (admin only)
   const resolveMarket = useCallback(async (params: MarketResolutionData) => {

@@ -1,0 +1,8 @@
+{
+  "celo": {
+    "PredictionMarketCore": {
+      "address": "0x7176D16D61A122231a78749c61740ad8F86BB13a",
+      "startBlock": 45500000
+    }
+  }
+}

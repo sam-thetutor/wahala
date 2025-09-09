@@ -230,6 +230,7 @@ const Markets: React.FC = () => {
                   createdAt: safeBigInt(market.createdat),
                   status: market.status as any // Convert number to MarketStatus enum
                 };
+                
                 return (
                   <MarketCard 
                     key={market.id.toString()} 

@@ -64,3 +64,5 @@ CREATE POLICY IF NOT EXISTS "Allow public read access to sync_status" ON sync_st
 
 
 
+
+
