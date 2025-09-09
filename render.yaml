@@ -2,8 +2,8 @@ services:
   - type: worker
     name: snarkels-polling-service
     env: node
-    buildCommand: npm install
-    startCommand: node scripts/start-polling-service.js
+    buildCommand: npm install --production
+    startCommand: node scripts/standalone-polling-service.js
     envVars:
       - key: ENABLE_POLLING
         value: true
