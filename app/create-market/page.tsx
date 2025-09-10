@@ -6,11 +6,9 @@ import { useAccount, useBalance } from 'wagmi';
 import { usePredictionMarket } from '@/hooks/usePredictionMarket';
 import { useNotificationHelpers } from '@/hooks/useNotificationHelpers';
 import { useMiniApp } from '@/contexts/MiniAppContext';
-import { useReferral } from '@/contexts/ReferralContext';
 import { useFarcaster } from '@/components/FarcasterProvider';
 import { MiniAppProvider } from '@/contexts/MiniAppContext';
-import { ReferralProvider } from '@/contexts/ReferralContext';
-import ReferralBanner from '@/components/ReferralBanner';
+// ReferralBanner removed - using Divvi SDK instead
 import NotificationContainer from '@/components/NotificationContainer';
 import { parseEther, formatEther } from 'viem';
 
@@ -29,7 +27,7 @@ const CreateMarketContent: React.FC = () => {
   const { isConnected, address } = useAccount();
   const { createMarket, contractState } = usePredictionMarket();
   const { isMiniApp, composeCast, triggerHaptic } = useMiniApp();
-  const { referralCode, submitReferral } = useReferral();
+  // Referral tracking is now handled automatically by Divvi SDK
   const { isInFarcasterContext, context } = useFarcaster();
   
   // Get Farcaster wallet address if available
@@ -163,13 +161,7 @@ const CreateMarketContent: React.FC = () => {
       setTimeout(() => {
       }, 5000);
       
-      // Submit referral if user was referred
-      if (referralCode) {
-        submitReferral({
-          type: 'market_creation',
-          marketId: 'new', // Will be updated when we get the actual market ID
-        }, contractState.transactionHash);
-      }
+      // Referral tracking is now handled automatically by Divvi SDK
       
       // Trigger haptic feedback and compose cast for Mini App users
       if (isMiniApp) {
@@ -185,7 +177,7 @@ const CreateMarketContent: React.FC = () => {
         router.push('/markets');
       }, 4000);
     }
-  }, [contractState.success, contractState.transactionHash, router, formData.question, notifyMarketCreated, isMiniApp, composeCast, triggerHaptic, referralCode, submitReferral, formData.description, formData.category, formData.image, formData.source, formData.endTime, farcasterAddress]);
+  }, [contractState.success, contractState.transactionHash, router, formData.question, notifyMarketCreated, isMiniApp, composeCast, triggerHaptic, formData.description, formData.category, formData.image, formData.source, formData.endTime, farcasterAddress]);
 
   const validateForm = (): boolean => {
     const errors: Partial<CreateMarketForm> = {};
@@ -337,8 +329,7 @@ const CreateMarketContent: React.FC = () => {
 
   return (
     <div className="py-6 px-3 sm:px-6 lg:px-8">
-      {/* Referral Banner */}
-      <ReferralBanner />
+      {/* Referral tracking handled by Divvi SDK */}
       
       <div className="max-w-4xl mx-auto">
         {/* Header - Mobile Optimized */}
@@ -655,9 +646,7 @@ const CreateMarketContent: React.FC = () => {
 const CreateMarketPage: React.FC = () => {
   return (
     <MiniAppProvider>
-      <ReferralProvider>
-        <CreateMarketContent />
-      </ReferralProvider>
+      <CreateMarketContent />
     </MiniAppProvider>
   );
 };

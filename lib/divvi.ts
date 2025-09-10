@@ -1,23 +1,39 @@
-import type { Hex } from 'viem'
+import { getReferralTag, submitReferral } from '@divvi/referral-sdk'
+import type { Address, Hex } from 'viem'
 
-const DIVVI_CONSUMER_ADDRESS: `0x${string}` = '0x21D654daaB0fe1be0e584980ca7C1a382850939f'
+const DIVVI_CONSUMER_ADDRESS: Address = '0x21D654daaB0fe1be0e584980ca7C3a382850939f'
 
-// Always safe: return empty suffix if SDK is unavailable
-// @ts-ignore - downstream consumers accept Hex '0x' as no-op suffix
-export function getReferralDataSuffix(_providers: `0x${string}`[] = []): Hex {
-  return DIVVI_CONSUMER_ADDRESS as Hex
-}
-
-export async function submitDivviReferral(txHash: Hex, chainId: number): Promise<void> {
+/**
+ * Generate a referral tag for Divvi attribution tracking
+ * @param user - The user address making the transaction
+ * @returns Referral tag to append to transaction data
+ */
+export function generateReferralTag(user: Address): Hex {
   try {
-    // Dynamically import to avoid build-time coupling
-    const mod = await import('@divvi/referral-sdk') as any
-    if (mod && typeof mod.submitReferral === 'function') {
-      await mod.submitReferral({ txHash, chainId })
-    }
-  } catch {
-    // no-op; attribution errors must not break main flow
+    return getReferralTag({
+      user,
+      consumer: DIVVI_CONSUMER_ADDRESS,
+    }) as Hex
+  } catch (error) {
+    console.warn('Failed to generate referral tag:', error)
+    return '0x' as Hex // Return empty hex if generation fails
   }
 }
 
-
+/**
+ * Submit referral data to Divvi after successful transaction
+ * @param txHash - Transaction hash
+ * @param chainId - Chain ID where transaction was sent
+ */
+export async function submitDivviReferral(txHash: Hex, chainId: number): Promise<void> {
+  try {
+    await submitReferral({
+      txHash,
+      chainId,
+    })
+    console.log('✅ Referral submitted to Divvi:', { txHash, chainId })
+  } catch (error) {
+    console.warn('Failed to submit referral to Divvi:', error)
+    // Don't throw - referral submission should not break main flow
+  }
+}

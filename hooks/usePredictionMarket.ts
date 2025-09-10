@@ -5,16 +5,18 @@ import {
   useWriteContract, 
   useWaitForTransactionReceipt,
   useReadContract,
-  useSimulateContract
+  useSimulateContract,
+  useWalletClient
 } from 'wagmi';
 import { 
   parseEther, 
   formatEther,
+  encodeFunctionData,
   type Address,
   type TransactionReceipt
 } from 'viem';
 import { PREDICTION_MARKET_CORE_ABI, PREDICTION_MARKET_CLAIMS_ABI } from '@/contracts/contracts';
-import { getReferralDataSuffix, submitDivviReferral } from '@/lib/divvi';
+import { generateReferralTag, submitDivviReferral } from '@/lib/divvi';
 import { celo } from 'viem/chains';
 import { getCoreContractAddress, getClaimsContractAddress } from '@/lib/contract-addresses';
 
@@ -75,6 +77,7 @@ interface UsePredictionMarketReturn {
 export function usePredictionMarket(): UsePredictionMarketReturn {
   const { address, chainId } = useAccount();
   const { switchChain } = useSwitchChain();
+  const { data: walletClient } = useWalletClient();
   
   const [contractState, setContractState] = useState<ContractState>({
     isLoading: false,
@@ -122,7 +125,7 @@ export function usePredictionMarket(): UsePredictionMarketReturn {
     }
   }, [isPending, writeError, isConfirmed, hash, transactionHash]);
 
-  // Helper function to handle contract calls
+  // Helper function to handle contract calls with mandatory Divvi referral tracking
   const handleContractCall = useCallback(async (
     contractAddress: Address,
     abi: any,
@@ -133,21 +136,70 @@ export function usePredictionMarket(): UsePredictionMarketReturn {
     try {
       setContractState(prev => ({ ...prev, isLoading: true, error: null, success: false }));
       
-      // Use the writeContractAsync function from the hook
-      const hash = await writeContractAsync({
-        address: contractAddress,
-        abi,
-        functionName,
-        args,
-        value,
-        chainId: 42220 // Force Celo mainnet
-      });
+      let hash: `0x${string}`;
+      
+      if (address && walletClient) {
+        // Use Wagmi's wallet client for mandatory referral tracking
+        try {
+          // Generate referral tag
+          const referralTag = generateReferralTag(address);
+          
+          // Encode function data
+          const data = encodeFunctionData({
+            abi,
+            functionName,
+            args,
+          });
+          
+          // Append referral tag to data
+          const dataWithReferral = data + referralTag;
+          
+          // Send transaction with referral data using Wagmi's wallet client
+          hash = await walletClient.sendTransaction({
+            account: address,
+            to: contractAddress,
+            data: dataWithReferral as `0x${string}`,
+            value: value || 0n,
+          });
+          
+          console.log('✅ Transaction sent with referral tag:', { hash, referralTag });
+        } catch (error) {
+          console.warn('Failed to send transaction with referral, falling back to regular transaction:', error);
+          
+          // Fallback to regular Wagmi transaction
+          hash = await writeContractAsync({
+            address: contractAddress,
+            abi,
+            functionName,
+            args,
+            value,
+            chainId: 42220,
+          });
+        }
+      } else {
+        // Use regular Wagmi transaction if wallet client not available
+        hash = await writeContractAsync({
+          address: contractAddress,
+          abi,
+          functionName,
+          args,
+          value,
+          chainId: 42220,
+        });
+      }
       
       setContractState(prev => ({ 
         ...prev, 
         transactionHash: hash as string,
         isLoading: true 
       }));
+      
+      // Submit referral to Divvi after successful transaction (mandatory)
+      try {
+        await submitDivviReferral(hash, 42220);
+      } catch (error) {
+        console.warn('Failed to submit Divvi referral:', error);
+      }
       
       return { success: true, transactionHash: hash as string };
     } catch (error: any) {
@@ -160,7 +212,7 @@ export function usePredictionMarket(): UsePredictionMarketReturn {
       }));
       return { success: false, error: errorMessage };
     }
-  }, [writeContract]);
+  }, [writeContract, address, walletClient]);
 
   // Market creation
   const createMarket = useCallback(async (params: MarketCreationData) => {
@@ -186,17 +238,7 @@ export function usePredictionMarket(): UsePredictionMarketReturn {
       parseEther('0.01') // 0.01 CELO creation fee
     );
 
-    if (result.success) {
-      // Submit Divvi referral if available
-      try {
-        const referralData = getReferralDataSuffix();
-        if (referralData && result.transactionHash) {
-          await submitDivviReferral(result.transactionHash as `0x${string}`, 42220);
-        }
-      } catch (error) {
-        console.warn('Failed to submit Divvi referral:', error);
-      }
-    }
+    // Referral tracking is now handled in handleContractCall
 
     return result;
   }, [address, chainId, switchChain, handleContractCall]);
@@ -409,7 +451,8 @@ export function usePredictionMarket(): UsePredictionMarketReturn {
       contractAddress,
       PREDICTION_MARKET_CORE_ABI,
       'claimCreatorFee',
-      [BigInt(marketId)]
+      [BigInt(marketId)],
+      undefined // No value
     );
   }, [address, chainId, switchChain, handleContractCall]);
 

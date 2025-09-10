@@ -6,7 +6,7 @@ import AccountModalProvider from '@/components/AccountModalProvider'
 import { FarcasterProvider } from '@/components/FarcasterProvider'
 import MiniAppWrapper from '@/components/MiniAppWrapper'
 import AppKitProvider from '@/components/AppKitProvider'
-import { ReferralProvider } from '@/contexts/ReferralContext'
+// ReferralProvider removed - using Divvi SDK instead
 import { cookies } from 'next/headers'
 import ClientLayout from '@/components/ClientLayout'
 import TopNavbar from '@/components/TopNavbar'
@@ -71,16 +71,14 @@ export default async function RootLayout({
           <MiniAppWrapper>
             <FarcasterProvider>
               <AppKitProvider>
-                <ReferralProvider>
-                  <ClientLayout>
-                    <AccountModalProvider>
-                      <ErrorBoundary>
-                        <TopNavbar />
-                        {children}
-                      </ErrorBoundary>
-                    </AccountModalProvider>
-                  </ClientLayout>
-                </ReferralProvider>
+                <ClientLayout>
+                  <AccountModalProvider>
+                    <ErrorBoundary>
+                      <TopNavbar />
+                      {children}
+                    </ErrorBoundary>
+                  </AccountModalProvider>
+                </ClientLayout>
               </AppKitProvider>
             </FarcasterProvider>
           </MiniAppWrapper>

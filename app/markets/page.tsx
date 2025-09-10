@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import MarketCard from '@/components/MarketCard';
 import { useSubgraphMarkets, Market } from '@/hooks/useSubgraphMarkets';
 import { MarketWithMetadata } from '@/contracts/contracts';
-import ReferralBanner from '@/components/ReferralBanner';
 import NotificationContainer, { useNotifications } from '@/components/NotificationContainer';
 
 const Markets: React.FC = () => {
@@ -147,7 +146,6 @@ const Markets: React.FC = () => {
     <div className="py-6 px-3 sm:px-6 lg:px-8">
       <div className="max-w-[1280px] mx-auto">
         {/* Referral Banner */}
-        <ReferralBanner />
       
       {/* Page Header - Mobile Optimized */}
       <div className="text-center mb-6">
