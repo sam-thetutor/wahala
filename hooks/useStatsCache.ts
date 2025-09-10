@@ -4,7 +4,7 @@ import { useSubgraphMarkets } from './useSubgraphMarkets';
 interface StatsData {
   totalMarkets: number;
   activeTraders: number;
-  totalVolume: bigint;
+  totalVolume: number;
   marketsResolved: number;
   lastUpdated: number;
 }
@@ -18,7 +18,7 @@ export function useStatsCache() {
       return {
         totalMarkets: 0,
         activeTraders: 0,
-        totalVolume: 0n,
+        totalVolume: 0,
         marketsResolved: 0,
         lastUpdated: Date.now()
       };
@@ -27,8 +27,8 @@ export function useStatsCache() {
     const totalMarkets = allMarkets.length;
     const marketsResolved = allMarkets.filter(market => market.status === 'RESOLVED').length;
     const totalVolume = allMarkets.reduce((sum, market) => {
-      return sum + BigInt(Math.floor(parseFloat(market.totalPool) * 1e18));
-    }, 0n);
+      return sum + parseFloat(market.totalPool);
+    }, 0);
     
     return {
       totalMarkets,

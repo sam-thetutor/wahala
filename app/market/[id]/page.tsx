@@ -45,7 +45,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
   });
 
   // Prediction market hooks
-  const { buyShares, updateDatabaseAfterPurchase, contractState } = usePredictionMarket();
+  const { buyShares, contractState } = usePredictionMarket();
   const { notifyTransactionSuccess } = useNotificationHelpers();
 
   // Local state
@@ -61,6 +61,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
   const [justPurchased, setJustPurchased] = useState(false);
   const [optimisticUpdate, setOptimisticUpdate] = useState<any>(null);
   const [pendingTransaction, setPendingTransaction] = useState<string | null>(null);
+  const [refreshingAfterPurchase, setRefreshingAfterPurchase] = useState(false);
 
   // Market data from subgraph
   const {
@@ -131,48 +132,25 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
     }
   }, [dataError]);
 
-  // Handle transaction confirmation and database updates
+  // Handle transaction confirmation - no database updates needed
   useEffect(() => {
     if (contractState.success && contractState.transactionHash && pendingTransaction) {
-      console.log('✅ Transaction confirmed, updating database...');
+      console.log('✅ Transaction confirmed, clearing optimistic update...');
       
-      // Update database after transaction confirmation
-      const updateDatabase = async () => {
-        // Use the amount from optimistic update to ensure we have the correct value
-        const amount = parseFloat(optimisticUpdate?.amount || buyAmount);
-        console.log('🔄 Database update - using amount:', amount, 'from optimistic update:', optimisticUpdate?.amount, 'or form:', buyAmount);
-        
-        const success = await updateDatabaseAfterPurchase({
-          marketId: parseInt(marketId),
-          outcome: optimisticUpdate?.outcome ?? (selectedSide === 'yes'),
-          amount: amount.toString()
-        }, contractState.transactionHash!);
-        
-        if (success) {
-          console.log('✅ Database updated successfully');
-          // Clear optimistic update and trigger refresh
-          setOptimisticUpdate(null);
-          setPendingTransaction(null);
-          setJustPurchased(true);
-          
-          // Refresh data immediately
-          refreshData();
-          
-          // Reset aggressive polling after 30 seconds
-          setTimeout(() => {
-            setJustPurchased(false);
-          }, 30000);
-        } else {
-          console.error('❌ Database update failed');
-          // Still clear optimistic update to avoid confusion
-          setOptimisticUpdate(null);
-          setPendingTransaction(null);
-        }
-      };
+      // Clear optimistic update and trigger refresh
+      setOptimisticUpdate(null);
+      setPendingTransaction(null);
+      setJustPurchased(true);
       
-      updateDatabase();
+      // Refresh data immediately from subgraph
+      refreshData();
+      
+      // Reset just purchased state after 30 seconds
+      setTimeout(() => {
+        setJustPurchased(false);
+      }, 30000);
     }
-  }, [contractState.success, contractState.transactionHash, pendingTransaction, updateDatabaseAfterPurchase, marketId, selectedSide, buyAmount, refreshData]);
+  }, [contractState.success, contractState.transactionHash, pendingTransaction, refreshData]);
 
   // Calculate market statistics with optimistic updates
   const yesPercentage = useMemo(() => {
@@ -415,6 +393,17 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
         
         // Reset form
         setBuyAmount('1');
+        
+        // Refetch subgraph data after 5 seconds to get the latest blockchain state
+        console.log('🔄 Scheduling subgraph refetch in 5 seconds...');
+        setTimeout(() => {
+          console.log('🔄 Refetching subgraph data after purchase...');
+          setRefreshingAfterPurchase(true);
+          refreshData().finally(() => {
+            setRefreshingAfterPurchase(false);
+          });
+        }, 10000);
+        
       } else {
         // Transaction failed, remove optimistic update
         setOptimisticUpdate(null);
@@ -582,6 +571,16 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
                           <span className="font-semibold text-gray-900">{participants.length}</span>
                         </div>
                       </div>
+                      
+                      {/* Refreshing indicator */}
+                      {refreshingAfterPurchase && (
+                        <div className="mt-2 flex items-center justify-center">
+                          <div className="flex items-center space-x-2 text-blue-600 text-sm">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            <span>Updating from blockchain...</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Action Icons */}
@@ -842,6 +841,11 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
                   {justPurchased && (
                     <span className="text-green-600 text-xs font-medium">
                       Updating after purchase...
+                    </span>
+                  )}
+                  {refreshingAfterPurchase && (
+                    <span className="text-blue-600 text-xs font-medium">
+                      Refreshing data from blockchain...
                     </span>
                   )}
                   {optimisticUpdate && (

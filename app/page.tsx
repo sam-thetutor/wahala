@@ -62,6 +62,13 @@ const HomePageContent: React.FC = () => {
   const { isMiniApp, userFid, username, displayName, pfpUrl } = useMiniApp();
   const { markets: allMarkets, loading: marketsLoading, refetch } = useSubgraphMarkets();
   
+  // Debug subgraph data
+  console.log('🏠 Homepage - Subgraph data:', {
+    allMarkets,
+    marketsLoading,
+    marketsLength: allMarkets?.length || 0
+  });
+  
   // Calculate stats from subgraph data
   const stats = useMemo(() => {
     if (!allMarkets || allMarkets.length === 0) {
@@ -168,10 +175,25 @@ const HomePageContent: React.FC = () => {
   // Get trending markets (most active)
   const getTrendingMarkets = () => {
     const currentTime = Math.floor(Date.now() / 1000);
-    return allMarkets
-      .filter((m) => m.status === 'ACTIVE' && Number(m.endTime) > currentTime) // Only active markets
-      .sort((a, b) => Number(b.totalPool) - Number(a.totalPool))
-      .slice(0, 3);
+    console.log('🔍 getTrendingMarkets: Current time:', currentTime);
+    console.log('🔍 getTrendingMarkets: All markets:', allMarkets);
+    
+    const filtered = allMarkets.filter((m) => {
+      // Convert ISO string to Unix timestamp for comparison
+      const endTime = Math.floor(new Date(m.endTime).getTime() / 1000);
+      const isActive = m.status === 'ACTIVE';
+      const isNotExpired = endTime > currentTime;
+      console.log('🔍 Market filter:', { id: m.id, status: m.status, endTime, currentTime, isActive, isNotExpired });
+      return isActive && isNotExpired;
+    });
+    
+    const sorted = filtered.sort((a, b) => Number(b.totalPool) - Number(a.totalPool));
+    const trending = sorted.slice(0, 3);
+    
+    console.log('🔍 getTrendingMarkets: Filtered:', filtered);
+    console.log('🔍 getTrendingMarkets: Trending:', trending);
+    
+    return trending;
   };
 
   useEffect(() => {

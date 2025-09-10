@@ -29,8 +29,12 @@ export function useSubgraphMarkets() {
       setLoading(true)
       setError(null)
       
+      console.log('🔍 useSubgraphMarkets: Fetching markets from subgraph...')
       const subgraphMarkets = await subgraphApi.getMarkets()
+      console.log('🔍 useSubgraphMarkets: Raw subgraph data:', subgraphMarkets)
+      
       const transformedMarkets = subgraphMarkets.map(transformMarket)
+      console.log('🔍 useSubgraphMarkets: Transformed markets:', transformedMarkets)
       
       setMarkets(transformedMarkets)
     } catch (err) {
