@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import MarketCard from '@/components/MarketCard';
-import { useMarketsApi } from '@/hooks/useMarketsApi';
+import { useSubgraphMarkets, Market } from '@/hooks/useSubgraphMarkets';
 import { MarketWithMetadata } from '@/contracts/contracts';
 import ReferralBanner from '@/components/ReferralBanner';
 import NotificationContainer, { useNotifications } from '@/components/NotificationContainer';
@@ -14,21 +14,61 @@ const Markets: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   const {
-    markets,
-    categories,
-    pagination,
+    markets: subgraphMarkets,
     loading,
     error,
     refetch
-  } = useMarketsApi({
-    page: currentPage,
-    limit: 12,
-    search: searchTerm,
-    category: selectedCategory,
-    sortBy
-  });
+  } = useSubgraphMarkets();
 
   const { notifications, removeNotification } = useNotifications();
+
+  // Filter and sort markets
+  const filteredAndSortedMarkets = React.useMemo(() => {
+    let filtered = subgraphMarkets;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(market =>
+        market.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        market.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Category filter (simplified - you can add categories to subgraph later)
+    if (selectedCategory && selectedCategory !== 'all') {
+      // For now, we'll skip category filtering since subgraph doesn't have categories
+      // You can add this to the subgraph schema later
+    }
+
+    // Sort markets
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'volume':
+          return parseFloat(b.totalPool) - parseFloat(a.totalPool);
+        case 'ending':
+          return new Date(a.endTime).getTime() - new Date(b.endTime).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [subgraphMarkets, searchTerm, selectedCategory, sortBy]);
+
+  // Pagination
+  const itemsPerPage = 12;
+  const totalPages = Math.ceil(filteredAndSortedMarkets.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedMarkets = filteredAndSortedMarkets.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, sortBy]);
 
   // Trigger event listener to check for new events on page load
   useEffect(() => {
@@ -50,6 +90,15 @@ const Markets: React.FC = () => {
   const openFilterModal = () => setIsFilterModalOpen(true);
   const closeFilterModal = () => setIsFilterModalOpen(false);
 
+  // Mock categories for now (you can add this to subgraph later)
+  const categories = [
+    { id: 'all', name: 'All Markets', color: '#3B82F6' },
+    { id: 'crypto', name: 'Cryptocurrency', color: '#10B981' },
+    { id: 'sports', name: 'Sports', color: '#F59E0B' },
+    { id: 'politics', name: 'Politics', color: '#EF4444' },
+    { id: 'entertainment', name: 'Entertainment', color: '#8B5CF6' }
+  ];
+
   // Get the current category name for display
   const getCurrentCategoryName = () => {
     if (!selectedCategory || selectedCategory === '') return 'All Markets';
@@ -64,7 +113,7 @@ const Markets: React.FC = () => {
         <div className="max-w-[1280px] mx-auto">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-lg text-gray-600">Loading markets...</p>
+            <p className="text-lg text-gray-600">Loading markets from blockchain...</p>
           </div>
         </div>
       </div>
@@ -80,7 +129,7 @@ const Markets: React.FC = () => {
             <div className="text-red-500 text-6xl mb-4">⚠️</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Markets</h2>
             <p className="text-lg text-gray-600 mb-6">
-              {error?.message || 'An error occurred while loading markets'}
+              {error || 'An error occurred while loading markets from the blockchain'}
             </p>
             <button 
               onClick={() => refetch()} 
@@ -182,7 +231,7 @@ const Markets: React.FC = () => {
 
       {/* Markets Display - Mobile Optimized */}
       <div className="mb-6">
-        {markets.length === 0 ? (
+        {paginatedMarkets.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-gray-400 text-4xl mb-3">🔍</div>
             <h2 className="text-lg font-bold text-gray-900 mb-3">
@@ -199,41 +248,26 @@ const Markets: React.FC = () => {
           <>
             {/* Markets Grid - Mobile Optimized */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-stretch">
-              {markets.map((market) => {
-                // Handle both numeric and string IDs safely
-                const marketId = market.id.startsWith('market_') 
-                  ? market.id.replace('market_', '') 
-                  : market.id;
-                
-                // Safe BigInt conversion with fallbacks
-                const safeBigInt = (value: string, fallback: string = '0') => {
-                  try {
-                    // Check if value is a valid number
-                    if (isNaN(Number(value)) || value.includes(':')) {
-                      console.warn(`Invalid BigInt value: ${value}, using fallback: ${fallback}`);
-                      return BigInt(fallback);
-                    }
-                    return BigInt(value);
-                  } catch (error) {
-                    console.warn(`BigInt conversion failed for: ${value}, using fallback: ${fallback}`);
-                    return BigInt(fallback);
-                  }
-                };
-                
+              {paginatedMarkets.map((market) => {
+                // Convert subgraph market to MarketWithMetadata format
                 const adaptedMarket: MarketWithMetadata = {
-                  ...market,
-                  id: safeBigInt(marketId),
-                  endTime: safeBigInt(market.endtime),
-                  totalPool: safeBigInt(market.totalpool),
-                  totalYes: safeBigInt(market.totalyes),
-                  totalNo: safeBigInt(market.totalno),
-                  createdAt: safeBigInt(market.createdat),
-                  status: market.status as any // Convert number to MarketStatus enum
+                  id: BigInt(market.id),
+                  question: market.question,
+                  description: market.description,
+                  source: market.source,
+                  endTime: BigInt(Math.floor(new Date(market.endTime).getTime() / 1000)),
+                  totalPool: BigInt(Math.floor(parseFloat(market.totalPool) * 1e18)), // Convert CELO to wei
+                  totalYes: BigInt(Math.floor(parseFloat(market.totalYes) * 1e18)), // Convert CELO to wei
+                  totalNo: BigInt(Math.floor(parseFloat(market.totalNo) * 1e18)), // Convert CELO to wei
+                  createdAt: BigInt(Math.floor(new Date(market.createdAt).getTime() / 1000)),
+                  status: market.status as any,
+                  creator: market.creator,
+                  resolver: market.resolver
                 };
                 
                 return (
                   <MarketCard 
-                    key={market.id.toString()} 
+                    key={market.id} 
                     market={adaptedMarket} 
                   />
                 );
@@ -241,23 +275,23 @@ const Markets: React.FC = () => {
             </div>
 
             {/* Pagination - Mobile Optimized */}
-            {pagination.totalPages > 1 && (
+            {totalPages > 1 && (
               <div className="flex items-center justify-center space-x-2 mt-6">
                 <button
                   onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={!pagination.hasPrevPage}
+                  disabled={currentPage === 1}
                   className="px-3 py-2 bg-white text-black border border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 
                 <span className="px-3 py-2 text-xs text-gray-600">
-                  Page {pagination.currentPage} of {pagination.totalPages}
+                  Page {currentPage} of {totalPages}
                 </span>
                 
                 <button
                   onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={!pagination.hasNextPage}
+                  disabled={currentPage === totalPages}
                   className="px-3 py-2 bg-white border text-black border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
@@ -341,7 +375,7 @@ const Markets: React.FC = () => {
               {/* Market Count */}
               <div className="pt-3 border-t border-gray-200">
                 <div className="text-center text-xs text-gray-600">
-                  {markets.length} of {pagination.totalMarkets} markets
+                  {paginatedMarkets.length} of {filteredAndSortedMarkets.length} markets
                 </div>
               </div>
             </div>

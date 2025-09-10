@@ -33,7 +33,7 @@ import { sdk } from '@farcaster/miniapp-sdk';
 import { useFarcaster } from '@/components/FarcasterProvider';
 import { useMiniApp } from '@/hooks/useMiniApp';
 import FarcasterUserProfile from '@/components/FarcasterUserProfile';
-import { useAllMarketsApi } from '@/hooks/useMarketsApi';
+import { useSubgraphMarkets } from '@/hooks/useSubgraphMarkets';
 import { formatEther } from 'viem';
 import NotificationContainer, { useNotifications } from '@/components/NotificationContainer';
 import ReferralBanner from '@/components/ReferralBanner';
@@ -60,7 +60,37 @@ const HomePageContent: React.FC = () => {
   const { isConnected } = useAccount();
   const { isInFarcasterContext } = useFarcaster();
   const { isMiniApp, userFid, username, displayName, pfpUrl } = useMiniApp();
-  const { allMarkets, stats, loading: marketsLoading, refetch } = useAllMarketsApi();
+  const { markets: allMarkets, loading: marketsLoading, refetch } = useSubgraphMarkets();
+  
+  // Calculate stats from subgraph data
+  const stats = useMemo(() => {
+    if (!allMarkets || allMarkets.length === 0) {
+      return {
+        totalMarkets: 0,
+        totalVolume: '0',
+        totalParticipants: 0,
+        marketsResolved: 0
+      };
+    }
+    
+    const totalMarkets = allMarkets.length;
+    const marketsResolved = allMarkets.filter(market => market.status === 'RESOLVED').length;
+    const totalVolume = allMarkets.reduce((sum, market) => {
+      return sum + parseFloat(market.totalPool);
+    }, 0).toString();
+    const totalParticipants = allMarkets.reduce((sum, market) => {
+      // This would need to be calculated from participants data
+      // For now, we'll use a placeholder
+      return sum + 1; // Placeholder
+    }, 0);
+    
+    return {
+      totalMarkets,
+      totalVolume,
+      totalParticipants,
+      marketsResolved
+    };
+  }, [allMarkets]);
   const { addNotification } = useNotifications();
   const { composeCast, triggerHaptic } = useMiniApp();
 
@@ -128,7 +158,7 @@ const HomePageContent: React.FC = () => {
     return {
       ...stats,
       activeTraders: uniqueTraders.size,
-      totalVolume: BigInt(stats.totalVolume || '0')
+      totalVolume: stats.totalVolume || '0'
     };
   }, [stats, allMarkets]);
 
@@ -139,8 +169,8 @@ const HomePageContent: React.FC = () => {
   const getTrendingMarkets = () => {
     const currentTime = Math.floor(Date.now() / 1000);
     return allMarkets
-      .filter((m) => m.status === 0 && Number(m.endtime) > currentTime) // Only active markets
-      .sort((a, b) => Number(b.totalpool) - Number(a.totalpool))
+      .filter((m) => m.status === 'ACTIVE' && Number(m.endTime) > currentTime) // Only active markets
+      .sort((a, b) => Number(b.totalPool) - Number(a.totalPool))
       .slice(0, 3);
   };
 
@@ -245,26 +275,17 @@ const HomePageContent: React.FC = () => {
               <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-white/20">
                 <div className="text-lg md:text-2xl font-bold text-purple-600 mb-1">
                   {marketsLoading ? '...' : (() => {
-                    console.log('🔍 Enhanced stats:', enhancedStats);
-                    const volume = enhancedStats.totalVolume;
-                    const volumeInCelo = formatEther(volume);
-                    const roundedVolume = parseFloat(volumeInCelo).toFixed(5);
-                    console.log('🔍 Volume display debug:', {
-                      rawVolume: volume.toString(),
-                      volumeInCelo: volumeInCelo,
-                      roundedVolume: roundedVolume,
-                      isBigInt: typeof volume === 'bigint'
-                    });
-                    return volume > 0n ? `${Number(roundedVolume)*10} CELO` : '0 CELO';
+                    const volume = parseFloat(enhancedStats.totalVolume);
+                    return volume > 0 ? `${volume.toFixed(2)} CELO` : '0 CELO';
                   })()}
                 </div>
                 <p className="text-xs text-gray-700 font-medium">
-                  {marketsLoading ? 'Loading...' : (enhancedStats.totalVolume > 0n ? 'Total Volume' : 'No Markets Yet')}
+                  {marketsLoading ? 'Loading...' : (parseFloat(enhancedStats.totalVolume) > 0 ? 'Total Volume' : 'No Markets Yet')}
                 </p>
               </div>
               <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-white/20">
                 <div className="text-lg md:text-2xl font-bold text-yellow-600 mb-1">
-                  {marketsLoading ? '...' : enhancedStats.resolvedMarkets}
+                  {marketsLoading ? '...' : stats.marketsResolved}
                 </div>
                 <p className="text-xs text-gray-700 font-medium">
                   Resolved markets
@@ -323,11 +344,11 @@ const HomePageContent: React.FC = () => {
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">YES:</span>
                       <span className="font-medium text-green-600">
-                        {Number(market.totalyes) > 0 || Number(market.totalno) > 0
+                        {Number(market.totalYes) > 0 || Number(market.totalNo) > 0
                           ? `${(
-                              (Number(market.totalyes) /
-                                (Number(market.totalyes) +
-                                  Number(market.totalno))) *
+                              (Number(market.totalYes) /
+                                (Number(market.totalYes) +
+                                  Number(market.totalNo))) *
                               100
                             ).toFixed(1)}%`
                           : "50.0%"}
@@ -336,11 +357,11 @@ const HomePageContent: React.FC = () => {
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">NO:</span>
                       <span className="font-medium text-red-600">
-                        {Number(market.totalyes) > 0 || Number(market.totalno) > 0
+                        {Number(market.totalYes) > 0 || Number(market.totalNo) > 0
                           ? `${(
-                              (Number(market.totalno) /
-                                (Number(market.totalyes) +
-                                  Number(market.totalno))) *
+                              (Number(market.totalNo) /
+                                (Number(market.totalYes) +
+                                  Number(market.totalNo))) *
                               100
                             ).toFixed(1)}%`
                           : "50.0%"}
@@ -348,9 +369,9 @@ const HomePageContent: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
-                    <span>Pool: {formatEther(BigInt(market.totalpool))} CELO</span>
+                    <span>Pool: {market.totalPool} CELO</span>
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                      {market.category}
+                      Prediction
                     </span>
                   </div>
                   <div className="flex gap-2">

@@ -7,7 +7,7 @@ import { useAccount, useBalance } from 'wagmi';
 import { parseEther } from 'viem';
 
 // Custom Hooks
-import { useMarketDetails } from '@/hooks/useMarketDetails';
+import { useSubgraphMarketDetails } from '@/hooks/useSubgraphMarketDetails';
 import { usePredictionMarket } from '@/hooks/usePredictionMarket';
 import { useNotificationHelpers } from '@/hooks/useNotificationHelpers';
 import { useFarcaster } from '@/components/FarcasterProvider';
@@ -62,7 +62,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
   const [optimisticUpdate, setOptimisticUpdate] = useState<any>(null);
   const [pendingTransaction, setPendingTransaction] = useState<string | null>(null);
 
-  // Market data from our custom hook
+  // Market data from subgraph
   const {
     market: smartMarketData,
     participants,
@@ -71,16 +71,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
     error: dataError,
     lastUpdated,
     refresh: refreshData,
-    pollingStatus,
-    isPolling,
-    isPageVisible,
     isRefreshing,
     hasUpdates,
     initialLoadComplete
-  } = useMarketDetails({
+  } = useSubgraphMarketDetails({
     marketId: marketId || '',
-    enabled: true,
-    pollingInterval: justPurchased ? 1000 : 3000 // More aggressive polling after purchase
+    enabled: true
   });
 
   // Farcaster-specific effects
@@ -93,21 +89,37 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
     }
   }, [isFarcasterApp, isReady, context, getUserDisplayName]);
 
-  console.log('🔄 Market data:', smartMarketData);
+  console.log('🔄 Market data from subgraph:', smartMarketData);
+  console.log('🔄 Participants data from subgraph:', participants);
+  console.log('🔄 Data loading states:', { dataLoading, participantsLoading });
+  console.log('🔄 Data errors:', { dataError });
+  
   // Update local market state when data loads
   useEffect(() => {
     if (smartMarketData) {
-      console.log('📊 Market data loaded:', {
-        id: smartMarketData.id,
-        question: smartMarketData.question,
-        image: smartMarketData.image == "" ? "https://a2ede-rqaaa-aaaal-ai6sq-cai.raw.icp0.io/uploads/food1.612.612.jpg" : smartMarketData.image,
-        totalyes: smartMarketData.totalyes,
-        totalno: smartMarketData.totalno,
-        creator: smartMarketData.creator,
-        endtime: smartMarketData.endtime,
-        description: smartMarketData.description
+      // Convert subgraph data to expected format
+      const convertedMarket = {
+        ...smartMarketData,
+        totalyes: smartMarketData.totalYes,
+        totalno: smartMarketData.totalNo,
+        totalpool: smartMarketData.totalPool,
+        endtime: smartMarketData.endTime,
+        createdat: smartMarketData.createdAt,
+        image: smartMarketData.image || "https://a2ede-rqaaa-aaaal-ai6sq-cai.raw.icp0.io/uploads/food1.612.612.jpg"
+      };
+      
+      console.log('📊 Market data loaded from subgraph:', {
+        id: convertedMarket.id,
+        question: convertedMarket.question,
+        totalpool: convertedMarket.totalpool,
+        totalyes: convertedMarket.totalyes,
+        totalno: convertedMarket.totalno,
+        creator: convertedMarket.creator,
+        endtime: convertedMarket.endtime,
+        description: convertedMarket.description
       });
-      setMarket(smartMarketData);
+      
+      setMarket(convertedMarket);
       setIsLoading(false);
     }
   }, [smartMarketData]);
@@ -172,10 +184,10 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
     // Calculate from participants data if available (more accurate)
     if (participants && participants.length > 0) {
       totalYesShares = participants.reduce((sum, participant) => {
-        return sum + parseFloat(participant.totalyesshares || 0);
+        return sum + parseFloat(participant.totalYesShares || '0');
       }, 0);
       totalNoShares = participants.reduce((sum, participant) => {
-        return sum + parseFloat(participant.totalnoshares || 0);
+        return sum + parseFloat(participant.totalNoShares || '0');
       }, 0);
     } else {
       // Fallback to market data
@@ -210,26 +222,26 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
     // Calculate total volume from participants data if available (more accurate)
     if (participants && participants.length > 0) {
       total = participants.reduce((sum, participant) => {
-        return sum + parseFloat(participant.totalinvestment || 0);
+        return sum + parseFloat(participant.totalInvestment || '0');
       }, 0);
     } else {
-      // Fallback to market data
-      total = parseFloat(market.totalyes || 0) + parseFloat(market.totalno || 0);
+      // Fallback to market data (subgraph data is already in CELO format)
+      total = parseFloat(market.totalYes || 0) + parseFloat(market.totalNo || 0);
     }
     
     // Apply optimistic update if available
     if (optimisticUpdate) {
-      // Convert CELO amount to wei for consistency with database storage
-      total += parseFloat(optimisticUpdate.amount) * 1e18;
+      // Data is already in CELO format
+      total += parseFloat(optimisticUpdate.amount);
     }
     
     return total;
   }, [market, participants, optimisticUpdate]);
 
-  // Format volume with proper wei to CELO conversion
+  // Format volume - data is already in CELO format from subgraph
   const formatVolume = (volume: number) => {
-    // Convert from wei to CELO (divide by 1e18)
-    const celoAmount = volume / 1e18;
+    // Data is already in CELO format, no conversion needed
+    const celoAmount = volume;
     
     if (celoAmount >= 1e12) {
       return `${(celoAmount / 1e12).toLocaleString('en-US', { 
@@ -551,8 +563,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
                           <span className="text-gray-600 text-xs">Yes Shares</span>
                           <span className="font-semibold text-green-600">
                             {participants && participants.length > 0 
-                              ? formatVolume(participants.reduce((sum, p) => sum + parseFloat(p.totalyesshares || 0), 0))
-                              : formatVolume(parseFloat(market?.totalyes || 0))
+                              ? formatVolume(participants.reduce((sum, p) => sum + parseFloat(p.totalYesShares || '0'), 0))
+                              : formatVolume(parseFloat(market?.totalYes || 0))
                             }
                           </span>
                         </div>
@@ -560,8 +572,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
                           <span className="text-gray-600 text-xs">No Shares</span>
                           <span className="font-semibold text-red-600">
                             {participants && participants.length > 0 
-                              ? formatVolume(participants.reduce((sum, p) => sum + parseFloat(p.totalnoshares || 0), 0))
-                              : formatVolume(parseFloat(market?.totalno || 0))
+                              ? formatVolume(participants.reduce((sum, p) => sum + parseFloat(p.totalNoShares || '0'), 0))
+                              : formatVolume(parseFloat(market?.totalNo || 0))
                             }
                           </span>
                         </div>
@@ -856,45 +868,56 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
               ) : participants.length > 0 ? (
                 <div className="space-y-3">
                   <div className="max-h-80 overflow-y-auto">
-                    {participants.map((participant: any, index: number) => (
-                      <div 
-                        key={participant.address || participant.id || index} 
-                        className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm font-medium text-gray-600">
-                            {index + 1}
+                    {participants.map((participant: any, index: number) => {
+                      // Convert subgraph participant data to expected format
+                      const convertedParticipant = {
+                        ...participant,
+                        address: participant.user,
+                        totalyesshares: participant.totalYesShares,
+                        totalnoshares: participant.totalNoShares,
+                        totalinvestment: participant.totalInvestment
+                      };
+                      
+                      return (
+                        <div 
+                          key={convertedParticipant.address || convertedParticipant.id || index} 
+                          className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm font-medium text-gray-600">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {shortenAddress(convertedParticipant.address || 'Unknown')}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {parseFloat(convertedParticipant.totalyesshares || 0) > parseFloat(convertedParticipant.totalnoshares || 0) ? 'Yes' : 
+                                 parseFloat(convertedParticipant.totalnoshares || 0) > parseFloat(convertedParticipant.totalyesshares || 0) ? 'No' : 'Neutral'} side
+                              </div>
+                            </div>
                           </div>
-                          <div>
+
+                          <div className="text-right">
                             <div className="text-sm font-medium text-gray-900">
-                              {shortenAddress(participant.address || 'Unknown')}
+                              {formatVolume(parseFloat(convertedParticipant.totalinvestment || 0))}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {parseFloat(participant.totalyesshares || 0) > parseFloat(participant.totalnoshares || 0) ? 'Yes' : 
-                               parseFloat(participant.totalnoshares || 0) > parseFloat(participant.totalyesshares || 0) ? 'No' : 'Neutral'} side
+                              Total Investment
                             </div>
                           </div>
-                        </div>
-
-                        <div className="text-right">
-                          <div className="text-sm font-medium text-gray-900">
-                            {formatVolume(parseFloat(participant.totalinvestment || 0))}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Total Investment
-                          </div>
-                        </div>
 
                         <div className="text-right text-xs">
                           <div className="text-green-600">
-                            Yes: {formatVolume(parseFloat(participant.totalyesshares || 0))}
+                            Yes: {formatVolume(parseFloat(convertedParticipant.totalyesshares || 0))}
                           </div>
                           <div className="text-red-600">
-                            No: {formatVolume(parseFloat(participant.totalnoshares || 0))}
+                            No: {formatVolume(parseFloat(convertedParticipant.totalnoshares || 0))}
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : (

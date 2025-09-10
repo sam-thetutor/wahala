@@ -16,41 +16,27 @@ dataSources:
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - ClaimsContractSet
-        - CreatorFeeClaimed
-        - CreatorFeePercentageUpdated
+        - Market
+        - Participant
+        - User
+        - GlobalStats
         - MarketCreated
-        - MarketCreationFeeUpdated
-        - MarketResolved
-        - OwnershipTransferred
-        - RewardsDisbursed
         - SharesBought
-        - UsernameChanged
+        - MarketResolved
         - UsernameSet
+        - UsernameChanged
       abis:
         - name: PredictionMarketCore
           file: ./abis/PredictionMarketCore.json
       eventHandlers:
-        - event: ClaimsContractSet(indexed address,indexed address)
-          handler: handleClaimsContractSet
-        - event: CreatorFeeClaimed(indexed uint256,indexed address,uint256)
-          handler: handleCreatorFeeClaimed
-        - event: CreatorFeePercentageUpdated(uint256,uint256)
-          handler: handleCreatorFeePercentageUpdated
         - event: MarketCreated(indexed uint256,indexed address,string,string,string,uint256,uint256)
           handler: handleMarketCreated
-        - event: MarketCreationFeeUpdated(uint256,uint256)
-          handler: handleMarketCreationFeeUpdated
-        - event: MarketResolved(indexed uint256,indexed address,bool)
-          handler: handleMarketResolved
-        - event: OwnershipTransferred(indexed address,indexed address)
-          handler: handleOwnershipTransferred
-        - event: RewardsDisbursed(indexed uint256,indexed address,uint256)
-          handler: handleRewardsDisbursed
         - event: SharesBought(indexed uint256,indexed address,bool,uint256)
           handler: handleSharesBought
-        - event: UsernameChanged(indexed address,string,string)
-          handler: handleUsernameChanged
+        - event: MarketResolved(indexed uint256,indexed address,bool)
+          handler: handleMarketResolved
         - event: UsernameSet(indexed address,string)
           handler: handleUsernameSet
+        - event: UsernameChanged(indexed address,string,string)
+          handler: handleUsernameChanged
       file: ./src/prediction-market-core.ts

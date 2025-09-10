@@ -1,78 +1,66 @@
-type ClaimsContractSet @entity(immutable: true) {
-  id: Bytes!
-  oldContract: Bytes! # address
-  newContract: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+# Market entity - aggregated data for each market
+type Market @entity(immutable: false) {
+  id: ID! # marketId
+  question: String!
+  description: String!
+  source: String!
+  endTime: BigInt!
+  creator: Bytes!
+  creationFee: BigInt!
+  totalPool: BigInt!
+  totalYes: BigInt!
+  totalNo: BigInt!
+  status: MarketStatus!
+  outcome: Boolean
+  createdAt: BigInt!
+  resolvedAt: BigInt
+  resolver: Bytes
 }
 
-type CreatorFeeClaimed @entity(immutable: true) {
-  id: Bytes!
-  marketId: BigInt! # uint256
-  creator: Bytes! # address
-  amount: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+# Participant entity - tracks user participation in markets
+type Participant @entity(immutable: false) {
+  id: ID! # marketId-userAddress
+  market: Market!
+  user: Bytes!
+  totalYesShares: BigInt!
+  totalNoShares: BigInt!
+  totalInvestment: BigInt!
+  firstPurchaseAt: BigInt!
+  lastPurchaseAt: BigInt!
+  transactionCount: BigInt!
 }
 
-type CreatorFeePercentageUpdated @entity(immutable: true) {
-  id: Bytes!
-  oldPercentage: BigInt! # uint256
-  newPercentage: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+# User entity - tracks user information
+type User @entity(immutable: false) {
+  id: ID! # user address
+  username: String
+  totalMarketsCreated: BigInt!
+  totalMarketsParticipated: BigInt!
+  totalInvestment: BigInt!
+  totalWinnings: BigInt!
+  createdAt: BigInt!
 }
 
+# Global stats entity
+type GlobalStats @entity(immutable: false) {
+  id: ID! # "global"
+  totalMarkets: BigInt!
+  totalParticipants: BigInt!
+  totalVolume: BigInt!
+  totalFees: BigInt!
+  lastUpdated: BigInt!
+}
+
+# Event entities (immutable)
 type MarketCreated @entity(immutable: true) {
   id: Bytes!
-  marketId: BigInt! # uint256
-  creator: Bytes! # address
-  question: String! # string
-  description: String! # string
-  source: String! # string
-  endTime: BigInt! # uint256
-  creationFee: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type MarketCreationFeeUpdated @entity(immutable: true) {
-  id: Bytes!
-  oldFee: BigInt! # uint256
-  newFee: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type MarketResolved @entity(immutable: true) {
-  id: Bytes!
-  marketId: BigInt! # uint256
-  resolver: Bytes! # address
-  outcome: Boolean! # bool
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type OwnershipTransferred @entity(immutable: true) {
-  id: Bytes!
-  previousOwner: Bytes! # address
-  newOwner: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type RewardsDisbursed @entity(immutable: true) {
-  id: Bytes!
-  marketId: BigInt! # uint256
-  claimant: Bytes! # address
-  amount: BigInt! # uint256
+  marketId: BigInt!
+  creator: Bytes!
+  question: String!
+  description: String!
+  source: String!
+  endTime: BigInt!
+  creationFee: BigInt!
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -80,20 +68,32 @@ type RewardsDisbursed @entity(immutable: true) {
 
 type SharesBought @entity(immutable: true) {
   id: Bytes!
-  marketId: BigInt! # uint256
-  buyer: Bytes! # address
-  side: Boolean! # bool
-  amount: BigInt! # uint256
+  marketId: BigInt!
+  buyer: Bytes!
+  side: Boolean!
+  amount: BigInt!
+  totalYes: BigInt!
+  totalNo: BigInt!
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
 
-type UsernameChanged @entity(immutable: true) {
+type MarketResolved @entity(immutable: true) {
   id: Bytes!
-  user: Bytes! # address
-  oldUsername: String! # string
-  newUsername: String! # string
+  marketId: BigInt!
+  resolver: Bytes!
+  outcome: Boolean!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type CreatorFeeClaimed @entity(immutable: true) {
+  id: Bytes!
+  marketId: BigInt!
+  creator: Bytes!
+  amount: BigInt!
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -101,9 +101,26 @@ type UsernameChanged @entity(immutable: true) {
 
 type UsernameSet @entity(immutable: true) {
   id: Bytes!
-  user: Bytes! # address
-  username: String! # string
+  user: Bytes!
+  username: String!
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
+}
+
+type UsernameChanged @entity(immutable: true) {
+  id: Bytes!
+  user: Bytes!
+  oldUsername: String!
+  newUsername: String!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# Enums
+enum MarketStatus {
+  ACTIVE
+  RESOLVED
+  CANCELLED
 }
