@@ -210,3 +210,4 @@ syncNewContractToDatabase()
     process.exit(1)
   })
 
+

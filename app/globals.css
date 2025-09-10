@@ -5,17 +5,6 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  
-  /* New blue theme variables - updated to sand blue */
-  --primary-blue: #2563eb;
-  --accent-blue: #3b82f6;
-  --light-blue: #dbeafe;
-  --dark-blue: #64748b; /* Changed from #1e40af to sand blue */
-  --sand-blue: #94a3b8; /* Additional sand blue tone */
-  --warm-blue: #475569; /* Warmer blue tone */
-  --success-green: #10b981;
-  --warning-amber: #f59e0b;
-  --gray-500: #6b7280;
 }
 
 @theme inline {

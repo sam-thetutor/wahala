@@ -8,14 +8,22 @@
 export const CONTRACT_ADDRESSES = {
   // Celo Mainnet
   CELO: {
-    PREDICTION_MARKET_CORE: '0x7176D16D61A122231a78749c61740ad8F86BB13a',
-    PREDICTION_MARKET_CLAIMS: '0x1e1ac759e75dA03a39f16ae72B73279A1edf63d6',
+    PREDICTION_MARKET_CORE: '0x35f61008878b85B4239C1EF714989B236757a283',
+    PREDICTION_MARKET_CLAIMS: '0x2FDd27190d3A7EB376f06D391d7e0F4fF7811350',
   },
   // Base Mainnet
   BASE: {
     PREDICTION_MARKET_CORE: '0x0000000000000000000000000000000000000000',
     PREDICTION_MARKET_CLAIMS: '0x0000000000000000000000000000000000000000',
   },
+} as const;
+
+// Admin addresses
+export const ADMIN_ADDRESSES = {
+  // Primary admin address
+  PRIMARY: '0x21d654daab0fe1be0e584980ca7c1a382850939f',
+  // Secondary admin address (if needed)
+  SECONDARY: '0x7818CEd1298849B47a9B56066b5adc72CDDAf733',
 } as const;
 
 // OLD ADDRESSES (commented out for reference)
@@ -57,3 +65,13 @@ export const getClaimsContractAddress = (chainId?: number): `0x${string}` => {
 // Convenience exports for Celo mainnet (most commonly used)
 export const CELO_CORE_ADDRESS = CONTRACT_ADDRESSES.CELO.PREDICTION_MARKET_CORE;
 export const CELO_CLAIMS_ADDRESS = CONTRACT_ADDRESSES.CELO.PREDICTION_MARKET_CLAIMS;
+
+/**
+ * Check if an address is an admin
+ */
+export const isAdminAddress = (address?: string): boolean => {
+  if (!address) return false;
+  const lowerAddress = address.toLowerCase();
+  return lowerAddress === ADMIN_ADDRESSES.PRIMARY.toLowerCase() || 
+         lowerAddress === ADMIN_ADDRESSES.SECONDARY.toLowerCase();
+};

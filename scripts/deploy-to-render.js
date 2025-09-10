@@ -68,9 +68,9 @@ async function deployToRender() {
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_PREDICTION_MARKET_ADDRESS_CELO
-        value: 0x7176D16D61A122231a78749c61740ad8F86BB13a
+        value: 0x35f61008878b85B4239C1EF714989B236757a283
       - key: NEXT_PUBLIC_PREDICTION_MARKET_CLAIMS_ADDRESS_CELO
-        value: 0x1e1ac759e75dA03a39f16ae72B73279A1edf63d6
+        value: 0x2FDd27190d3A7EB376f06D391d7e0F4fF7811350
       # Note: You'll need to set these in Render dashboard:
       # - NEXT_PUBLIC_SUPABASE_URL
       # - NEXT_PUBLIC_SUPABASE_ANON_KEY`;

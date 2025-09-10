@@ -10,9 +10,11 @@ import NotificationContainer, { useNotifications } from '@/components/Notificati
 import { CreatorFeeClaim } from '@/components/CreatorFeeClaim';
 import { formatEther } from 'viem';
 import Link from 'next/link';
-import { useUserActivity } from '@/hooks/useUserActivity';
-import { useUserStats } from '@/hooks/useUserStats';
-import { UserActivity, UserStats, ACTIVITY_CONFIG, MARKET_STATUS_CONFIG } from '@/types/profile';
+import { useSubgraphUserStats } from '@/hooks/useSubgraphUserStats';
+import { useSubgraphUserActivity } from '@/hooks/useSubgraphUserActivity';
+import { useSubgraphUserMarkets } from '@/hooks/useSubgraphUserMarkets';
+import { useSubgraphUserClaims } from '@/hooks/useSubgraphUserClaims';
+import { useSubgraphUserPerformance } from '@/hooks/useSubgraphUserPerformance';
 import { formatVolume, formatDate, shortenAddress, formatPercentage } from '@/lib/utils';
 import ClaimsSection from '@/components/ClaimsSection';
 
@@ -38,10 +40,17 @@ const ProfileContent: React.FC = () => {
     chainId: 42220
   });
   
-  // Use new hooks for enhanced data
+  // Use enhanced subgraph hooks for comprehensive data
+  const { 
+    stats: userStats, 
+    loading: statsLoading, 
+    error: statsError,
+    refetch: refetchStats,
+    lastUpdated: statsLastUpdated
+  } = useSubgraphUserStats();
+  
   const { 
     activities, 
-    stats: activityStats, 
     loading: activitiesLoading, 
     error: activitiesError,
     refetch: refetchActivities,
@@ -49,27 +58,41 @@ const ProfileContent: React.FC = () => {
     hasMore,
     setFilters: setActivityFilters,
     filters: activityFilters
-  } = useUserActivity();
+  } = useSubgraphUserActivity();
   
-  const { 
-    stats: userStats, 
-    loading: statsLoading, 
-    error: statsError,
-    refetch: refetchStats
-  } = useUserStats();
+  const {
+    markets: userMarkets,
+    loading: marketsLoading,
+    error: marketsError,
+    refetch: refetchMarkets,
+    stats: marketsStats
+  } = useSubgraphUserMarkets();
+  
+  const {
+    claims,
+    availableClaims,
+    loading: claimsLoading,
+    error: claimsError,
+    refetch: refetchClaims,
+    stats: claimsStats
+  } = useSubgraphUserClaims();
+  
+  const {
+    performance,
+    loading: performanceLoading,
+    error: performanceError,
+    refetch: refetchPerformance
+  } = useSubgraphUserPerformance();
   
   
   const [activeTab, setActiveTab] = useState<'overview' | 'activities' | 'markets' | 'claims'>('overview');
   const [isPolling, setIsPolling] = useState(false);
 
-  // Get markets created by user from activities
-  const userMarkets = activities.filter(activity => activity.type === 'market_created');
-  
   // Combined loading state
-  const loading = activitiesLoading || statsLoading;
+  const loading = activitiesLoading || statsLoading || marketsLoading || claimsLoading || performanceLoading;
   
   // Combined error state
-  const error = activitiesError || statsError;
+  const error = activitiesError || statsError || marketsError || claimsError || performanceError;
 
   // Polling effect for real-time updates
   useEffect(() => {
@@ -83,7 +106,10 @@ const ProfileContent: React.FC = () => {
         setIsPolling(true);
         Promise.all([
           refetchActivities(),
-          refetchStats()
+          refetchStats(),
+          refetchMarkets(),
+          refetchClaims(),
+          refetchPerformance()
         ]).finally(() => {
           setIsPolling(false);
         });
@@ -134,7 +160,7 @@ const ProfileContent: React.FC = () => {
                     {getUserEmoji()}
                   </div>
                 ) : (
-                  <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-lg">
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-lg">
                     {farcasterAddress.slice(2, 4).toUpperCase()}
                   </div>
                 )}
@@ -164,7 +190,7 @@ const ProfileContent: React.FC = () => {
               {/* Polling Indicator */}
               {isPolling && (
                 <div className="flex items-center text-xs text-gray-500">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600 mr-1"></div>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b border-emerald-600 mr-1"></div>
                   Updating...
                 </div>
               )}
@@ -188,8 +214,11 @@ const ProfileContent: React.FC = () => {
                 onClick={() => {
                   refetchActivities();
                   refetchStats();
+                  refetchMarkets();
+                  refetchClaims();
+                  refetchPerformance();
                 }}
-                className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs md:text-sm"
+                className="px-3 md:px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-xs md:text-sm"
               >
                 Refresh
               </button>
@@ -202,16 +231,16 @@ const ProfileContent: React.FC = () => {
           <nav className="flex space-x-1">
             {[
               { id: 'overview', label: 'Overview', count: null },
-              { id: 'activities', label: 'Activities', count: userStats?.totalTrades || 0 },
-              { id: 'markets', label: 'My Markets', count: userStats?.totalMarketsCreated || 0 },
-              { id: 'claims', label: 'Claims', count: 0 },
+              { id: 'activities', label: 'Activities', count: activities.length },
+              { id: 'markets', label: 'My Markets', count: userMarkets.length },
+              { id: 'claims', label: 'Claims', count: availableClaims.length },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`flex-1 px-2 md:px-4 py-2 text-xs md:text-sm font-medium rounded-md transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-emerald-600 text-white'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
@@ -249,7 +278,7 @@ const ProfileContent: React.FC = () => {
               {/* Markets Created */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
                 <div className="flex items-center">
-                  <div className="p-2 bg-blue-100 rounded-lg">
+                  <div className="p-2 bg-emerald-100 rounded-lg">
                     <span className="text-lg md:text-xl">📊</span>
                   </div>
                   <div className="ml-3">
@@ -341,6 +370,9 @@ const ProfileContent: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Advanced Performance Metrics */}
+            
           </div>
         )}
 
@@ -373,7 +405,7 @@ const ProfileContent: React.FC = () => {
             
             {loading ? (
               <div className="text-center py-6 md:py-8">
-                <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-blue-600 mx-auto mb-3 md:mb-4"></div>
+                <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-emerald-600 mx-auto mb-3 md:mb-4"></div>
                 <p className="text-sm md:text-base text-gray-600">Loading activities...</p>
               </div>
             ) : error ? (
@@ -383,7 +415,7 @@ const ProfileContent: React.FC = () => {
                 <p className="text-sm md:text-base text-gray-600 mb-4">{error}</p>
                 <button
                   onClick={refetchActivities}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
                 >
                   Try Again
                 </button>
@@ -391,44 +423,37 @@ const ProfileContent: React.FC = () => {
             ) : activities.length > 0 ? (
               <div className="space-y-3 md:space-y-4">
                 {activities.map((activity) => {
-                  const config = ACTIVITY_CONFIG[activity.type];
-                  const marketStatus = MARKET_STATUS_CONFIG[activity.marketStatus as keyof typeof MARKET_STATUS_CONFIG];
-                  const activityDate = activity.lastPurchaseAt || activity.createdAt;
-                  if (!activityDate) return null;
-                  
-                  // Ensure activityDate is a Date object
-                  const dateObj = activityDate instanceof Date ? activityDate : new Date(activityDate);
+                  const activityDate = new Date(activity.timestamp * 1000);
                   
                   return (
                     <div
                       key={activity.id}
                       className="flex items-center p-3 md:p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
                     >
-                      <div className={`text-lg md:text-2xl mr-3 md:mr-4 p-2 rounded-lg ${config.bgColor}`}>
-                        {config.icon}
+                      <div className={`text-lg md:text-2xl mr-3 md:mr-4 p-2 rounded-lg bg-gray-100`}>
+                        {activity.icon}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-medium text-sm md:text-base text-gray-900">
-                              {config.label}
+                              {activity.description}
                             </p>
                             <p className="text-xs md:text-sm text-gray-600 mt-1">
                               {activity.marketQuestion}
                             </p>
-                            {activity.type === 'trading' && activity.totalInvestment && (
+                            {activity.amount && (
                               <p className="text-xs text-gray-500 mt-1">
-                                Investment: {formatVolume(activity.totalInvestment)} • 
-                                {activity.primarySide === 'yes' ? ' Yes' : activity.primarySide === 'no' ? ' No' : ' Neutral'}
+                                Amount: {formatVolume(activity.amount)} CELO
                               </p>
                             )}
                           </div>
                           <div className="text-right">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${marketStatus.bgColor} ${marketStatus.color}`}>
-                              {marketStatus.label}
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800`}>
+                              {activity.marketStatus}
                             </span>
                             <p className="text-xs md:text-sm text-gray-500 mt-1">
-                              {formatDate(dateObj.getTime() / 1000)}
+                              {formatDate(activity.timestamp)}
                             </p>
                           </div>
                         </div>
@@ -460,7 +485,7 @@ const ProfileContent: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Link
                     href="/create-market"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
                   >
                     Create Market
                   </Link>
@@ -482,15 +507,12 @@ const ProfileContent: React.FC = () => {
             
             {loading ? (
               <div className="text-center py-6 md:py-8">
-                <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-blue-600 mx-auto mb-3 md:mb-4"></div>
+                <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-emerald-600 mx-auto mb-3 md:mb-4"></div>
                 <p className="text-sm md:text-base text-gray-600">Loading markets...</p>
               </div>
             ) : userMarkets.length > 0 ? (
               <div className="space-y-3 md:space-y-4">
-                {userMarkets.map((activity) => {
-                  const market = activity.market;
-                  const marketStatus = MARKET_STATUS_CONFIG[market.status as keyof typeof MARKET_STATUS_CONFIG];
-                  
+                {userMarkets.map((market) => {
                   return (
                     <div
                       key={market.id}
@@ -502,23 +524,35 @@ const ProfileContent: React.FC = () => {
                             {market.question}
                           </h3>
                           <div className="flex flex-col md:flex-row md:items-center md:space-x-4 text-xs md:text-sm text-gray-500 space-y-1 md:space-y-0">
-                            <span>Created: {formatDate(parseInt(market.createdat || '0'))}</span>
+                            <span>Created: {formatDate(market.createdAt)}</span>
                             <span>Market ID: {market.id}</span>
-                            <span>End Time: {formatDate(parseInt(market.endtime))}</span>
+                            <span>End Time: {formatDate(market.endTime)}</span>
                           </div>
                           <div className="flex items-center space-x-4 mt-2 text-xs text-gray-600">
-                            <span>Pool: {formatVolume(market.totalpool)}</span>
-                            <span>Yes: {formatVolume(market.totalyes)}</span>
-                            <span>No: {formatVolume(market.totalno)}</span>
+                            <span>Pool: {formatVolume(market.totalPool)}</span>
+                            <span>Yes: {formatVolume(market.totalYes)}</span>
+                            <span>No: {formatVolume(market.totalNo)}</span>
+                            <span>Participants: {market.participantCount}</span>
+                          </div>
+                          <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                            <span>Engagement: {market.engagementScore}/100</span>
+                            <span>Creator Fees: {formatVolume(market.creatorFeesClaimed)} CELO</span>
+                            {market.pendingCreatorFees !== '0' && (
+                              <span className="text-green-600">Pending: {formatVolume(market.pendingCreatorFees)} CELO</span>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${marketStatus.bgColor} ${marketStatus.color}`}>
-                            {marketStatus.label}
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            market.status === 'RESOLVED' ? 'bg-green-100 text-green-800' :
+                            market.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {market.status}
                           </span>
                           <Link
                             href={`/market/${market.id}`}
-                            className="px-2 md:px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                            className="px-2 md:px-3 py-1 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors"
                           >
                             View
                           </Link>
@@ -526,7 +560,7 @@ const ProfileContent: React.FC = () => {
                       </div>
                       
                       {/* Creator Fee Claim for Resolved Markets */}
-                      {market.status === 1 && (
+                      {market.status === 'RESOLVED' && market.pendingCreatorFees !== '0' && (
                         <CreatorFeeClaim
                           marketId={BigInt(market.id)}
                           marketQuestion={market.question}
@@ -546,7 +580,7 @@ const ProfileContent: React.FC = () => {
                 </p>
                 <Link
                   href="/create-market"
-                  className="inline-block px-4 md:px-6 py-2 md:py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base"
+                  className="inline-block px-4 md:px-6 py-2 md:py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors text-sm md:text-base"
                 >
                   Create Market
                 </Link>
@@ -556,7 +590,103 @@ const ProfileContent: React.FC = () => {
         )}
 
         {activeTab === 'claims' && (
-          <ClaimsSection userAddress={farcasterAddress} />
+          <div className="space-y-4 md:space-y-6">
+            {/* Claims Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                <div className="text-center">
+                  <p className="text-xs font-medium text-gray-600">Total Claimed</p>
+                  <p className="text-sm md:text-lg font-bold text-gray-900">{formatVolume(claimsStats.totalClaimed)}</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                <div className="text-center">
+                  <p className="text-xs font-medium text-gray-600">Available</p>
+                  <p className="text-sm md:text-lg font-bold text-green-600">{formatVolume(claimsStats.totalAvailable)}</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                <div className="text-center">
+                  <p className="text-xs font-medium text-gray-600">Winnings</p>
+                  <p className="text-sm md:text-lg font-bold text-yellow-600">{formatVolume(claimsStats.totalWinningsClaimed)}</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+                <div className="text-center">
+                  <p className="text-xs font-medium text-gray-600">Creator Fees</p>
+                  <p className="text-sm md:text-lg font-bold text-purple-600">{formatVolume(claimsStats.totalCreatorFeesClaimed)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Available Claims */}
+            {availableClaims.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Claims</h3>
+                <div className="space-y-3">
+                  {availableClaims.map((claim) => (
+                    <div key={claim.marketId} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">{claim.marketQuestion}</h4>
+                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                            <span>Winnings: {formatVolume(claim.winningsAmount)} CELO</span>
+                            <span>Creator Fee: {formatVolume(claim.creatorFeeAmount)} CELO</span>
+                            <span className="font-semibold text-green-600">Total: {formatVolume(claim.totalAmount)} CELO</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            claim.canClaim ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {claim.canClaim ? 'Claimable' : 'Not Available'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Claim History */}
+            {claims.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Claim History</h3>
+                <div className="space-y-3">
+                  {claims.map((claim) => (
+                    <div key={claim.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">{claim.marketQuestion}</h4>
+                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                            <span>Type: {claim.type === 'winnings' ? 'Winnings' : 'Creator Fee'}</span>
+                            <span>Amount: {formatVolume(claim.amount)} CELO</span>
+                            <span>Date: {formatDate(claim.claimedAt)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                            Claimed
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {availableClaims.length === 0 && claims.length === 0 && (
+              <div className="text-center py-6 md:py-8">
+                <div className="text-gray-400 text-3xl md:text-4xl mb-3 md:mb-4">🏆</div>
+                <h4 className="text-base md:text-lg font-medium text-gray-900 mb-2">No Claims Available</h4>
+                <p className="text-sm md:text-base text-gray-600 mb-4">
+                  Participate in prediction markets to earn winnings and creator fees.
+                </p>
+              </div>
+            )}
+          </div>
         )}
 
         <NotificationContainer 

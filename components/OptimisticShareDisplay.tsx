@@ -1,8 +1,8 @@
 'use client'
 
 import React from 'react'
-import { useOptimisticShares } from '@/hooks/useOptimisticShares'
-import { formatEther } from 'viem'
+import { useSubgraphMarketDetails } from '@/hooks/useSubgraphMarketDetails'
+import { useAccount } from 'wagmi'
 
 interface OptimisticShareDisplayProps {
   marketId: string
@@ -13,18 +13,16 @@ export const OptimisticShareDisplay: React.FC<OptimisticShareDisplayProps> = ({
   marketId, 
   className = '' 
 }) => {
-  const { userShares, isPending } = useOptimisticShares(marketId)
+  const { address } = useAccount()
+  const { participants, participantsLoading } = useSubgraphMarketDetails({
+    marketId: marketId || '',
+    enabled: true
+  })
 
-  if (!userShares) {
-    return (
-      <div className={`shares-display ${className}`}>
-        <div className="text-gray-500">No shares yet</div>
-      </div>
-    )
-  }
+  // Find current user's participation
+  const userParticipation = participants.find(p => p.user.toLowerCase() === address?.toLowerCase())
 
-  // Safety check for proper data structure
-  if (typeof userShares !== 'object' || !userShares.totalInvestment || !userShares.yesShares || !userShares.noShares) {
+  if (participantsLoading) {
     return (
       <div className={`shares-display ${className}`}>
         <div className="text-gray-500">Loading shares...</div>
@@ -32,27 +30,34 @@ export const OptimisticShareDisplay: React.FC<OptimisticShareDisplayProps> = ({
     )
   }
 
-  const totalInvestment = formatEther(BigInt(userShares.totalInvestment))
-  const yesShares = formatEther(BigInt(userShares.yesShares))
-  const noShares = formatEther(BigInt(userShares.noShares))
+  if (!userParticipation) {
+    return (
+      <div className={`shares-display ${className}`}>
+        <div className="text-gray-500">No shares yet</div>
+      </div>
+    )
+  }
+
+  const totalInvestment = parseFloat(userParticipation.totalInvestment || '0')
+  const yesShares = parseFloat(userParticipation.totalYesShares || '0')
+  const noShares = parseFloat(userParticipation.totalNoShares || '0')
 
   return (
-    <div className={`shares-display ${className} ${isPending ? 'syncing' : ''}`}>
+    <div className={`shares-display ${className}`}>
       <div className="shares-summary">
         <div className="total-investment">
           <span className="label">Total Investment:</span>
-          <span className="value">{totalInvestment} ETH</span>
-          {isPending && <span className="syncing-indicator">Syncing...</span>}
+          <span className="value">{totalInvestment.toFixed(4)} CELO</span>
         </div>
         
         <div className="shares-breakdown">
           <div className="yes-shares">
             <span className="label">YES:</span>
-            <span className="value">{yesShares} ETH</span>
+            <span className="value">{yesShares.toFixed(4)} CELO</span>
           </div>
           <div className="no-shares">
             <span className="label">NO:</span>
-            <span className="value">{noShares} ETH</span>
+            <span className="value">{noShares.toFixed(4)} CELO</span>
           </div>
         </div>
       </div>

@@ -1,140 +1,179 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MarketWithMetadata } from '@/contracts/contracts';
 import { formatEther } from 'viem';
 import { Clock, Users, TrendingUp, Calendar } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Typography, Body, BodySmall, Caption } from '@/components/ui/Typography';
+import { formatTimeRemaining, formatCurrency, formatPercentage } from '@/lib/utils';
 
 interface MarketCardProps {
   market: MarketWithMetadata;
+  className?: string;
 }
 
-const MarketCard: React.FC<MarketCardProps> = ({ market }) => {
-  const currentTime = Math.floor(Date.now() / 1000);
+const MarketCard: React.FC<MarketCardProps> = ({ market, className }) => {
+  const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
   const endTime = Number(market.endTime);
   const isEnded = endTime <= currentTime;
   const timeRemaining = endTime - currentTime;
-  
-  // Calculate time remaining in a readable format
-  const getTimeRemaining = () => {
-    if (isEnded) return 'Ended';
-    
-    const days = Math.floor(timeRemaining / 86400);
-    const hours = Math.floor((timeRemaining % 86400) / 3600);
-    const minutes = Math.floor((timeRemaining % 3600) / 60);
-    
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-  };
 
-  // Calculate YES percentage
+  // Update time every second for real-time countdown
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Math.floor(Date.now() / 1000));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Calculate market statistics
   const totalPool = Number(formatEther(market.totalPool));
   const totalYes = Number(formatEther(market.totalYes));
   const totalNo = Number(formatEther(market.totalNo));
   const totalShares = totalYes + totalNo;
   const yesPercentage = totalShares > 0 ? (totalYes / totalShares) * 100 : 50;
-
-  // Get status color
-  const getStatusColor = () => {
-    if (isEnded) return 'bg-gray-500';
-    if (timeRemaining < 3600) return 'bg-red-500'; // Less than 1 hour
-    if (timeRemaining < 86400) return 'bg-yellow-500'; // Less than 1 day
-    return 'bg-green-500';
+  
+  // Calculate dash value for semicircle
+  const dashValue = (yesPercentage / 100) * 50;
+  
+  
+  // Get status badge variant
+  const getStatusVariant = () => {
+    if (isEnded) return 'market-ended';
+    if (timeRemaining < 3600) return 'warning'; // Less than 1 hour
+    if (timeRemaining < 86400) return 'pending'; // Less than 1 day
+    return 'market-active';
   };
-
-  // Get category color
-  const getCategoryColor = (category: string) => {
-    const colors: { [key: string]: string } = {
-      'Politics': 'bg-red-100 text-red-800',
-      'Sports': 'bg-green-100 text-green-800',
-      'Technology': 'bg-blue-100 text-blue-800',
-      'Entertainment': 'bg-purple-100 text-purple-800',
-      'Finance': 'bg-yellow-100 text-yellow-800',
-      'Science': 'bg-indigo-100 text-indigo-800',
-      'Weather': 'bg-cyan-100 text-cyan-800',
-      'Other': 'bg-gray-100 text-gray-800'
+  
+  // Get category badge variant
+  const getCategoryVariant = (category: string) => {
+    const categoryMap: { [key: string]: string } = {
+      'Politics': 'politics',
+      'Sports': 'sports',
+      'Technology': 'technology',
+      'Entertainment': 'entertainment',
+      'Finance': 'finance',
+      'Science': 'science',
+      'Weather': 'weather',
     };
-    return colors[category] || colors['Other'];
+    return categoryMap[category] || 'general';
   };
 
   return (
     <Link href={`/market/${market.id}`} className="block h-full">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col">
-        {/* Market Image - Mobile Optimized */}
-        <div className="relative h-24 md:h-32 bg-gradient-to-r from-blue-500 to-purple-600">
-          {market.image && market.image !== '' ? (
-            <img 
-              src={market.image} 
-              alt={market.question}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 md:w-8 md:h-8 text-white" />
+      <div className={`bg-white rounded-lg border border-gray-200 hover:shadow-md transition-all duration-200 p-4 ${className}`}>
+        {/* First Row - Question and Circular Progress */}
+        <div className="flex items-start justify-between mb-3">
+          {/* Question with Icon */}
+          <div className="flex items-start flex-1 min-w-0 mr-3">
+            <span className="text-blue-500 mr-2 text-lg flex-shrink-0 mt-0.5">💎</span>
+            <h3 className="text-sm font-medium text-gray-900 leading-tight break-words">
+              {market.question}
+            </h3>
+          </div>
+
+          {/* Semicircle Progress Indicator */}
+          <div className="flex-shrink-0">
+            <div className="relative w-12 h-6">
+              <svg className="w-12 h-6" viewBox="0 0 36 18">
+                {/* Background semicircle */}
+                <path
+                  className="text-gray-200"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  fill="none"
+                  d="M18 2.0845
+                    a 15.9155 15.9155 0 0 1 0 31.831"
+                />
+                {/* Progress semicircle */}
+                <path
+                  className="text-green-500"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeDasharray={`${dashValue} 50`}
+                  d="M18 2.0845
+                    a 15.9155 15.9155 0 0 1 0 31.831"
+                />
+              </svg>
+              {/* Percentage text in center */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-xs font-semibold text-gray-700">
+                  {formatPercentage(yesPercentage)}
+                </span>
+              </div>
             </div>
-          )}
-          
-          {/* Status Badge - Mobile Optimized */}
-          <div className={`absolute top-1 right-1 md:top-2 md:right-2 px-1.5 py-0.5 md:px-2 md:py-1 rounded-full text-xs font-medium text-white ${getStatusColor()}`}>
-            {isEnded ? 'Ended' : getTimeRemaining()}
           </div>
         </div>
 
-        {/* Market Content - Mobile Optimized */}
-        <div className="p-3 md:p-4 flex flex-col flex-1">
-          {/* Category */}
-          <div className="mb-1.5 md:mb-2">
-            <span className={`inline-block px-1.5 py-0.5 md:px-2 md:py-1 rounded-full text-xs font-medium ${getCategoryColor(market.category)}`}>
-              {market.category}
+        {/* Second Row - Countdown Timer */}
+        <div className="flex items-center mb-4">
+          {/* Countdown Timer */}
+          <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
+            isEnded 
+              ? 'bg-gray-100 text-gray-600' 
+              : timeRemaining < 3600 
+                ? 'bg-red-100 text-red-600'
+                : timeRemaining < 86400
+                  ? 'bg-yellow-100 text-yellow-600'
+                  : 'bg-green-100 text-green-600'
+          }`}>
+            <span className="mr-1">⏰</span>
+            {isEnded ? 'Ended' : formatTimeRemaining(timeRemaining)}
+          </div>
+        </div>
+
+        {/* Divider Line */}
+        <div className="border-t border-gray-100 mb-4"></div>
+
+        {/* Last Row - Volume and YES/NO Buttons */}
+        <div className="flex items-center justify-between">
+          {/* Volume */}
+          <div className="flex items-center">
+            <span className="text-blue-500 mr-2 text-sm">💎</span>
+            <span className="text-blue-500 mr-1 text-sm">📈</span>
+            <span className="text-sm text-gray-600">
+              {formatCurrency(totalPool)}
             </span>
           </div>
 
-          {/* Question - Mobile Optimized */}
-          <h3 className="text-xs md:text-sm font-semibold text-gray-900 mb-1.5 md:mb-2 line-clamp-2">
-            {market.question}
-          </h3>
-
-          {/* Description - Mobile Optimized */}
-          <p className="text-xs text-gray-600 mb-2 md:mb-3 line-clamp-1">
-            {market.description}
-          </p>
-
-          {/* Market Stats - Mobile Optimized */}
-          <div className="space-y-1.5 md:space-y-2 mt-auto">
-            {/* YES/NO Pool */}
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-1">
-                <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-green-500 rounded-full"></div>
-                <span className="text-gray-600">YES</span>
-                <span className="font-medium text-gray-900">{yesPercentage.toFixed(1)}%</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-red-500 rounded-full"></div>
-                <span className="text-gray-600">NO</span>
-                <span className="font-medium text-gray-900">{(100 - yesPercentage).toFixed(1)}%</span>
+          {/* YES/NO Buttons */}
+          <div className="flex gap-1.5">
+            <div className="relative group">
+              <button 
+                className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-md transition-all duration-200"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = `/market/${market.id}`;
+                }}
+              >
+                YES
+              </button>
+              {/* Hover Tooltip */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                {formatPercentage(yesPercentage)} YES
               </div>
             </div>
 
-            {/* Total Pool */}
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-1">
-                <Users className="w-3 h-3 text-gray-400" />
-                <span className="text-gray-600">Pool</span>
+            <div className="relative group">
+              <button 
+                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition-all duration-200"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = `/market/${market.id}`;
+                }}
+              >
+                NO
+              </button>
+              {/* Hover Tooltip */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                {formatPercentage(100 - yesPercentage)} NO
               </div>
-              <span className="font-medium text-gray-900">{totalPool.toFixed(2)} CELO</span>
-            </div>
-
-            {/* End Time */}
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-1">
-                <Calendar className="w-3 h-3 text-gray-400" />
-                <span className="text-gray-600">Ends</span>
-              </div>
-              <span className="font-medium text-gray-900">
-                {new Date(endTime * 1000).toLocaleDateString()}
-              </span>
             </div>
           </div>
         </div>

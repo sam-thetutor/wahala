@@ -9,6 +9,7 @@ interface OptimisticBuyButtonProps {
   side: 'yes' | 'no'
   className?: string
   disabled?: boolean
+  onRefreshTrigger?: (trigger: number) => void
 }
 
 export const OptimisticBuyButton: React.FC<OptimisticBuyButtonProps> = ({ 
@@ -16,10 +17,18 @@ export const OptimisticBuyButton: React.FC<OptimisticBuyButtonProps> = ({
   amount, 
   side, 
   className = '',
-  disabled = false
+  disabled = false,
+  onRefreshTrigger
 }) => {
-  const { buyShares, isPending, error, isMarketAvailable } = useOptimisticSharePurchase(marketId)
+  const { buyShares, isPending, error, isMarketAvailable, refreshTrigger } = useOptimisticSharePurchase(marketId)
   const [isClicked, setIsClicked] = useState(false)
+
+  // Notify parent when refresh trigger changes
+  React.useEffect(() => {
+    if (refreshTrigger > 0 && onRefreshTrigger) {
+      onRefreshTrigger(refreshTrigger)
+    }
+  }, [refreshTrigger, onRefreshTrigger])
 
   const handleClick = async () => {
     console.log('🔘 Buy button clicked:', { marketId, amount, side, isPending, disabled, isMarketAvailable })

@@ -211,7 +211,7 @@ const Markets: React.FC = () => {
           </div>
         </div>
 
-        {/* Sorting Options */}
+        {/* Sorting Options and Refresh */}
         <div className="flex items-center justify-center space-x-3">
           <span className="text-xs text-gray-600">Sort by:</span>
           <select
@@ -224,6 +224,12 @@ const Markets: React.FC = () => {
             <option value="volume">Highest Volume</option>
             <option value="ending">Ending Soon</option>
           </select>
+          <button
+            onClick={() => refetch()}
+            className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Refresh
+          </button>
         </div>
       </div>
 

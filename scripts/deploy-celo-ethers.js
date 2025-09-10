@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-const PRIVATE_KEY = 'de02aea8dabb0cb2a0830ffb299f82fcdd8cf14d08563f2dfeaf378110a10f61';
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const CELO_RPC_URL = 'https://forno.celo.org';
 const DEPLOYER_ADDRESS = '0x21D654daaB0fe1be0e584980ca7C1a382850939f';
 

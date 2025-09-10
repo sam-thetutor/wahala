@@ -7,6 +7,7 @@ import { useAccount } from 'wagmi';
 import WalletConnectButton from './WalletConnectButton';
 import FireworksCelebration from './FireworksCelebration';
 import { useCelebration } from '../hooks/useCelebration';
+import { isAdminAddress } from '@/lib/contract-addresses';
 
 const TopNavbar: React.FC = () => {
   const pathname = usePathname();
@@ -15,7 +16,7 @@ const TopNavbar: React.FC = () => {
   const { isConnected, address } = useAccount();
   
   // Admin address check
-  const isAdmin = address?.toLowerCase() === '0x21d654daab0fe1be0e584980ca7c1a382850939f';
+  const isAdmin = isAdminAddress(address);
 
   const isActiveLink = (path: string) => {
     return pathname === path;
@@ -55,16 +56,6 @@ const TopNavbar: React.FC = () => {
                   }`}
                 >
                   Home
-                </Link>
-                <Link 
-                  href="/markets" 
-                  className={`transition-colors font-medium ${
-                    isActiveLink('/markets') 
-                      ? 'text-blue-600' 
-                      : 'text-gray-700 hover:text-blue-600'
-                  }`}
-                >
-                  Markets
                 </Link>
                 <Link 
                   href="/leaderboard" 
@@ -185,17 +176,6 @@ const TopNavbar: React.FC = () => {
                   }`}
                 >
                   Home
-                </Link>
-                <Link
-                  href="/markets"
-                  onClick={closeMobileMenu}
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                    isActiveLink('/markets')
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  Markets
                 </Link>
                 <Link
                   href="/leaderboard"

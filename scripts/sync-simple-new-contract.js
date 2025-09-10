@@ -191,3 +191,4 @@ syncSimpleNewContract()
     process.exit(1)
   })
 
+

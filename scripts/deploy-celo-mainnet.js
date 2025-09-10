@@ -17,7 +17,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-const PRIVATE_KEY = 'de02aea8dabb0cb2a0830ffb299f82fcdd8cf14d08563f2dfeaf378110a10f61';
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const CELO_RPC_URL = 'https://forno.celo.org';
 
 // Contract bytecode and ABI (simplified - you'll need to compile the contracts first)

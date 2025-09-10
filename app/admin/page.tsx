@@ -20,8 +20,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-
-const ADMIN_ADDRESS = '0x21D654daaB0fe1be0e584980ca7C1a382850939f';
+import { isAdminAddress } from '@/lib/contract-addresses';
 
 const Admin: React.FC = () => {
   const { isConnected, address } = useAccount();
@@ -34,7 +33,7 @@ const Admin: React.FC = () => {
   const [showResolved, setShowResolved] = useState(false);
 
   // Check if current user is admin
-  const isAdmin = address?.toLowerCase() === ADMIN_ADDRESS.toLowerCase();
+  const isAdmin = isAdminAddress(address);
 
   useEffect(() => {
     if (isAdmin) {
@@ -156,7 +155,7 @@ const Admin: React.FC = () => {
               Only the admin can access this page.
             </p>
             <p className="text-sm text-red-600">
-              Admin address: {ADMIN_ADDRESS}
+              Admin address: {address || 'Not connected'}
             </p>
           </div>
         </div>

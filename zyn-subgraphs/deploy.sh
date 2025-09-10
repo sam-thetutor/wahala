@@ -8,7 +8,7 @@ echo "📝 Step 1: Create subgraph in The Graph Studio"
 echo "   1. Go to https://thegraph.com/studio/"
 echo "   2. Connect your wallet"
 echo "   3. Click 'Create a Subgraph'"
-echo "   4. Name it 'zyn-prediction-markets'"
+echo "   4. Name it 'core'"
 echo "   5. Copy the deploy key"
 
 # Authenticate with the deploy key
@@ -18,8 +18,8 @@ echo "   (Replace <YOUR_DEPLOY_KEY> with the key from The Graph Studio)"
 
 # Deploy the subgraph
 echo "📦 Step 3: Deploy the subgraph"
-echo "   Run: graph deploy --deploy-key <YOUR_DEPLOY_KEY> zyn-prediction-markets"
+echo "   Run: graph deploy --deploy-key <YOUR_DEPLOY_KEY> core"
 
 echo ""
 echo "📊 After deployment, you can view it at:"
-echo "   https://thegraph.com/studio/subgraph/zyn-prediction-markets"
+echo "   https://thegraph.com/studio/subgraph/core"

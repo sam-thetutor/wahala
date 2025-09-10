@@ -11,7 +11,7 @@ require('dotenv').config();
 
 // Contract addresses
 const CELO_RPC_URL = process.env.CELO_RPC_URL || 'https://forno.celo.org';
-const PRIVATE_KEY = process.env.PRIVATE_KEY || 'e6c9282f0777361430384ac956bedca9d62e747de7be6a6988a475d2f09fa3b3';
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
 // Read contract source files
 function readContractSource(contractName) {

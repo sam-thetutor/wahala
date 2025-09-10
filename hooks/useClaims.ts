@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { subgraphClient, queries, SubgraphUserClaim } from '@/lib/subgraph';
+import { subgraphClient, queries, SubgraphUserClaim, subgraphApi } from '@/lib/subgraph';
 import { formatEther, parseEther } from 'viem';
-import { usePredictionMarket } from './usePredictionMarket';
 
 export interface WinningsClaim {
   marketId: string;
@@ -51,7 +50,6 @@ const calculateTotalWinnerAmount = (winningShares: number, losingShares: number,
 };
 
 export function useClaims(userAddress: string | undefined) {
-  const { hasClaimedWinnings, hasClaimedCreatorFee } = usePredictionMarket();
   const [claimsData, setClaimsData] = useState<ClaimsData>({
     winnings: [],
     creatorFees: [],
@@ -125,8 +123,8 @@ export function useClaims(userAddress: string | undefined) {
               });
             }
 
-            // Check if user has already claimed winnings
-            const isClaimed = await hasClaimedWinnings(parseInt(market.id));
+            // Check if user has already claimed winnings using subgraph
+            const isClaimed = await subgraphApi.checkUserClaimedWinnings(userAddress.toLowerCase(), market.id);
 
             if (parseFloat(claimableAmount) > 0) {
               winnings.push({
@@ -170,8 +168,9 @@ export function useClaims(userAddress: string | undefined) {
               creatorFee
             });
 
-            // Check if user has already claimed creator fee
-            const isClaimed = await hasClaimedCreatorFee(parseInt(market.id));
+            // Check if user has already claimed creator fee using subgraph
+            // Note: Creator fee claims are tracked separately, we'll need to add this to subgraph
+            const isClaimed = false; // TODO: Add creator fee claims tracking to subgraph
 
             if (parseFloat(creatorFee) > 0) {
               creatorFees.push({

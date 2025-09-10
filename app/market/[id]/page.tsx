@@ -1,20 +1,25 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAccount, useBalance } from 'wagmi';
 import { parseEther } from 'viem';
+import { Share2, CheckCircle, ChevronDown, ChevronUp, RefreshCw, TrendingUp, Users, Clock } from 'lucide-react';
 
 // Custom Hooks
 import { useSubgraphMarketDetails } from '@/hooks/useSubgraphMarketDetails';
-import { usePredictionMarket } from '@/hooks/usePredictionMarket';
 import { useNotificationHelpers } from '@/hooks/useNotificationHelpers';
 import { useFarcaster } from '@/components/FarcasterProvider';
 
-// Icons
-import { Share2, CheckCircle, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
-import { formatGwei } from 'viem';
+import OptimisticBuyButton from '@/components/OptimisticBuyButton';
+import { formatTimeRemaining, formatCurrency, formatPercentage, formatVolume, formatDate, shortenAddress, calculatePotentialReturn } from '@/lib/utils';
+
+// Design System Components
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Typography } from '@/components/ui/Typography';
+import { Badge } from '@/components/ui/Badge';
 
 interface MarketDetailProps {
   params: Promise<{ id: string }>;
@@ -49,24 +54,21 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
     chainId: 42220
   });
 
-  // Prediction market hooks
-  const { buyShares, contractState } = usePredictionMarket();
   const { notifyTransactionSuccess } = useNotificationHelpers();
+  
+  // State for refresh trigger from buy button
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [justPurchased, setJustPurchased] = useState(false);
+  const [refreshingAfterPurchase, setRefreshingAfterPurchase] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
 
   // Local state
-  const [market, setMarket] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [orderBookExpanded, setOrderBookExpanded] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(true);
   
   // Trading state
   const [selectedSide, setSelectedSide] = useState<'yes' | 'no'>('yes');
   const [buyAmount, setBuyAmount] = useState('1');
-  const [isBuying, setIsBuying] = useState(false);
-  const [justPurchased, setJustPurchased] = useState(false);
-  const [optimisticUpdate, setOptimisticUpdate] = useState<any>(null);
-  const [pendingTransaction, setPendingTransaction] = useState<string | null>(null);
-  const [refreshingAfterPurchase, setRefreshingAfterPurchase] = useState(false);
 
   // Market data from subgraph
   const {
@@ -100,66 +102,35 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
   console.log('🔄 Data loading states:', { dataLoading, participantsLoading });
   console.log('🔄 Data errors:', { dataError });
   
-  // Update local market state when data loads
-  useEffect(() => {
-    if (smartMarketData) {
-      // Convert subgraph data to expected format
-      const convertedMarket = {
-        ...smartMarketData,
-        totalyes: smartMarketData.totalYes,
-        totalno: smartMarketData.totalNo,
-        totalpool: smartMarketData.totalPool,
-        endtime: smartMarketData.endTime,
-        createdat: smartMarketData.createdAt,
-        image: smartMarketData.image || "https://a2ede-rqaaa-aaaal-ai6sq-cai.raw.icp0.io/uploads/food1.612.612.jpg"
-      };
-      
-      console.log('📊 Market data loaded from subgraph:', {
-        id: convertedMarket.id,
-        question: convertedMarket.question,
-        totalpool: convertedMarket.totalpool,
-        totalyes: convertedMarket.totalyes,
-        totalno: convertedMarket.totalno,
-        creator: convertedMarket.creator,
-        endtime: convertedMarket.endtime,
-        description: convertedMarket.description
-      });
-      
-      setMarket(convertedMarket);
-      setIsLoading(false);
-    }
-  }, [smartMarketData]);
 
   // Handle errors
   useEffect(() => {
     if (dataError) {
-      setIsLoading(false);
+      console.error('❌ Market data error:', dataError);
     }
   }, [dataError]);
 
-  // Handle transaction confirmation - no database updates needed
+  // Handle refresh trigger from share purchase
   useEffect(() => {
-    if (contractState.success && contractState.transactionHash && pendingTransaction) {
-      console.log('✅ Transaction confirmed, clearing optimistic update...');
-      
-      // Clear optimistic update and trigger refresh
-      setOptimisticUpdate(null);
-      setPendingTransaction(null);
-      setJustPurchased(true);
-      
-      // Refresh data immediately from subgraph
+    if (refreshTrigger > 0) {
+      console.log('🔄 Refresh triggered by share purchase, refreshing data...');
       refreshData();
-      
+    }
+  }, [refreshTrigger, refreshData]);
+
+  // Handle just purchased state (for UI feedback)
+  useEffect(() => {
+    if (justPurchased) {
       // Reset just purchased state after 30 seconds
       setTimeout(() => {
         setJustPurchased(false);
       }, 30000);
     }
-  }, [contractState.success, contractState.transactionHash, pendingTransaction, refreshData]);
+  }, [justPurchased]);
 
-  // Calculate market statistics with optimistic updates
+  // Calculate market statistics
   const yesPercentage = useMemo(() => {
-    if (!market) return 50;
+    if (!smartMarketData) return 50;
     
     let totalYesShares = 0;
     let totalNoShares = 0;
@@ -174,31 +145,30 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
       }, 0);
     } else {
       // Fallback to market data
-      totalYesShares = parseFloat(market.totalyes || 0);
-      totalNoShares = parseFloat(market.totalno || 0);
-    }
-    
-    // Apply optimistic update if available
-    if (optimisticUpdate) {
-      // Convert CELO amount to wei for consistency with database storage
-      const amountInWei = parseFloat(optimisticUpdate.amount) * 1e18;
-      if (optimisticUpdate.outcome) {
-        totalYesShares += amountInWei;
-      } else {
-        totalNoShares += amountInWei;
-      }
+      totalYesShares = parseFloat(smartMarketData?.totalYes || '0');
+      totalNoShares = parseFloat(smartMarketData?.totalNo || '0');
     }
     
     const total = totalYesShares + totalNoShares;
     return total > 0 ? (totalYesShares / total) * 100 : 50;
-  }, [market, participants, optimisticUpdate]);
+  }, [smartMarketData, participants]);
 
   const noPercentage = useMemo(() => {
     return 100 - yesPercentage;
   }, [yesPercentage]);
 
+  // Calculate time remaining
+  const timeRemaining = useMemo(() => {
+    if (!smartMarketData?.endTime) return 0;
+    const endTime = new Date(smartMarketData.endTime).getTime();
+    const now = Date.now();
+    return Math.max(0, Math.floor((endTime - now) / 1000));
+  }, [smartMarketData?.endTime]);
+
+  const isEnded = timeRemaining <= 0;
+
   const totalVolume = useMemo(() => {
-    if (!market) return 0;
+    if (!smartMarketData) return 0;
     
     let total = 0;
     
@@ -209,17 +179,11 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
       }, 0);
     } else {
       // Fallback to market data (subgraph data is already in CELO format)
-      total = parseFloat(market.totalYes || 0) + parseFloat(market.totalNo || 0);
-    }
-    
-    // Apply optimistic update if available
-    if (optimisticUpdate) {
-      // Data is already in CELO format
-      total += parseFloat(optimisticUpdate.amount);
+      total = parseFloat(smartMarketData?.totalYes || '0') + parseFloat(smartMarketData?.totalNo || '0');
     }
     
     return total;
-  }, [market, participants, optimisticUpdate]);
+  }, [smartMarketData, participants]);
 
   // Format volume - data is already in CELO format from subgraph
   const formatVolume = (volume: number) => {
@@ -304,129 +268,65 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
 
   // Calculate share prices
   const yesPrice = useMemo(() => {
-    if (!market || !market.totalyes || !market.totalno) return 0.5;
-    const total = parseFloat(market.totalyes) + parseFloat(market.totalno);
-    return total > 0 ? parseFloat(market.totalyes) / total : 0.5;
-  }, [market]);
+    if (!smartMarketData || !smartMarketData.totalYes || !smartMarketData.totalNo) return 0.5;
+    const total = parseFloat(smartMarketData.totalYes) + parseFloat(smartMarketData.totalNo);
+    return total > 0 ? parseFloat(smartMarketData.totalYes) / total : 0.5;
+  }, [smartMarketData]);
 
   const noPrice = useMemo(() => {
     return 1 - yesPrice;
   }, [yesPrice]);
 
-  // Calculate trading details
+  // Calculate trading details using smart contract logic
   const tradingDetails = useMemo(() => {
-    if (!market || !buyAmount || isNaN(parseFloat(buyAmount))) {
+    if (!smartMarketData || !buyAmount || isNaN(parseFloat(buyAmount))) {
       return {
         shares: 0,
         avgPrice: 0,
         fees: 0,
         potentialReturn: 0,
-        returnPercentage: 0
+        returnPercentage: 0,
+        breakdown: {
+          originalStake: 0,
+          winningsFromLosers: 0,
+          creatorFee: 0,
+          platformFee: 0,
+          totalWinnings: 0,
+        }
       };
     }
 
     const amount = parseFloat(buyAmount);
     const currentPrice = selectedSide === 'yes' ? yesPrice : noPrice;
     const shares = amount / currentPrice;
-    const fees = amount * 0.0021; // 0.21% fee
-    const potentialReturn = shares * 1; // If correct, each share pays $1
-    const returnPercentage = ((potentialReturn - amount) / amount) * 100;
+    const fees = amount * 0.0021; // 0.21% transaction fee (separate from market fees)
+
+    // Get current market data
+    const totalYes = parseFloat(smartMarketData?.totalYes || '0');
+    const totalNo = parseFloat(smartMarketData?.totalNo || '0');
+    
+    // Determine winning and losing shares based on selected side
+    const totalWinningShares = selectedSide === 'yes' ? totalYes : totalNo;
+    const totalLosingShares = selectedSide === 'yes' ? totalNo : totalYes;
+    
+    // Calculate potential return using smart contract logic
+    const returnCalculation = calculatePotentialReturn(
+      shares,
+      totalWinningShares,
+      totalLosingShares,
+      15 // Creator fee percentage (from contract)
+    );
 
     return {
       shares: shares,
       avgPrice: currentPrice,
       fees: fees,
-      potentialReturn: potentialReturn,
-      returnPercentage: returnPercentage
+      potentialReturn: returnCalculation.potentialReturn,
+      returnPercentage: returnCalculation.returnPercentage,
+      breakdown: returnCalculation.breakdown
     };
-  }, [market, buyAmount, selectedSide, yesPrice, noPrice]);
+  }, [smartMarketData, buyAmount, selectedSide, yesPrice, noPrice]);
 
-  // Handle buy shares with optimistic updates
-  const handleBuyShares = async () => {
-    if (!market || !buyAmount || isNaN(parseFloat(buyAmount)) || !isConnected) return;
-    
-    const amount = parseFloat(buyAmount);
-    const userBalance = getFullBalance();
-    
-    if (amount > userBalance) {
-      alert('Insufficient balance');
-      return;
-    }
-    
-    // Ensure we have a valid market ID
-    if (!market.id) {
-      console.error('Market ID is undefined');
-      alert('Invalid market ID');
-      return;
-    }
-    
-    setIsBuying(true);
-    
-    // Apply optimistic update immediately
-    const optimisticData = {
-      outcome: selectedSide === 'yes',
-      amount: amount.toString()
-    };
-    setOptimisticUpdate(optimisticData);
-    
-    // Store the original amount for database update (before form reset)
-    const originalAmount = amount.toString();
-    
-    try {
-      console.log('Buying shares:', {
-        marketId: market.id,
-        side: selectedSide,
-        amount: amount,
-        amountString: amount.toString(),
-        shares: tradingDetails.shares,
-        userBalance: userBalance
-      });
-      
-      // Convert market ID to number if it's a string
-      const marketId = typeof market.id === 'string' ? parseInt(market.id) : market.id;
-      
-      // Call the actual buyShares function from the smart contract
-      const result = await buyShares({
-        marketId: marketId,
-        outcome: selectedSide === 'yes', // true for yes, false for no
-        amount: amount.toString() // amount as string
-      });
-      
-      if (result.success && result.transactionHash) {
-        // Store transaction hash for confirmation tracking
-        setPendingTransaction(result.transactionHash);
-        
-        // Show success notification
-        notifyTransactionSuccess('Transaction submitted! Waiting for confirmation...');
-        
-        // Reset form
-        setBuyAmount('1');
-        
-        // Refetch subgraph data after 5 seconds to get the latest blockchain state
-        console.log('🔄 Scheduling subgraph refetch in 5 seconds...');
-        setTimeout(() => {
-          console.log('🔄 Refetching subgraph data after purchase...');
-          setRefreshingAfterPurchase(true);
-          refreshData().finally(() => {
-            setRefreshingAfterPurchase(false);
-          });
-        }, 10000);
-        
-      } else {
-        // Transaction failed, remove optimistic update
-        setOptimisticUpdate(null);
-        alert(result.error || 'Failed to purchase shares. Please try again.');
-      }
-      
-    } catch (error) {
-      console.error('Error buying shares:', error);
-      // Remove optimistic update on error
-      setOptimisticUpdate(null);
-      alert('Failed to purchase shares. Please try again.');
-    } finally {
-      setIsBuying(false);
-    }
-  };
 
   // Handle max button
   const handleMaxAmount = () => {
@@ -438,13 +338,13 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
 
   // Social sharing function
   const handleShare = async () => {
-    if (!market) return;
+    if (!smartMarketData) return;
     
-    const shareText = `🎯 ${market.question}\n\nCurrent odds: ${yesPercentage.toFixed(1)}% Yes, ${noPercentage.toFixed(1)}% No\n\nTrade on Zyn: https://zynp.vercel.app/market/${market.id}`;
+    const shareText = `🎯 ${smartMarketData?.question}\n\nCurrent odds: ${yesPercentage.toFixed(1)}% Yes, ${noPercentage.toFixed(1)}% No\n\nTrade on Zyn: https://zynp.vercel.app/market/${smartMarketData?.id}`;
     
     if (isFarcasterApp) {
       try {
-        await composeCast(shareText, [`https://zynp.vercel.app/market/${market.id}`]);
+        await composeCast(shareText, [`https://zynp.vercel.app/market/${smartMarketData?.id}`]);
       } catch (error) {
         console.error('Error sharing to Farcaster:', error);
         showToast('Failed to share to Farcaster');
@@ -454,9 +354,9 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
       if (navigator.share) {
         try {
           await navigator.share({
-            title: market.question,
+            title: smartMarketData?.question,
             text: shareText,
-            url: `https://zynp.vercel.app/market/${market.id}`
+            url: `https://zynp.vercel.app/market/${smartMarketData?.id}`
           });
         } catch (error) {
           // Fallback to clipboard
@@ -470,8 +370,25 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
     }
   };
 
+  // Buy shares function
+  const handleBuyShares = () => {
+    if (!isConnected) {
+      showToast('Please connect your wallet first');
+      return;
+    }
+    
+    if (parseFloat(buyAmount) <= 0) {
+      showToast('Please enter a valid amount');
+      return;
+    }
+    
+    setIsBuying(true);
+    // The actual buying logic is handled by OptimisticBuyButton
+    // This function is just for validation and state management
+  };
+
   // Loading state
-  if (isLoading || !initialLoadComplete) {
+  if (dataLoading || !initialLoadComplete) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -483,7 +400,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
   }
 
   // Error state
-  if (dataError || !market) {
+  if (dataError || !smartMarketData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -504,335 +421,340 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           
           {/* Main Content Area - Left Side */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             
             {/* Market Header */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4">
-                {/* Market Image */}
-                <div className="flex-shrink-0 self-center sm:self-start">
-                  {market.image == "" ? (
-                    <Image
-                      src="https://a2ede-rqaaa-aaaal-ai6sq-cai.raw.icp0.io/uploads/food1.612.612.jpg"
-                      alt={market.question}
-                      width={80}
-                      height={80}
-                      className="rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <span className="text-gray-400 text-xs text-center">No Image</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Market Details */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row items-start justify-between space-y-3 sm:space-y-0">
-                    <div className="flex-1">
-                      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 text-center sm:text-left">
-                        {market.question}
-                      </h1>
-                      
-                      {/* Market Metadata */}
-                      <div className="flex flex-wrap items-center justify-center sm:justify-start text-sm text-gray-500 mb-3 space-x-2 sm:space-x-4">
-                        <span className="font-semibold text-green-600">
-                          {formatVolume(totalVolume)}
-                        </span>
-                        <span>
-                          {formatDate(market.endtime)}
-                        </span>
-                        <span>by {shortenAddress(market.creator)}</span>
+            <Card className="bg-white shadow-lg">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4">
+                  {/* Market Image */}
+                  {/* <div className="flex-shrink-0 self-center sm:self-start">
+                    {smartMarketData?.image == "" ? (
+                      <Image
+                        src="https://a2ede-rqaaa-aaaal-ai6sq-cai.raw.icp0.io/uploads/food1.612.612.jpg"
+                        alt={smartMarketData?.question}
+                        width={80}
+                        height={80}
+                        className="rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <Typography variant="caption" className="text-center text-gray-500">No Image</Typography>
                       </div>
-                      
-                      {/* Market Statistics */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div className="flex flex-col">
-                          <span className="text-gray-600 text-xs">Total Volume</span>
-                          <span className="font-semibold text-gray-900">{formatVolume(totalVolume)}</span>
+                    )}
+                  </div> */}
+                  
+                  {/* Market Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row items-start justify-between space-y-3 sm:space-y-0">
+                      <div className="flex-1">
+                        <Typography variant="h1" className="mb-2 text-center sm:text-left text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                          {smartMarketData?.question}
+                        </Typography>
+                        
+                        {/* Market Metadata */}
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-4 mb-3">
+                          <Badge variant="success" size="sm">
+                            {formatVolume(totalVolume)}
+                          </Badge>
+                          <Typography variant="body" className="text-gray-600">
+                            {formatDate(smartMarketData?.endTime)}
+                          </Typography>
+                          <Typography variant="body" className="text-gray-600">
+                            by {shortenAddress(smartMarketData?.creator)}
+                          </Typography>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-gray-600 text-xs">Yes Shares</span>
-                          <span className="font-semibold text-green-600">
-                            {participants && participants.length > 0 
-                              ? formatVolume(participants.reduce((sum, p) => sum + parseFloat(p.totalYesShares || '0'), 0))
-                              : formatVolume(parseFloat(market?.totalYes || 0))
-                            }
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-gray-600 text-xs">No Shares</span>
-                          <span className="font-semibold text-red-600">
-                            {participants && participants.length > 0 
-                              ? formatVolume(participants.reduce((sum, p) => sum + parseFloat(p.totalNoShares || '0'), 0))
-                              : formatVolume(parseFloat(market?.totalNo || 0))
-                            }
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-gray-600 text-xs">Participants</span>
-                          <span className="font-semibold text-gray-900">{participants.length}</span>
-                        </div>
-                      </div>
-                      
-                      {/* Refreshing indicator */}
-                      {refreshingAfterPurchase && (
-                        <div className="mt-2 flex items-center justify-center">
-                          <div className="flex items-center space-x-2 text-blue-600 text-sm">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                            <span>Updating from blockchain...</span>
+                        
+                        {/* Market Statistics */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                          <div className="flex flex-col">
+                        <Typography variant="caption" className="mb-1 text-gray-600">Total Volume</Typography>
+                        <Typography variant="body" weight="semibold" className="text-gray-900">{formatVolume(totalVolume)}</Typography>
+                          </div>
+                          <div className="flex flex-col">
+                            <Typography variant="caption" className="mb-1 text-gray-600">Yes Shares</Typography>
+                            <Typography variant="body" weight="semibold" className="text-green-600">
+                              {participants && participants.length > 0 
+                                ? formatVolume(participants.reduce((sum, p) => sum + parseFloat(p.totalYesShares || '0'), 0))
+                                : formatVolume(parseFloat(smartMarketData?.totalYes || '0'))
+                              }
+                            </Typography>
+                          </div>
+                          <div className="flex flex-col">
+                            <Typography variant="caption" className="mb-1 text-gray-600">No Shares</Typography>
+                            <Typography variant="body" weight="semibold" className="text-red-600">
+                              {participants && participants.length > 0 
+                                ? formatVolume(participants.reduce((sum, p) => sum + parseFloat(p.totalNoShares || '0'), 0))
+                                : formatVolume(parseFloat(smartMarketData?.totalNo || '0'))
+                              }
+                            </Typography>
+                          </div>
+                          <div className="flex flex-col">
+                            <Typography variant="caption" className="mb-1 text-gray-600">Participants</Typography>
+                            <Typography variant="body" weight="semibold" className="text-gray-900">{participants.length}</Typography>
                           </div>
                         </div>
-                      )}
-                    </div>
-                    
-                    {/* Action Icons */}
-                    <div className="flex items-center space-x-2">
-                      <button 
-                        onClick={handleShare}
-                        className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        <Share2 className="h-5 w-5" />
-                      </button>
-                      <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                        <CheckCircle className="h-5 w-5" />
-                      </button>
+                        
+                        {/* Refreshing indicator */}
+                        {refreshingAfterPurchase && (
+                          <div className="mt-2 flex items-center justify-center">
+                            <div className="flex items-center space-x-2 text-blue-600 text-sm">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                              <Typography variant="body" className="text-blue-600">Updating from blockchain...</Typography>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Action Icons */}
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={handleShare}
+                        >
+                          <Share2 className="h-5 w-5" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <CheckCircle className="h-5 w-5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Buy Shares Section - Mobile Only */}
-            <div className="lg:hidden">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Buy Shares</h3>
-                
-                {/* Pick a side */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-gray-700">Pick a side</span>
-                    <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
-                      <RefreshCw className="h-4 w-4" />
-                    </button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setSelectedSide('yes')}
-                      className={`p-3 rounded-lg border-2 transition-all ${
-                        selectedSide === 'yes'
-                          ? 'border-green-500 bg-green-50 text-green-700'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-lg font-semibold">Yes</div>
-                        <div className="text-sm text-gray-500">{(yesPrice * 100).toFixed(1)}¢</div>
-                      </div>
-                    </button>
+            <div className="lg:hidden mb-6">
+              <Card className="bg-white shadow-lg border-2 border-gray-200">
+                <CardHeader className="bg-gray-50 border-b px-4 py-3">
+                  <CardTitle className="text-gray-900 font-bold text-base">Buy Shares</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6 bg-white p-4">
+                  {/* Pick a side */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Typography variant="body" weight="semibold" className="text-gray-900">Pick a side</Typography>
+                      <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </div>
                     
-                    <button
-                      onClick={() => setSelectedSide('no')}
-                      className={`p-3 rounded-lg border-2 transition-all ${
-                        selectedSide === 'no'
-                          ? 'border-red-500 bg-red-50 text-red-700'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-lg font-semibold">No</div>
-                        <div className="text-sm text-gray-500">{(noPrice * 100).toFixed(1)}¢</div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Amount input */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Amount (CELO)</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-gray-500">
-                        Balance: {formatBalance(balance)}
-                      </span>
-                      {isConnected && getFullBalance() > 0 && (
-                        <button 
-                          onClick={handleMaxAmount}
-                          className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                        >
-                          Max
-                        </button>
-                      )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        variant={selectedSide === 'yes' ? 'primary' : 'outline'}
+                        size="lg"
+                        onClick={() => setSelectedSide('yes')}
+                        className="flex flex-col items-center gap-1 py-3 h-auto min-h-[60px]"
+                      >
+                        <Typography variant="body" weight="semibold" className="text-sm">Yes</Typography>
+                        <Typography variant="caption" className="text-xs">{(yesPrice * 100).toFixed(1)}¢</Typography>
+                      </Button>
+                      
+                      <Button
+                        variant={selectedSide === 'no' ? 'primary' : 'outline'}
+                        size="lg"
+                        onClick={() => setSelectedSide('no')}
+                        className="flex flex-col items-center gap-1 py-3 h-auto min-h-[60px]"
+                      >
+                        <Typography variant="body" weight="semibold" className="text-sm">No</Typography>
+                        <Typography variant="caption" className="text-xs">{(noPrice * 100).toFixed(1)}¢</Typography>
+                      </Button>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <button 
-                      onClick={() => setBuyAmount((parseFloat(buyAmount) - 1).toString())}
-                      className="w-8 h-8 text-black rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                    >
-                      -
-                    </button>
+
+                  {/* Amount input */}
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                      <Typography variant="body" weight="semibold" className="text-gray-900 text-sm">Amount (CELO)</Typography>
+                      <div className="flex items-center justify-between sm:justify-end space-x-3">
+                        <Typography variant="caption" className="text-gray-600 text-xs">
+                          Balance: {formatBalance(balance)}
+                        </Typography>
+                        {isConnected && getFullBalance() > 0 && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={handleMaxAmount}
+                            className="text-blue-600 hover:text-blue-800 font-medium text-xs"
+                          >
+                            Max
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                     
-                    <input
-                      type="number"
-                      value={buyAmount}
-                      onChange={(e) => setBuyAmount(e.target.value)}
-                      className="flex-1 px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
-                      placeholder="0"
-                      min="0.01"
-                      step="0.01"
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBuyAmount((parseFloat(buyAmount) - 1).toString())}
+                        className="w-8 h-8 p-0 text-black border-gray-300 hover:bg-gray-50"
+                      >
+                        <span className="text-sm font-semibold">-</span>
+                      </Button>
+                      
+                      <input
+                        type="number"
+                        value={buyAmount}
+                        onChange={(e) => setBuyAmount(e.target.value)}
+                        className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-black text-sm font-medium bg-white"
+                        placeholder="0"
+                        min="0.01"
+                        step="0.01"
+                      />
+                      
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBuyAmount((parseFloat(buyAmount) + 1).toString())}
+                        className="w-8 h-8 p-0 text-black border-gray-300 hover:bg-gray-50"
+                      >
+                        <span className="text-sm font-semibold">+</span>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Mobile Trade Summary */}
+                  <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                    <Typography variant="body" weight="semibold" className="text-gray-900 text-sm">Trade Summary</Typography>
+                    
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <Typography variant="caption" className="text-gray-600 text-xs">Avg Price:</Typography>
+                        <Typography variant="body" weight="semibold" className="text-gray-900 text-xs">{(tradingDetails.avgPrice * 100).toFixed(2)}¢</Typography>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <Typography variant="caption" className="text-gray-600 text-xs">Shares:</Typography>
+                        <Typography variant="body" weight="semibold" className="text-gray-900 text-xs">{tradingDetails.shares.toFixed(2)}</Typography>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <Typography variant="caption" className="text-gray-600 text-xs">Transaction fees:</Typography>
+                        <Typography variant="body" weight="semibold" className="text-gray-900 text-xs">${tradingDetails.fees.toFixed(4)}</Typography>
+                      </div>
+                      
+                      {/* Smart Contract Breakdown */}
+                      <div className="pt-2 border-t border-gray-200">
+                        <Typography variant="caption" className="text-gray-500 font-medium text-xs">If you win:</Typography>
+                        <div className="mt-1 space-y-1">
+                          <div className="flex justify-between">
+                            <Typography variant="caption" className="text-gray-600 text-xs">Your stake back:</Typography>
+                            <Typography variant="body" weight="semibold" className="text-gray-900 text-xs">${tradingDetails.breakdown.originalStake.toFixed(2)}</Typography>
+                          </div>
+                          
+                          {tradingDetails.breakdown.winningsFromLosers > 0 && (
+                            <>
+                              <div className="flex justify-between">
+                                <Typography variant="caption" className="text-gray-600 text-xs">Winnings from losers:</Typography>
+                                <Typography variant="body" weight="semibold" className="text-green-600 text-xs">+${tradingDetails.breakdown.winningsFromLosers.toFixed(2)}</Typography>
+                              </div>
+                              
+                              <div className="flex justify-between">
+                                <Typography variant="caption" className="text-gray-500 text-xs">Creator fee (15%):</Typography>
+                                <Typography variant="caption" className="text-gray-500 text-xs">-${tradingDetails.breakdown.creatorFee.toFixed(2)}</Typography>
+                              </div>
+                              
+                              <div className="flex justify-between">
+                                <Typography variant="caption" className="text-gray-500 text-xs">Platform fee (15%):</Typography>
+                                <Typography variant="caption" className="text-gray-500 text-xs">-${tradingDetails.breakdown.platformFee.toFixed(2)}</Typography>
+                              </div>
+                            </>
+                          )}
+                          
+                          {tradingDetails.breakdown.winningsFromLosers === 0 && (
+                            <div className="flex justify-between">
+                              <Typography variant="caption" className="text-gray-500 text-xs">No losing shares = no additional winnings</Typography>
+                              <Typography variant="caption" className="text-gray-500 text-xs">0% return</Typography>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="pt-2 border-t border-gray-200">
+                        <div className="flex justify-between">
+                          <Typography variant="caption" className="text-gray-600 font-medium text-xs">Total return:</Typography>
+                          <Typography variant="body" weight="semibold" className={`text-xs ${tradingDetails.returnPercentage > 0 ? "text-green-600" : "text-gray-900"}`}>
+                            ${tradingDetails.potentialReturn.toFixed(2)} ({tradingDetails.returnPercentage > 0 ? '+' : ''}{tradingDetails.returnPercentage.toFixed(1)}%)
+                          </Typography>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Buy button */}
+                  {!isConnected ? (
+                    <Button variant="secondary" size="lg" fullWidth disabled className="py-3 text-sm font-semibold">
+                      Connect Wallet to Trade
+                    </Button>
+                  ) : (
+                    <OptimisticBuyButton
+                      marketId={marketId}
+                      amount={buyAmount}
+                      side={selectedSide}
+                      className="w-full py-3 text-sm font-semibold"
+                      onRefreshTrigger={setRefreshTrigger}
                     />
-                    
-                    <button 
-                      onClick={() => setBuyAmount((parseFloat(buyAmount) + 1).toString())}
-                      className="w-8 text-black h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
+                  )}
 
-                {/* Trading details */}
-                {/* <div className="space-y-3 mb-6 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Avg Price:</span>
-                    <span className="font-medium">{(tradingDetails.avgPrice * 100).toFixed(2)}¢</span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Shares:</span>
-                    <span className="font-medium">{tradingDetails.shares.toFixed(2)}</span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Estimated fees:</span>
-                    <span className="font-medium">${tradingDetails.fees.toFixed(4)}</span>
-                  </div>
-                  
-                  <div className="flex justify-between font-semibold">
-                    <span className="text-gray-900">Potential return:</span>
-                    <span className="text-green-600">
-                      ${tradingDetails.potentialReturn.toFixed(2)} ({tradingDetails.returnPercentage.toFixed(2)}%)
-                    </span>
-                  </div>
-                </div> */}
-
-                {/* Buy button */}
-                {!isConnected ? (
-                  <div className="w-full py-3 px-4 rounded-lg bg-gray-100 text-gray-500 text-center font-semibold">
-                    Connect Wallet to Trade
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleBuyShares}
-                    disabled={isBuying || !buyAmount || isNaN(parseFloat(buyAmount)) || parseFloat(buyAmount) <= 0 || parseFloat(buyAmount) > getFullBalance() || !!optimisticUpdate}
-                    className={`w-full py-3 px-4 rounded-lg font-semibold transition-all ${
-                      isBuying || !buyAmount || isNaN(parseFloat(buyAmount)) || parseFloat(buyAmount) <= 0 || parseFloat(buyAmount) > getFullBalance() || !!optimisticUpdate
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : selectedSide === 'yes'
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-red-600 hover:bg-red-700 text-white'
-                    }`}
-                  >
-                    {isBuying ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Buying...
-                      </div>
-                    ) : optimisticUpdate ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Confirming...
-                      </div>
-                    ) : parseFloat(buyAmount) > getFullBalance() ? (
-                      'Insufficient Balance'
-                    ) : (
-                      `Buy ${selectedSide.toUpperCase()}`
-                    )}
-                  </button>
-                )}
-
-                {/* Disclaimer */}
-                
-              </div>
+                  {/* Disclaimer */}
+                  <Typography variant="caption" className="text-center block text-gray-500 text-xs mt-4">
+                    *This is just a guide, not official rules
+                  </Typography>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Summary Section */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <button
-                onClick={() => setSummaryExpanded(!summaryExpanded)}
-                className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
-              >
-                <span className="font-semibold text-gray-900">Summary</span>
-                {summaryExpanded ? (
-                  <ChevronUp className="h-5 w-5 text-gray-400" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-400" />
-                )}
-              </button>
+            <Card className="bg-white shadow-lg">
+              <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => setSummaryExpanded(!summaryExpanded)}
+                  className="w-full justify-between p-0 h-auto"
+                >
+                  <Typography variant="h3" weight="semibold">Summary</Typography>
+                  {summaryExpanded ? (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </Button>
+              </CardHeader>
               
               {summaryExpanded && (
-                <div className="px-6 pb-4 border-t border-gray-200">
-                  <div className="prose prose-sm max-w-none">
-                    <p className="text-gray-700 mb-4">
-                      {market.description || 'No description available for this market.'}
-                    </p>
+                <CardContent className="pt-0 px-4 pb-4 sm:px-6 sm:pb-6">
+                  <div className="space-y-4">
+                    <Typography variant="body" className="text-gray-700">
+                      {smartMarketData?.description || 'No description available for this market.'}
+                    </Typography>
                     
-                    {market.source && (
-                      <p className="text-sm text-gray-600 mb-4">
-                        <strong>Source:</strong>{' '}
+                    {smartMarketData?.source && (
+                      <div>
+                        <Typography variant="body" weight="semibold" className="mb-2 text-gray-900">Source:</Typography>
                         <a 
-                          href={market.source} 
+                          href={smartMarketData?.source} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-blue-600 hover:underline"
                         >
-                          {market.source}
+                          {smartMarketData?.source}
                         </a>
-                      </p>
+                      </div>
                     )}
                   </div>
-                </div>
+                </CardContent>
               )}
-            </div>
+            </Card>
 
-            {/* Probability/Chance Section */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="mb-4">
-                <h2 className="text-xl font-semibold text-gray-900 mb-2 text-center sm:text-left">
-                  {yesPercentage.toFixed(1)}% chance
-                </h2>
-                
-                {/* Progress Bar */}
-                <div className="w-full bg-gray-200 rounded-full h-8 flex overflow-hidden">
-                  <div 
-                    className="bg-green-500 flex items-center justify-center text-white font-semibold text-sm"
-                    style={{ width: `${yesPercentage}%` }}
-                  >
-                    {yesPercentage > 15 ? 'Yes' : ''}
-                  </div>
-                  <div 
-                    className="bg-blue-500 flex items-center justify-center text-white font-semibold text-sm"
-                    style={{ width: `${noPercentage}%` }}
-                  >
-                    {noPercentage > 15 ? 'No' : ''}
-                  </div>
-                </div>
-                
-                {/* Labels */}
-                <div className="flex justify-between mt-2 text-sm text-gray-600">
-                  <span>Yes</span>
-                  <span>No</span>
-                </div>
-              </div>
-            </div>
+           
 
             {/* OrderBook Section */}
            
@@ -854,11 +776,6 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
                   {refreshingAfterPurchase && (
                     <span className="text-blue-600 text-xs font-medium">
                       Refreshing data from blockchain...
-                    </span>
-                  )}
-                  {optimisticUpdate && (
-                    <span className="text-blue-600 text-xs font-medium">
-                      Pending transaction...
                     </span>
                   )}
                   <button
@@ -904,8 +821,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
                                 {shortenAddress(convertedParticipant.address || 'Unknown')}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {parseFloat(convertedParticipant.totalyesshares || 0) > parseFloat(convertedParticipant.totalnoshares || 0) ? 'Yes' : 
-                                 parseFloat(convertedParticipant.totalnoshares || 0) > parseFloat(convertedParticipant.totalyesshares || 0) ? 'No' : 'Neutral'} side
+                                {parseFloat(convertedParticipant.totalyesshares || 0) > 0 ? 'Yes' : 'No'} side
                               </div>
                             </div>
                           </div>
@@ -915,18 +831,9 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
                               {formatVolume(parseFloat(convertedParticipant.totalinvestment || 0))}
                             </div>
                             <div className="text-xs text-gray-500">
-                              Total Investment
+                              {parseFloat(convertedParticipant.totalyesshares || 0) > 0 ? 'Yes Shares' : 'No Shares'}
                             </div>
                           </div>
-
-                        <div className="text-right text-xs">
-                          <div className="text-green-600">
-                            Yes: {formatVolume(parseFloat(convertedParticipant.totalyesshares || 0))}
-                          </div>
-                          <div className="text-red-600">
-                            No: {formatVolume(parseFloat(convertedParticipant.totalnoshares || 0))}
-                          </div>
-                        </div>
                       </div>
                       );
                     })}
@@ -948,160 +855,183 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
 
           {/* Right Sidebar - Trading Interface - Desktop Only */}
           <div className="hidden lg:block lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Buy Shares</h3>
-              
-              {/* Pick a side */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-gray-700">Pick a side</span>
-                  <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
-                    <RefreshCw className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setSelectedSide('yes')}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      selectedSide === 'yes'
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-lg font-semibold">Yes</div>
-                      <div className="text-sm text-gray-500">{(yesPrice * 100).toFixed(1)}¢</div>
-                    </div>
-                  </button>
+            <Card className="bg-white shadow-lg border-2 border-gray-200">
+              <CardHeader className="bg-gray-50 border-b">
+                <CardTitle className="text-gray-900 font-bold">Buy Shares</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 bg-white">
+                {/* Pick a side */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Typography variant="body" weight="semibold" className="text-gray-900">Pick a side</Typography>
+                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
                   
-                  <button
-                    onClick={() => setSelectedSide('no')}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      selectedSide === 'no'
-                        ? 'border-red-500 bg-red-50 text-red-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-lg font-semibold">No</div>
-                      <div className="text-sm text-gray-500">{(noPrice * 100).toFixed(1)}¢</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Amount input */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Amount ($)</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-gray-500">
-                      Balance: {formatBalance(balance)}
-                    </span>
-                    {isConnected && getFullBalance() > 0 && (
-                      <button 
-                        onClick={handleMaxAmount}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        Max
-                      </button>
-                    )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant={selectedSide === 'yes' ? 'primary' : 'outline'}
+                      size="lg"
+                      onClick={() => setSelectedSide('yes')}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <Typography variant="body" weight="semibold" className="text-gray-900">Yes</Typography>
+                      <Typography variant="caption" className="text-gray-600">{(yesPrice * 100).toFixed(1)}¢</Typography>
+                    </Button>
+                    
+                    <Button
+                      variant={selectedSide === 'no' ? 'primary' : 'outline'}
+                      size="lg"
+                      onClick={() => setSelectedSide('no')}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <Typography variant="body" weight="semibold" className="text-gray-900">No</Typography>
+                      <Typography variant="caption" className="text-gray-600">{(noPrice * 100).toFixed(1)}¢</Typography>
+                    </Button>
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <button 
-                    onClick={() => setBuyAmount((parseFloat(buyAmount) - 1).toString())}
-                    className="w-8 h-8 text-black rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                  >
-                    -
-                  </button>
+
+                {/* Amount input */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Typography variant="body" weight="semibold" className="text-gray-900">Amount (CELO)</Typography>
+                    <div className="flex items-center space-x-2">
+                      <Typography variant="caption" className="text-gray-600">
+                        Balance: {formatBalance(balance)}
+                      </Typography>
+                      {isConnected && getFullBalance() > 0 && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={handleMaxAmount}
+                        >
+                          Max
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                   
-                  <input
-                    type="number"
-                    value={buyAmount}
-                    onChange={(e) => setBuyAmount(e.target.value)}
-                    className="flex-1 px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
-                    placeholder="0"
-                    min="0.01"
-                    step="0.01"
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBuyAmount((parseFloat(buyAmount) - 1).toString())}
+                      className="w-8 text-black h-8 p-0"
+                    >
+                      -
+                    </Button>
+                    
+                    <input
+                      type="number"
+                      value={buyAmount}
+                      onChange={(e) => setBuyAmount(e.target.value)}
+                      className="flex-1 text-black px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-center"
+                      placeholder="0"
+                      min="0.01"
+                      step="0.01"
+                    />
+                    
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBuyAmount((parseFloat(buyAmount) + 1).toString())}
+                      className="w-8 text-black h-8 p-0"
+                    >
+                      +
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Trading details */}
+                <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                  <Typography variant="body" weight="semibold" className="mb-3 text-gray-900">Trade Summary</Typography>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <Typography variant="caption" className="text-gray-600">Avg Price:</Typography>
+                      <Typography variant="body" weight="semibold" className="text-gray-900">{(tradingDetails.avgPrice * 100).toFixed(2)}¢</Typography>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <Typography variant="caption" className="text-gray-600">Shares:</Typography>
+                      <Typography variant="body" weight="semibold" className="text-gray-900">{tradingDetails.shares.toFixed(2)}</Typography>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <Typography variant="caption" className="text-gray-600">Transaction fees:</Typography>
+                      <Typography variant="body" weight="semibold" className="text-gray-900">${tradingDetails.fees.toFixed(4)}</Typography>
+                    </div>
+                    
+                    {/* Smart Contract Breakdown */}
+                    <div className="pt-2 border-t border-gray-200">
+                      <Typography variant="caption" className="text-gray-500 font-medium">If you win:</Typography>
+                      <div className="mt-1 space-y-1">
+                        <div className="flex justify-between">
+                          <Typography variant="caption" className="text-gray-600">Your stake back:</Typography>
+                          <Typography variant="body" weight="semibold" className="text-gray-900">${tradingDetails.breakdown.originalStake.toFixed(2)}</Typography>
+                        </div>
+                        
+                        {tradingDetails.breakdown.winningsFromLosers > 0 && (
+                          <>
+                            <div className="flex justify-between">
+                              <Typography variant="caption" className="text-gray-600">Winnings from losers:</Typography>
+                              <Typography variant="body" weight="semibold" className="text-green-600">+${tradingDetails.breakdown.winningsFromLosers.toFixed(2)}</Typography>
+                            </div>
+                            
+                            <div className="flex justify-between">
+                              <Typography variant="caption" className="text-gray-500 text-xs">Creator fee (15%):</Typography>
+                              <Typography variant="caption" className="text-gray-500 text-xs">-${tradingDetails.breakdown.creatorFee.toFixed(2)}</Typography>
+                            </div>
+                            
+                            <div className="flex justify-between">
+                              <Typography variant="caption" className="text-gray-500 text-xs">Platform fee (15%):</Typography>
+                              <Typography variant="caption" className="text-gray-500 text-xs">-${tradingDetails.breakdown.platformFee.toFixed(2)}</Typography>
+                            </div>
+                          </>
+                        )}
+                        
+                        {tradingDetails.breakdown.winningsFromLosers === 0 && (
+                          <div className="flex justify-between">
+                            <Typography variant="caption" className="text-gray-500 text-xs">No losing shares = no additional winnings</Typography>
+                            <Typography variant="caption" className="text-gray-500 text-xs">0% return</Typography>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="pt-2 border-t border-gray-200">
+                      <div className="flex justify-between">
+                        <Typography variant="caption" className="text-gray-600 font-medium">Total return:</Typography>
+                        <Typography variant="body" weight="semibold" className={tradingDetails.returnPercentage > 0 ? "text-green-600" : "text-gray-900"}>
+                          ${tradingDetails.potentialReturn.toFixed(2)} ({tradingDetails.returnPercentage > 0 ? '+' : ''}{tradingDetails.returnPercentage.toFixed(1)}%)
+                        </Typography>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Buy button */}
+                {!isConnected ? (
+                  <Button variant="secondary" size="lg" fullWidth disabled>
+                    Connect Wallet to Trade
+                  </Button>
+                ) : (
+                  <OptimisticBuyButton
+                    marketId={marketId}
+                    amount={buyAmount}
+                    side={selectedSide}
+                    className="w-full"
+                    onRefreshTrigger={setRefreshTrigger}
                   />
-                  
-                  <button 
-                    onClick={() => setBuyAmount((parseFloat(buyAmount) + 1).toString())}
-                    className="w-8 text-black h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
+                )}
 
-              {/* Trading details */}
-              <div className="space-y-3 mb-6 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Avg Price:</span>
-                  <span className="font-medium">{(tradingDetails.avgPrice * 100).toFixed(2)}¢</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Shares:</span>
-                  <span className="font-medium">{tradingDetails.shares.toFixed(2)}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Estimated fees:</span>
-                  <span className="font-medium">${tradingDetails.fees.toFixed(4)}</span>
-                </div>
-                
-                <div className="flex justify-between font-semibold">
-                  <span className="text-gray-900">Potential return:</span>
-                  <span className="text-green-600">
-                    ${tradingDetails.potentialReturn.toFixed(2)} ({tradingDetails.returnPercentage.toFixed(2)}%)
-                  </span>
-                </div>
-              </div>
-
-              {/* Buy button */}
-              {!isConnected ? (
-                <div className="w-full py-3 px-4 rounded-lg bg-gray-100 text-gray-500 text-center font-semibold">
-                  Connect Wallet to Trade
-                </div>
-              ) : (
-                <button
-                  onClick={handleBuyShares}
-                  disabled={isBuying || !buyAmount || isNaN(parseFloat(buyAmount)) || parseFloat(buyAmount) <= 0 || parseFloat(buyAmount) > getFullBalance() || !!optimisticUpdate}
-                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-all ${
-                    isBuying || !buyAmount || isNaN(parseFloat(buyAmount)) || parseFloat(buyAmount) <= 0 || parseFloat(buyAmount) > getFullBalance() || !!optimisticUpdate
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : selectedSide === 'yes'
-                      ? 'bg-green-600 hover:bg-green-700 text-white'
-                      : 'bg-red-600 hover:bg-red-700 text-white'
-                  }`}
-                >
-                  {isBuying ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Buying...
-                    </div>
-                  ) : optimisticUpdate ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Confirming...
-                    </div>
-                  ) : parseFloat(buyAmount) > getFullBalance() ? (
-                    'Insufficient Balance'
-                  ) : (
-                    `Buy ${selectedSide.toUpperCase()}`
-                  )}
-                </button>
-              )}
-
-              {/* Disclaimer */}
-              <p className="text-xs text-gray-500 mt-4 text-center">
-                *This is just a guide, not official rules
-              </p>
-            </div>
+                {/* Disclaimer */}
+                <Typography variant="caption" className="text-center block text-gray-500">
+                  *This is just a guide, not official rules
+                </Typography>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

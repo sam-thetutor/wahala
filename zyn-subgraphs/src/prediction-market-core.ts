@@ -3,8 +3,11 @@ import {
   MarketCreated,
   SharesBought,
   MarketResolved,
+  CreatorFeeClaimed,
+  RewardsDisbursed,
   UsernameSet,
-  UsernameChanged
+  UsernameChanged,
+  WinningsClaimed
 } from "../generated/PredictionMarketCore/PredictionMarketCore"
 import {
   Market,
@@ -14,8 +17,11 @@ import {
   MarketCreated as MarketCreatedEntity,
   SharesBought as SharesBoughtEntity,
   MarketResolved as MarketResolvedEntity,
+  CreatorFeeClaimed as CreatorFeeClaimedEntity,
+  RewardsDisbursed as RewardsDisbursedEntity,
   UsernameSet as UsernameSetEntity,
-  UsernameChanged as UsernameChangedEntity
+  UsernameChanged as UsernameChangedEntity,
+  WinningsClaimed as WinningsClaimedEntity
 } from "../generated/schema"
 
 // Helper function to get or create global stats
@@ -121,7 +127,7 @@ export function handleSharesBought(event: SharesBought): void {
   let participant = getOrCreateParticipant(event.params.marketId, event.params.buyer)
   
   // Update participant stats
-  if (event.params.isYesShares) { // Changed from event.params.side
+  if (event.params.side) {
     participant.totalYesShares = participant.totalYesShares.plus(event.params.amount)
     market.totalYes = market.totalYes.plus(event.params.amount)
   } else {
@@ -153,7 +159,7 @@ export function handleSharesBought(event: SharesBought): void {
   let sharesBought = new SharesBoughtEntity(event.transaction.hash.concatI32(event.logIndex.toI32()))
   sharesBought.marketId = event.params.marketId
   sharesBought.buyer = event.params.buyer
-  sharesBought.side = event.params.isYesShares // Changed from event.params.side
+  sharesBought.side = event.params.side
   sharesBought.amount = event.params.amount
   sharesBought.totalYes = market.totalYes
   sharesBought.totalNo = market.totalNo
@@ -223,4 +229,45 @@ export function handleUsernameChanged(event: UsernameChanged): void {
   usernameChanged.blockTimestamp = event.block.timestamp
   usernameChanged.transactionHash = event.transaction.hash
   usernameChanged.save()
+}
+
+export function handleWinningsClaimed(event: WinningsClaimed): void {
+  // Update user winnings
+  let user = getOrCreateUser(event.params.claimant)
+  user.totalWinnings = user.totalWinnings.plus(event.params.amount)
+  user.save()
+
+  // Create WinningsClaimed event entity
+  let winningsClaimed = new WinningsClaimedEntity(event.transaction.hash.concatI32(event.logIndex.toI32()))
+  winningsClaimed.marketId = event.params.marketId
+  winningsClaimed.claimant = event.params.claimant
+  winningsClaimed.amount = event.params.amount
+  winningsClaimed.blockNumber = event.block.number
+  winningsClaimed.blockTimestamp = event.block.timestamp
+  winningsClaimed.transactionHash = event.transaction.hash
+  winningsClaimed.save()
+}
+
+export function handleCreatorFeeClaimed(event: CreatorFeeClaimed): void {
+  // Create CreatorFeeClaimed event entity
+  let creatorFeeClaimed = new CreatorFeeClaimedEntity(event.transaction.hash.concatI32(event.logIndex.toI32()))
+  creatorFeeClaimed.marketId = event.params.marketId
+  creatorFeeClaimed.creator = event.params.creator
+  creatorFeeClaimed.amount = event.params.amount
+  creatorFeeClaimed.blockNumber = event.block.number
+  creatorFeeClaimed.blockTimestamp = event.block.timestamp
+  creatorFeeClaimed.transactionHash = event.transaction.hash
+  creatorFeeClaimed.save()
+}
+
+export function handleRewardsDisbursed(event: RewardsDisbursed): void {
+  // Create RewardsDisbursed event entity
+  let rewardsDisbursed = new RewardsDisbursedEntity(event.transaction.hash.concatI32(event.logIndex.toI32()))
+  rewardsDisbursed.marketId = event.params.marketId
+  rewardsDisbursed.claimant = event.params.claimant
+  rewardsDisbursed.amount = event.params.amount
+  rewardsDisbursed.blockNumber = event.block.number
+  rewardsDisbursed.blockTimestamp = event.block.timestamp
+  rewardsDisbursed.transactionHash = event.transaction.hash
+  rewardsDisbursed.save()
 }

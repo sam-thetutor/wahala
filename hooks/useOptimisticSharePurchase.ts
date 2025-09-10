@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react'
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
-import { useOptimisticShares } from './useOptimisticShares'
 import { useNotificationHelpers } from './useNotificationHelpers'
 import { parseEther } from 'viem'
 
@@ -45,19 +44,14 @@ import { getCoreContractAddress } from '@/lib/contract-addresses'
 // OLD ADDRESS (commented out): 0x2D6614fe45da6Aa7e60077434129a51631AC702A
 
 export const useOptimisticSharePurchase = (marketId: string) => {
-  const { 
-    userShares, 
-    isPending, 
-    updateSharesOptimistically, 
-    confirmUpdate, 
-    revertUpdate 
-  } = useOptimisticShares(marketId)
-  
   const { writeContract, isPending: isTransactionPending, error: writeError, data: hash } = useWriteContract()
   const { data: receipt, isError: isReceiptError, error: receiptError } = useWaitForTransactionReceipt({
     hash,
   })
   const { notifyTransactionSuccess, notifyTransactionFailed } = useNotificationHelpers()
+  
+  // State for triggering data refresh
+  const [refreshTrigger, setRefreshTrigger] = React.useState(0)
 
   // Check market status
   const { data: marketData, error: marketError } = useReadContract({
@@ -98,11 +92,7 @@ export const useOptimisticSharePurchase = (marketId: string) => {
       const amountWei = parseEther(amount)
       console.log('💰 Amount in wei:', amountWei.toString())
       
-      // 1. INSTANT UI update (0ms)
-      console.log('⚡ Updating UI optimistically...')
-      updateSharesOptimistically(amount, side)
-
-      // 2. Execute transaction
+      // Execute transaction
       console.log('📝 Writing contract...')
       writeContract({
         address: getCoreContractAddress(),
@@ -112,36 +102,34 @@ export const useOptimisticSharePurchase = (marketId: string) => {
         value: amountWei
       })
 
-      // 3. Wait for transaction receipt
-      console.log('⏳ Waiting for transaction receipt...')
-      // Note: In a real implementation, you'd use useWaitForTransactionReceipt hook
-      setTimeout(() => {
-        // 4. Confirm optimistic update
-        console.log('✅ Confirming optimistic update...')
-        confirmUpdate()
-        notifyTransactionSuccess(`${side.toUpperCase()} shares purchased successfully!`)
-      }, 2000) // Simulate 2 second confirmation time
+      console.log('⏳ Transaction submitted, waiting for confirmation...')
     } catch (error) {
-      // 6. Revert on error
       console.error('❌ Error in buyShares:', error)
-      revertUpdate()
       notifyTransactionFailed(`Failed to buy shares: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
-  }, [marketId, marketData, updateSharesOptimistically, confirmUpdate, revertUpdate, writeContract, notifyTransactionSuccess, notifyTransactionFailed])
+  }, [marketId, marketData, writeContract, notifyTransactionFailed])
 
   // Handle transaction receipt
   React.useEffect(() => {
     if (receipt) {
       console.log('✅ Transaction confirmed:', receipt)
-      confirmUpdate()
       notifyTransactionSuccess('Shares purchased successfully!')
+      
+      // Trigger data refresh after 6 seconds
+      setTimeout(() => {
+        console.log('🔄 Refreshing data from subgraph...')
+        setRefreshTrigger(prev => prev + 1)
+      }, 6000)
     }
+  }, [receipt, notifyTransactionSuccess])
+
+  // Handle transaction errors
+  React.useEffect(() => {
     if (isReceiptError && receiptError) {
       console.error('❌ Transaction failed:', receiptError)
-      revertUpdate()
       notifyTransactionFailed(`Transaction failed: ${receiptError.message}`)
     }
-  }, [receipt, isReceiptError, receiptError, confirmUpdate, revertUpdate, notifyTransactionSuccess, notifyTransactionFailed])
+  }, [isReceiptError, receiptError, notifyTransactionFailed])
 
   // Determine if market is available for buying
   const isMarketAvailable = React.useMemo(() => {
@@ -154,10 +142,10 @@ export const useOptimisticSharePurchase = (marketId: string) => {
 
   return {
     buyShares,
-    userShares,
-    isPending: isPending || isTransactionPending,
+    isPending: isTransactionPending,
     error: writeError,
     isMarketAvailable,
-    marketData
+    marketData,
+    refreshTrigger // Expose refresh trigger for components to use
   }
 }

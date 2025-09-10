@@ -1,7 +1,7 @@
 import { formatEther, parseEther } from 'viem'
 
 // Subgraph endpoint
-const SUBGRAPH_URL = 'https://api.studio.thegraph.com/query/120210/core/0.1'
+const SUBGRAPH_URL = 'https://api.studio.thegraph.com/query/120210/core/0.2'
 
 // GraphQL client
 export const subgraphClient = {
@@ -172,6 +172,333 @@ export const queries = {
         totalInvestment
       }
     }
+  `,
+
+  getUserWinningsClaims: `
+    query GetUserWinningsClaims($userAddress: String!) {
+      winningsClaimeds(where: { claimant: $userAddress }, orderBy: blockTimestamp, orderDirection: desc) {
+        id
+        marketId
+        claimant
+        amount
+        blockNumber
+        blockTimestamp
+        transactionHash
+      }
+    }
+  `,
+
+  getMarketWinningsClaims: `
+    query GetMarketWinningsClaims($marketId: String!) {
+      winningsClaimeds(where: { marketId: $marketId }, orderBy: blockTimestamp, orderDirection: desc) {
+        id
+        marketId
+        claimant
+        amount
+        blockNumber
+        blockTimestamp
+        transactionHash
+      }
+    }
+  `,
+
+  checkUserClaimedWinnings: `
+    query CheckUserClaimedWinnings($userAddress: String!, $marketId: String!) {
+      winningsClaimeds(where: { claimant: $userAddress, marketId: $marketId }) {
+        id
+        amount
+        blockTimestamp
+      }
+    }
+  `,
+
+  // Enhanced user statistics query
+  getUserComprehensiveStats: `
+    query GetUserComprehensiveStats($userAddress: String!) {
+      # User participations with market details
+      participants(where: { user: $userAddress }) {
+        id
+        user
+        market {
+          id
+          question
+          status
+          outcome
+          totalPool
+          totalYes
+          totalNo
+          resolvedAt
+          creator
+        }
+        totalInvestment
+        totalYesShares
+        totalNoShares
+        firstPurchaseAt
+        lastPurchaseAt
+        transactionCount
+      }
+      
+      # Markets created by user
+      markets(where: { creator: $userAddress }) {
+        id
+        question
+        status
+        outcome
+        totalPool
+        totalYes
+        totalNo
+        createdAt
+        endTime
+        resolvedAt
+        creator
+      }
+      
+      # Winnings claimed by user
+      winningsClaimeds(where: { claimant: $userAddress }) {
+        id
+        marketId
+        claimant
+        amount
+        blockTimestamp
+        transactionHash
+      }
+      
+      # Creator fees claimed by user
+      creatorFeeClaimeds(where: { creator: $userAddress }) {
+        id
+        marketId
+        creator
+        amount
+        blockTimestamp
+        transactionHash
+      }
+    }
+  `,
+
+  // User activity feed with market context
+  getUserActivityFeed: `
+    query GetUserActivityFeed($userAddress: String!, $first: Int = 20, $skip: Int = 0) {
+      # Recent shares bought by user
+      sharesBoughts(
+        where: { buyer: $userAddress }
+        first: $first
+        skip: $skip
+        orderBy: blockTimestamp
+        orderDirection: desc
+      ) {
+        id
+        marketId
+        buyer
+        side
+        amount
+        totalYes
+        totalNo
+        blockTimestamp
+        transactionHash
+      }
+      
+      # Markets created by user
+      markets(
+        where: { creator: $userAddress }
+        first: $first
+        skip: $skip
+        orderBy: createdAt
+        orderDirection: desc
+      ) {
+        id
+        question
+        status
+        outcome
+        totalPool
+        totalYes
+        totalNo
+        createdAt
+        endTime
+        resolvedAt
+        creator
+      }
+      
+      # Get all markets that user has participated in via participants
+      participants(where: { user: $userAddress }) {
+        market {
+          id
+          question
+          status
+          outcome
+          totalPool
+          totalYes
+          totalNo
+          createdAt
+          endTime
+          resolvedAt
+          creator
+        }
+      }
+      
+      # Winnings claimed by user
+      winningsClaimeds(
+        where: { claimant: $userAddress }
+        first: $first
+        skip: $skip
+        orderBy: blockTimestamp
+        orderDirection: desc
+      ) {
+        id
+        marketId
+        claimant
+        amount
+        blockTimestamp
+        transactionHash
+      }
+      
+      # Creator fees claimed by user
+      creatorFeeClaimeds(
+        where: { creator: $userAddress }
+        first: $first
+        skip: $skip
+        orderBy: blockTimestamp
+        orderDirection: desc
+      ) {
+        id
+        marketId
+        creator
+        amount
+        blockTimestamp
+        transactionHash
+      }
+    }
+  `,
+
+  // User markets with performance metrics
+  getUserMarketsWithPerformance: `
+    query GetUserMarketsWithPerformance($userAddress: String!) {
+      markets(where: { creator: $userAddress }) {
+        id
+        question
+        description
+        status
+        outcome
+        totalPool
+        totalYes
+        totalNo
+        createdAt
+        endTime
+        resolvedAt
+        creator
+      }
+      
+      # Get participants for all markets created by user
+      participants(where: { market_: { creator: $userAddress } }) {
+        id
+        market {
+          id
+        }
+        user
+        totalInvestment
+        totalYesShares
+        totalNoShares
+        transactionCount
+      }
+      
+      # Get creator fee claims for all markets created by user
+      creatorFeeClaimeds(where: { creator: $userAddress }) {
+        id
+        marketId
+        creator
+        amount
+        blockTimestamp
+        transactionHash
+      }
+    }
+  `,
+
+  // User claims and winnings
+  getUserClaimsAndWinnings: `
+    query GetUserClaimsAndWinnings($userAddress: String!) {
+      # All winnings claimed
+      winningsClaimeds(where: { claimant: $userAddress }, orderBy: blockTimestamp, orderDirection: desc) {
+        id
+        marketId
+        claimant
+        amount
+        blockTimestamp
+        transactionHash
+      }
+      
+      # All creator fees claimed
+      creatorFeeClaimeds(where: { creator: $userAddress }, orderBy: blockTimestamp, orderDirection: desc) {
+        id
+        marketId
+        creator
+        amount
+        blockTimestamp
+        transactionHash
+      }
+      
+      # User participations to calculate available claims
+      participants(where: { user: $userAddress }) {
+        id
+        market {
+          id
+          question
+          status
+          outcome
+          totalYes
+          totalNo
+          totalPool
+          creator
+        }
+        totalYesShares
+        totalNoShares
+        totalInvestment
+      }
+    }
+  `,
+
+  // User trading performance analysis
+  getUserTradingPerformance: `
+    query GetUserTradingPerformance($userAddress: String!) {
+      # All user participations for performance analysis
+      participants(where: { user: $userAddress }) {
+        id
+        market {
+          id
+          question
+          status
+          outcome
+          totalPool
+          totalYes
+          totalNo
+          createdAt
+          endTime
+          resolvedAt
+        }
+        totalInvestment
+        totalYesShares
+        totalNoShares
+        firstPurchaseAt
+        lastPurchaseAt
+        transactionCount
+      }
+      
+      # Recent trading activity
+      sharesBoughts(
+        where: { buyer: $userAddress }
+        first: 100
+        orderBy: blockTimestamp
+        orderDirection: desc
+      ) {
+        id
+        marketId
+        buyer
+        side
+        amount
+        totalYes
+        totalNo
+        blockTimestamp
+        transactionHash
+      }
+    }
   `
 }
 
@@ -245,6 +572,234 @@ export interface SubgraphUserClaim {
     totalPool: string
     totalYes: string
     totalNo: string
+  }>
+}
+
+export interface SubgraphWinningsClaimed {
+  id: string
+  marketId: string
+  claimant: string
+  amount: string
+  blockNumber: string
+  blockTimestamp: string
+  transactionHash: string
+}
+
+// Enhanced user data interfaces
+export interface SubgraphUserComprehensiveStats {
+  participants: Array<{
+    id: string
+    user: string
+    market: {
+      id: string
+      question: string
+      status: string
+      outcome?: boolean
+      totalPool: string
+      totalYes: string
+      totalNo: string
+      resolvedAt?: string
+      creator: string
+    }
+    totalInvestment: string
+    totalYesShares: string
+    totalNoShares: string
+    firstPurchaseAt: string
+    lastPurchaseAt: string
+    transactionCount: string
+  }>
+  markets: Array<{
+    id: string
+    question: string
+    status: string
+    outcome?: boolean
+    totalPool: string
+    totalYes: string
+    totalNo: string
+    createdAt: string
+    endTime: string
+    resolvedAt?: string
+    creator: string
+  }>
+  winningsClaimeds: Array<{
+    id: string
+    marketId: string
+    claimant: string
+    amount: string
+    blockTimestamp: string
+    transactionHash: string
+  }>
+  creatorFeeClaimeds: Array<{
+    id: string
+    marketId: string
+    creator: string
+    amount: string
+    blockTimestamp: string
+    transactionHash: string
+  }>
+}
+
+export interface SubgraphUserActivityFeed {
+  sharesBoughts: Array<{
+    id: string
+    marketId: string
+    buyer: string
+    side: boolean
+    amount: string
+    totalYes: string
+    totalNo: string
+    blockTimestamp: string
+    transactionHash: string
+  }>
+  markets: Array<{
+    id: string
+    question: string
+    status: string
+    outcome?: boolean
+    totalPool: string
+    totalYes: string
+    totalNo: string
+    createdAt: string
+    endTime: string
+    resolvedAt?: string
+    creator: string
+  }>
+  participants: Array<{
+    market: {
+      id: string
+      question: string
+      status: string
+      outcome?: boolean
+      totalPool: string
+      totalYes: string
+      totalNo: string
+      createdAt: string
+      endTime: string
+      resolvedAt?: string
+      creator: string
+    }
+  }>
+  winningsClaimeds: Array<{
+    id: string
+    marketId: string
+    claimant: string
+    amount: string
+    blockTimestamp: string
+    transactionHash: string
+  }>
+  creatorFeeClaimeds: Array<{
+    id: string
+    marketId: string
+    creator: string
+    amount: string
+    blockTimestamp: string
+    transactionHash: string
+  }>
+}
+
+export interface SubgraphUserMarketsWithPerformance {
+  markets: Array<{
+    id: string
+    question: string
+    description: string
+    status: string
+    outcome?: boolean
+    totalPool: string
+    totalYes: string
+    totalNo: string
+    createdAt: string
+    endTime: string
+    resolvedAt?: string
+    creator: string
+  }>
+  participants: Array<{
+    id: string
+    market: {
+      id: string
+    }
+    user: string
+    totalInvestment: string
+    totalYesShares: string
+    totalNoShares: string
+    transactionCount: string
+  }>
+  creatorFeeClaimeds: Array<{
+    id: string
+    marketId: string
+    creator: string
+    amount: string
+    blockTimestamp: string
+    transactionHash: string
+  }>
+}
+
+export interface SubgraphUserClaimsAndWinnings {
+  winningsClaimeds: Array<{
+    id: string
+    marketId: string
+    claimant: string
+    amount: string
+    blockTimestamp: string
+    transactionHash: string
+  }>
+  creatorFeeClaimeds: Array<{
+    id: string
+    marketId: string
+    creator: string
+    amount: string
+    blockTimestamp: string
+    transactionHash: string
+  }>
+  participants: Array<{
+    id: string
+    market: {
+      id: string
+      question: string
+      status: string
+      outcome?: boolean
+      totalYes: string
+      totalNo: string
+      totalPool: string
+      creator: string
+    }
+    totalYesShares: string
+    totalNoShares: string
+    totalInvestment: string
+  }>
+}
+
+export interface SubgraphUserTradingPerformance {
+  participants: Array<{
+    id: string
+    market: {
+      id: string
+      question: string
+      status: string
+      outcome?: boolean
+      totalPool: string
+      totalYes: string
+      totalNo: string
+      createdAt: string
+      endTime: string
+      resolvedAt?: string
+    }
+    totalInvestment: string
+    totalYesShares: string
+    totalNoShares: string
+    firstPurchaseAt: string
+    lastPurchaseAt: string
+    transactionCount: string
+  }>
+  sharesBoughts: Array<{
+    id: string
+    marketId: string
+    buyer: string
+    side: boolean
+    amount: string
+    totalYes: string
+    totalNo: string
+    blockTimestamp: string
+    transactionHash: string
   }>
 }
 
@@ -337,5 +892,46 @@ export const subgraphApi = {
   async getRecentEvents(limit: number = 10): Promise<SubgraphSharesBought[]> {
     const { data } = await subgraphClient.query(queries.getRecentEvents, { first: limit })
     return data.sharesBoughts || []
+  },
+
+  async getUserWinningsClaims(userAddress: string): Promise<SubgraphWinningsClaimed[]> {
+    const { data } = await subgraphClient.query(queries.getUserWinningsClaims, { userAddress })
+    return data.winningsClaimeds || []
+  },
+
+  async getMarketWinningsClaims(marketId: string): Promise<SubgraphWinningsClaimed[]> {
+    const { data } = await subgraphClient.query(queries.getMarketWinningsClaims, { marketId })
+    return data.winningsClaimeds || []
+  },
+
+  async checkUserClaimedWinnings(userAddress: string, marketId: string): Promise<boolean> {
+    const { data } = await subgraphClient.query(queries.checkUserClaimedWinnings, { userAddress, marketId })
+    return data.winningsClaimeds && data.winningsClaimeds.length > 0
+  },
+
+  // Enhanced user data API functions
+  async getUserComprehensiveStats(userAddress: string): Promise<SubgraphUserComprehensiveStats> {
+    const { data } = await subgraphClient.query(queries.getUserComprehensiveStats, { userAddress })
+    return data
+  },
+
+  async getUserActivityFeed(userAddress: string, first: number = 20, skip: number = 0): Promise<SubgraphUserActivityFeed> {
+    const { data } = await subgraphClient.query(queries.getUserActivityFeed, { userAddress, first, skip })
+    return data
+  },
+
+  async getUserMarketsWithPerformance(userAddress: string): Promise<SubgraphUserMarketsWithPerformance> {
+    const { data } = await subgraphClient.query(queries.getUserMarketsWithPerformance, { userAddress })
+    return data
+  },
+
+  async getUserClaimsAndWinnings(userAddress: string): Promise<SubgraphUserClaimsAndWinnings> {
+    const { data } = await subgraphClient.query(queries.getUserClaimsAndWinnings, { userAddress })
+    return data
+  },
+
+  async getUserTradingPerformance(userAddress: string): Promise<SubgraphUserTradingPerformance> {
+    const { data } = await subgraphClient.query(queries.getUserTradingPerformance, { userAddress })
+    return data
   }
 }

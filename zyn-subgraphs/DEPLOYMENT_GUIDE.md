@@ -10,9 +10,9 @@
 
 2. **Create New Subgraph**
    - Click "Create a Subgraph"
-   - **Name**: `zyn-prediction-markets`
+   - **Name**: `core`
    - **Network**: Celo
-   - **Contract Address**: `0x7176D16D61A122231a78749c61740ad8F86BB13a`
+   - **Contract Address**: `0x35f61008878b85B4239C1EF714989B236757a283`
 
 3. **Get Deploy Key**
    - Copy the deploy key from the studio
@@ -29,7 +29,7 @@ graph auth <YOUR_DEPLOY_KEY>
 
 ```bash
 # Deploy using the deploy key
-graph deploy --deploy-key <YOUR_DEPLOY_KEY> zyn-prediction-markets
+graph deploy --deploy-key <YOUR_DEPLOY_KEY> core
 ```
 
 ### **Step 4: Verify Deployment**
@@ -52,14 +52,14 @@ If you want to test locally first:
 docker-compose up -d
 
 # Deploy to local node
-graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 zyn-prediction-markets
+graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 core
 ```
 
 ## Troubleshooting
 
 ### **"Subgraph not found" Error**
 - Make sure you created the subgraph in The Graph Studio first
-- Use the correct subgraph name: `zyn-prediction-markets`
+- Use the correct subgraph name: `core`
 
 ### **Authentication Errors**
 - Make sure you're using the correct deploy key
