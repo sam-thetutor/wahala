@@ -38,10 +38,15 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
 
   // Wallet integration
   const { address, isConnected } = useAccount();
+  
+  // Get Farcaster wallet address if available
+  const farcasterAddress = isInFarcasterContext() && context?.user?.walletAddress 
+    ? context.user.walletAddress 
+    : address;
+  
   const { data: balance, isLoading: balanceLoading } = useBalance({
-    address: address,
+    address: farcasterAddress,
     chainId: 42220
-
   });
 
   // Prediction market hooks
@@ -254,6 +259,9 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
     if (!address) return 'Unknown';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
+
+  // Use Farcaster address for display and transactions
+  const displayAddress = farcasterAddress || address;
 
   // Format date properly
   const formatDate = (dateString: string) => {

@@ -253,8 +253,10 @@ const Markets: React.FC = () => {
                 const adaptedMarket: MarketWithMetadata = {
                   id: BigInt(market.id),
                   question: market.question,
-                  description: market.description,
-                  source: market.source,
+                  description: market.description || '',
+                  category: 'General', // Default category since subgraph doesn't have this
+                  image: market.image || '',
+                  source: market.source || '',
                   endTime: BigInt(Math.floor(new Date(market.endTime).getTime() / 1000)),
                   totalPool: BigInt(Math.floor(parseFloat(market.totalPool) * 1e18)), // Convert CELO to wei
                   totalYes: BigInt(Math.floor(parseFloat(market.totalYes) * 1e18)), // Convert CELO to wei
@@ -262,7 +264,7 @@ const Markets: React.FC = () => {
                   createdAt: BigInt(Math.floor(new Date(market.createdAt).getTime() / 1000)),
                   status: market.status as any,
                   creator: market.creator,
-                  resolver: market.resolver
+                  outcome: false // Default outcome since subgraph doesn't have this
                 };
                 
                 return (

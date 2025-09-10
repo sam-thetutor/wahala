@@ -7,6 +7,7 @@ import { usePredictionMarket } from '@/hooks/usePredictionMarket';
 import { useNotificationHelpers } from '@/hooks/useNotificationHelpers';
 import { useMiniApp } from '@/contexts/MiniAppContext';
 import { useReferral } from '@/contexts/ReferralContext';
+import { useFarcaster } from '@/components/FarcasterProvider';
 import { MiniAppProvider } from '@/contexts/MiniAppContext';
 import { ReferralProvider } from '@/contexts/ReferralContext';
 import ReferralBanner from '@/components/ReferralBanner';
@@ -29,10 +30,16 @@ const CreateMarketContent: React.FC = () => {
   const { createMarket, contractState } = usePredictionMarket();
   const { isMiniApp, composeCast, triggerHaptic } = useMiniApp();
   const { referralCode, submitReferral } = useReferral();
+  const { isInFarcasterContext, context } = useFarcaster();
+  
+  // Get Farcaster wallet address if available
+  const farcasterAddress = isInFarcasterContext() && context?.user?.walletAddress 
+    ? context.user.walletAddress 
+    : address;
   
   // Check user's Celo balance
   const { data: balance } = useBalance({
-    address: address,
+    address: farcasterAddress,
     chainId: 42220
   });
   
@@ -116,7 +123,7 @@ const CreateMarketContent: React.FC = () => {
             description: formData.description,
             category: formData.category,
             image: formData.image || 'https://picsum.photos/400/300?random=1',
-            source: formData.source || address || '0x0000000000000000000000000000000000000000',
+            source: formData.source || farcasterAddress || '0x0000000000000000000000000000000000000000',
             endtime: endTimestamp.toString(), // Use calculated timestamp
             totalpool: '0',
             totalyes: '0',
@@ -124,7 +131,7 @@ const CreateMarketContent: React.FC = () => {
             status: 0, // Active
             outcome: false,
             createdat: Math.floor(Date.now() / 1000).toString(),
-            creator: address || '0x0000000000000000000000000000000000000000'
+            creator: farcasterAddress || '0x0000000000000000000000000000000000000000'
           };
 
           const response = await fetch('/api/markets/update', {
@@ -178,7 +185,7 @@ const CreateMarketContent: React.FC = () => {
         router.push('/markets');
       }, 4000);
     }
-  }, [contractState.success, contractState.transactionHash, router, formData.question, notifyMarketCreated, isMiniApp, composeCast, triggerHaptic, referralCode, submitReferral, formData.description, formData.category, formData.image, formData.source, formData.endTime, address]);
+  }, [contractState.success, contractState.transactionHash, router, formData.question, notifyMarketCreated, isMiniApp, composeCast, triggerHaptic, referralCode, submitReferral, formData.description, formData.category, formData.image, formData.source, formData.endTime, farcasterAddress]);
 
   const validateForm = (): boolean => {
     const errors: Partial<CreateMarketForm> = {};
@@ -263,7 +270,7 @@ const CreateMarketContent: React.FC = () => {
       // Process source links - join multiple lines with separator, or use address as fallback
       const sourceLinks = formData.source.trim() 
         ? formData.source.split('\n').filter(link => link.trim()).join(' | ')
-        : address || '0x0000000000000000000000000000000000000000';
+        : farcasterAddress || '0x0000000000000000000000000000000000000000';
       
       await createMarket({
         question: formData.question,

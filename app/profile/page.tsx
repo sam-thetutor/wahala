@@ -24,12 +24,17 @@ const ProfileContent: React.FC = () => {
     addToFarcaster,
     triggerHaptic
   } = useMiniApp();
-  const { isFarcasterApp, getUserDisplayName, getUserEmoji } = useFarcaster();
+  const { isFarcasterApp, getUserDisplayName, getUserEmoji, isInFarcasterContext, context } = useFarcaster();
   const { notifications, removeNotification } = useNotifications();
+  
+  // Get Farcaster wallet address if available
+  const farcasterAddress = isInFarcasterContext() && context?.user?.walletAddress 
+    ? context.user.walletAddress 
+    : address;
   
   // Fetch Celo balance
   const { data: balance, isLoading: balanceLoading } = useBalance({
-    address: address,
+    address: farcasterAddress,
     chainId: 42220
   });
   
@@ -74,7 +79,7 @@ const ProfileContent: React.FC = () => {
 
   // Polling effect for real-time updates
   useEffect(() => {
-    if (!address) return;
+    if (!farcasterAddress) return;
 
     let timeoutId: NodeJS.Timeout;
     
@@ -98,10 +103,10 @@ const ProfileContent: React.FC = () => {
       clearInterval(pollInterval);
       clearTimeout(timeoutId);
     };
-  }, [address, refetchActivities, refetchStats, refetchEvents]);
+  }, [farcasterAddress, refetchActivities, refetchStats, refetchEvents]);
 
   // Handle wallet not connected
-  if (!isConnected || !address) {
+  if (!isConnected || !farcasterAddress) {
     return (
       <div className="py-6 px-3 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
@@ -137,7 +142,7 @@ const ProfileContent: React.FC = () => {
                   </div>
                 ) : (
                   <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-lg">
-                    {address.slice(2, 4).toUpperCase()}
+                    {farcasterAddress.slice(2, 4).toUpperCase()}
                   </div>
                 )}
                 <div>
@@ -147,13 +152,13 @@ const ProfileContent: React.FC = () => {
                         {getUserDisplayName()}
                       </p>
                       <p className="text-xs md:text-sm text-gray-500">
-                        Farcaster User • {shortenAddress(address)}
+                        Farcaster User • {shortenAddress(farcasterAddress)}
                       </p>
                     </>
                   ) : (
                     <>
                       <p className="text-sm md:text-base lg:text-lg font-medium text-gray-900">
-                        {shortenAddress(address)}
+                        {shortenAddress(farcasterAddress)}
                       </p>
                       <p className="text-xs md:text-sm text-gray-500">Connected Wallet</p>
                     </>

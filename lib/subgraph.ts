@@ -7,22 +7,17 @@ const SUBGRAPH_URL = 'https://api.studio.thegraph.com/query/120210/core/0.1'
 export const subgraphClient = {
   async query(query: string, variables?: any) {
     try {
-      console.log('🔍 Subgraph query:', { query, variables, url: SUBGRAPH_URL })
-      
       const response = await fetch(SUBGRAPH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, variables })
       })
       
-      console.log('🔍 Subgraph response status:', response.status)
-      
       if (!response.ok) {
         throw new Error(`Subgraph query failed: ${response.statusText}`)
       }
       
       const data = await response.json()
-      console.log('🔍 Subgraph response data:', data)
       
       if (data.errors) {
         throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`)
@@ -192,14 +187,7 @@ export const parseEtherToWei = (ether: string): string => {
 
 // Market data transformation
 export const transformMarket = (market: SubgraphMarket) => {
-  console.log('🔍 Transforming market data:', {
-    id: market.id,
-    rawTotalPool: market.totalPool,
-    rawTotalYes: market.totalYes,
-    rawTotalNo: market.totalNo
-  })
-  
-  const transformed = {
+  return {
     ...market,
     totalPool: formatWeiToEther(market.totalPool),
     totalYes: formatWeiToEther(market.totalYes),
@@ -208,15 +196,6 @@ export const transformMarket = (market: SubgraphMarket) => {
     endTime: new Date(parseInt(market.endTime) * 1000).toISOString(),
     resolvedAt: market.resolvedAt ? new Date(parseInt(market.resolvedAt) * 1000).toISOString() : null
   }
-  
-  console.log('🔍 Transformed market data:', {
-    id: transformed.id,
-    totalPool: transformed.totalPool,
-    totalYes: transformed.totalYes,
-    totalNo: transformed.totalNo
-  })
-  
-  return transformed
 }
 
 // Participant data transformation

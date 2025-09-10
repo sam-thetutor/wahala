@@ -47,7 +47,7 @@ This document outlines the comprehensive reward distribution system for the Snar
 ### ✅ Phase 2: Frontend Components
 
 #### 1. Enhanced Leaderboard Component
-- **Real-time updates** with WebSocket/polling
+- **Real-time updates** with polling
 - **Personal reward cards** for winners
 - **Distribution progress** indicators
 - **Transaction hash links** to blockchain explorer
@@ -223,7 +223,7 @@ ALTER TABLE quiz_sessions ADD COLUMN distribution_completed_at TIMESTAMP;
 - [ ] End-to-end distribution flow
 - [ ] Real blockchain transactions (testnet)
 - [ ] UI state management
-- [ ] WebSocket/polling mechanisms
+- [ ] Polling mechanisms
 
 ### Load Tests
 - [ ] Large participant distributions (1000+ users)
