@@ -37,21 +37,10 @@ const cardVariants = cva(
 
 export interface CardProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof cardVariants> {
-  asChild?: boolean;
-}
+    VariantProps<typeof cardVariants> {}
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant, padding, hover, asChild = false, ...props }, ref) => {
-    if (asChild) {
-      return (
-        <React.Fragment
-          className={cn(cardVariants({ variant, padding, hover, className }))}
-          {...props}
-        />
-      );
-    }
-    
+  ({ className, variant, padding, hover, ...props }, ref) => {
     return (
       <div
         className={cn(cardVariants({ variant, padding, hover, className }))}

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { useAccount, useBalance } from 'wagmi';
+import { useAccount, useBalance, useChainId, useSwitchChain } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { useMiniApp } from '@/contexts/MiniAppContext';
 import { MiniAppProvider } from '@/contexts/MiniAppContext';
@@ -21,6 +21,8 @@ import ClaimsSection from '@/components/ClaimsSection';
 const ProfileContent: React.FC = () => {
   const router = useRouter();
   const { isConnected, address } = useAccount();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   const { 
     isMiniApp, 
     addToFarcaster,
@@ -123,6 +125,18 @@ const ProfileContent: React.FC = () => {
       clearTimeout(timeoutId);
     };
   }, [farcasterAddress, refetchActivities, refetchStats]);
+
+  // Auto-switch to Celo Mainnet when connected to wrong chain
+  useEffect(() => {
+    if (isConnected && chainId && chainId !== 42220) {
+      console.log('🔄 Auto-switching to Celo Mainnet from Profile page...', { currentChainId: chainId });
+      try {
+        switchChain({ chainId: 42220 });
+      } catch (error) {
+        console.error('❌ Failed to auto-switch to Celo Mainnet:', error);
+      }
+    }
+  }, [isConnected, chainId, switchChain]);
 
   // Handle wallet not connected
   if (!isConnected || !farcasterAddress) {

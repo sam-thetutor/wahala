@@ -50,18 +50,14 @@ const badgeVariants = cva(
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {
-  asChild?: boolean;
-}
+    VariantProps<typeof badgeVariants> {}
 
 const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? React.Fragment : 'div';
-    
+  ({ className, variant, size, ...props }, ref) => {
     return (
-      <Comp
+      <div
         className={cn(badgeVariants({ variant, size, className }))}
-        ref={asChild ? undefined : ref}
+        ref={ref}
         {...props}
       />
     );

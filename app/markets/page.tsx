@@ -5,12 +5,20 @@ import MarketCard from '@/components/MarketCard';
 import { useSubgraphMarkets, Market } from '@/hooks/useSubgraphMarkets';
 import { MarketWithMetadata } from '@/contracts/contracts';
 import NotificationContainer, { useNotifications } from '@/components/NotificationContainer';
+import { Menu } from 'lucide-react';
+import { useAccount, useChainId, useSwitchChain } from 'wagmi';
 
 const Markets: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'volume' | 'ending'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Chain management
+  const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
 
   const {
     markets: subgraphMarkets,
@@ -29,14 +37,63 @@ const Markets: React.FC = () => {
     if (searchTerm) {
       filtered = filtered.filter(market =>
         market.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        market.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (market.description && market.description.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
-    // Category filter (simplified - you can add categories to subgraph later)
+    // Category filter - for now we'll use a simple keyword-based approach
     if (selectedCategory && selectedCategory !== 'all') {
-      // For now, we'll skip category filtering since subgraph doesn't have categories
-      // You can add this to the subgraph schema later
+      filtered = filtered.filter(market => {
+        const question = market.question.toLowerCase();
+        const description = market.description?.toLowerCase() || '';
+        const combinedText = `${question} ${description}`;
+        
+        switch (selectedCategory) {
+          case 'crypto':
+            return combinedText.includes('crypto') || combinedText.includes('bitcoin') || 
+                   combinedText.includes('ethereum') || combinedText.includes('blockchain') ||
+                   combinedText.includes('defi') || combinedText.includes('nft');
+          case 'sports':
+            return combinedText.includes('sport') || combinedText.includes('football') || 
+                   combinedText.includes('basketball') || combinedText.includes('soccer') ||
+                   combinedText.includes('baseball') || combinedText.includes('tennis') ||
+                   combinedText.includes('olympics') || combinedText.includes('championship');
+          case 'politics':
+            return combinedText.includes('election') || combinedText.includes('president') || 
+                   combinedText.includes('government') || combinedText.includes('vote') ||
+                   combinedText.includes('congress') || combinedText.includes('senate') ||
+                   combinedText.includes('policy') || combinedText.includes('political');
+          case 'entertainment':
+            return combinedText.includes('movie') || combinedText.includes('film') || 
+                   combinedText.includes('music') || combinedText.includes('celebrity') ||
+                   combinedText.includes('award') || combinedText.includes('oscar') ||
+                   combinedText.includes('grammy') || combinedText.includes('entertainment');
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Status filter
+    if (selectedStatus && selectedStatus !== 'all') {
+      filtered = filtered.filter(market => {
+        const now = new Date().getTime();
+        const endTime = new Date(market.endTime).getTime();
+        const isExpired = endTime <= now;
+        
+        switch (selectedStatus) {
+          case 'active':
+            return market.status === 'ACTIVE' && !isExpired;
+          case 'expired':
+            return market.status === 'ACTIVE' && isExpired;
+          case 'resolved':
+            return market.status === 'RESOLVED';
+          case 'cancelled':
+            return market.status === 'CANCELLED';
+          default:
+            return true;
+        }
+      });
     }
 
     // Sort markets
@@ -56,7 +113,7 @@ const Markets: React.FC = () => {
     });
 
     return filtered;
-  }, [subgraphMarkets, searchTerm, selectedCategory, sortBy]);
+  }, [subgraphMarkets, searchTerm, selectedCategory, selectedStatus, sortBy]);
 
   // Pagination
   const itemsPerPage = 12;
@@ -67,7 +124,7 @@ const Markets: React.FC = () => {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCategory, sortBy]);
+  }, [searchTerm, selectedCategory, selectedStatus, sortBy]);
 
   // Trigger event listener to check for new events on page load
   useEffect(() => {
@@ -84,12 +141,33 @@ const Markets: React.FC = () => {
     triggerEventListener();
   }, []);
 
+  // Auto-switch to Celo Mainnet when connected to wrong chain
+  useEffect(() => {
+    if (isConnected && chainId && chainId !== 42220) {
+      console.log('🔄 Auto-switching to Celo Mainnet from Markets page...', { currentChainId: chainId });
+      try {
+        switchChain({ chainId: 42220 });
+      } catch (error) {
+        console.error('❌ Failed to auto-switch to Celo Mainnet:', error);
+      }
+    }
+  }, [isConnected, chainId, switchChain]);
+
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   const openFilterModal = () => setIsFilterModalOpen(true);
   const closeFilterModal = () => setIsFilterModalOpen(false);
 
-  // Mock categories for now (you can add this to subgraph later)
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory('');
+    setSelectedStatus('');
+    setSortBy('newest');
+    setCurrentPage(1);
+  };
+
+  // Categories for filtering
   const categories = [
     { id: 'all', name: 'All Markets', color: '#3B82F6' },
     { id: 'crypto', name: 'Cryptocurrency', color: '#10B981' },
@@ -98,11 +176,27 @@ const Markets: React.FC = () => {
     { id: 'entertainment', name: 'Entertainment', color: '#8B5CF6' }
   ];
 
+  // Status options for filtering
+  const statusOptions = [
+    { id: 'all', name: 'All Status', color: '#6B7280' },
+    { id: 'active', name: 'Active', color: '#10B981' },
+    { id: 'expired', name: 'Expired', color: '#F59E0B' },
+    { id: 'resolved', name: 'Resolved', color: '#3B82F6' },
+    { id: 'cancelled', name: 'Cancelled', color: '#EF4444' }
+  ];
+
   // Get the current category name for display
   const getCurrentCategoryName = () => {
     if (!selectedCategory || selectedCategory === '') return 'All Markets';
     const category = categories.find(cat => cat.id === selectedCategory);
     return category ? category.name : 'All Markets';
+  };
+
+  // Get the current status name for display
+  const getCurrentStatusName = () => {
+    if (!selectedStatus || selectedStatus === '') return 'All Status';
+    const status = statusOptions.find(stat => stat.id === selectedStatus);
+    return status ? status.name : 'All Status';
   };
 
   // Loading state
@@ -174,14 +268,12 @@ const Markets: React.FC = () => {
       <div className="md:hidden mb-4">
         <button
           onClick={openFilterModal}
-          className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-50 transition-colors text-sm"
+          className=" flex items-start justify-start gap-2 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-50 transition-colors text-sm"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-          </svg>
-          <span>Filters & Sort</span>
+          <Menu/>
           <span className="text-xs text-gray-500">
             {selectedCategory && selectedCategory !== '' ? `• ${getCurrentCategoryName()}` : ''}
+            {selectedStatus && selectedStatus !== '' ? ` • ${getCurrentStatusName()}` : ''}
             {sortBy !== 'newest' ? ` • ${sortBy}` : ''}
           </span>
         </button>
@@ -211,7 +303,29 @@ const Markets: React.FC = () => {
           </div>
         </div>
 
-        {/* Sorting Options and Refresh */}
+        {/* Status Filters */}
+        <div className="mb-4">
+          <div className="flex flex-wrap justify-center gap-2">
+            {statusOptions.map((status) => (
+              <button
+                key={status.id}
+                onClick={() => setSelectedStatus(status.id)}
+                className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  (selectedStatus === status.id) || (!selectedStatus && status.id === 'all')
+                    ? 'text-white'
+                    : 'bg-white text-gray-600 hover:text-gray-900 hover:bg-gray-50 border border-gray-200'
+                }`}
+                style={{
+                  backgroundColor: (selectedStatus === status.id) || (!selectedStatus && status.id === 'all') ? status.color : undefined
+                }}
+              >
+                {status.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Sorting Options and Actions */}
         <div className="flex items-center justify-center space-x-3">
           <span className="text-xs text-gray-600">Sort by:</span>
           <select
@@ -225,6 +339,12 @@ const Markets: React.FC = () => {
             <option value="ending">Ending Soon</option>
           </select>
           <button
+            onClick={clearAllFilters}
+            className="px-3 py-1 bg-gray-500 text-white text-xs rounded-md hover:bg-gray-600 transition-colors"
+          >
+            Clear Filters
+          </button>
+          <button
             onClick={() => refetch()}
             className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
           >
@@ -232,6 +352,41 @@ const Markets: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Active Filters Summary */}
+      {(searchTerm || selectedCategory || selectedStatus || sortBy !== 'newest') && (
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-gray-600">Active filters:</span>
+            {searchTerm && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                Search: "{searchTerm}"
+              </span>
+            )}
+            {selectedCategory && selectedCategory !== 'all' && (
+              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                {getCurrentCategoryName()}
+              </span>
+            )}
+            {selectedStatus && selectedStatus !== 'all' && (
+              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                {getCurrentStatusName()}
+              </span>
+            )}
+            {sortBy !== 'newest' && (
+              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
+                Sort: {sortBy}
+              </span>
+            )}
+            <button
+              onClick={clearAllFilters}
+              className="px-2 py-1 bg-gray-200 text-gray-700 rounded-full text-xs hover:bg-gray-300 transition-colors"
+            >
+              Clear All
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Markets Display - Mobile Optimized */}
       <div className="mb-6">
@@ -360,6 +515,32 @@ const Markets: React.FC = () => {
                 </div>
               </div>
 
+              {/* Status Filters */}
+              <div>
+                <h4 className="text-xs font-medium text-gray-700 mb-2">Status</h4>
+                <div className="space-y-1">
+                  {statusOptions.map((status) => (
+                    <button
+                      key={status.id}
+                      onClick={() => {
+                        setSelectedStatus(status.id);
+                        closeFilterModal();
+                      }}
+                      className={`w-full text-left px-2 py-2 rounded-md text-xs font-medium transition-colors ${
+                        (selectedStatus === status.id) || (!selectedStatus && status.id === 'all')
+                          ? 'text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                      style={{
+                        backgroundColor: (selectedStatus === status.id) || (!selectedStatus && status.id === 'all') ? status.color : undefined
+                      }}
+                    >
+                      {status.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Sorting Options */}
               <div>
                 <h4 className="text-xs font-medium text-gray-700 mb-2">Sort By</h4>
@@ -376,6 +557,19 @@ const Markets: React.FC = () => {
                   <option value="volume">Highest Volume</option>
                   <option value="ending">Ending Soon</option>
                 </select>
+              </div>
+
+              {/* Clear Filters Button */}
+              <div className="pt-3 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    clearAllFilters();
+                    closeFilterModal();
+                  }}
+                  className="w-full px-3 py-2 bg-gray-500 text-white text-xs rounded-md hover:bg-gray-600 transition-colors"
+                >
+                  Clear All Filters
+                </button>
               </div>
 
               {/* Market Count */}

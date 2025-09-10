@@ -39,7 +39,7 @@ const TopNavbar: React.FC = () => {
             <div className="flex items-center">
               <Link href="/" className="flex items-center space-x-2">
                 <img src="/logo.png" alt="Snarkels" className="w-8 h-8" />
-                <span className="font-handwriting text-xl font-bold text-slate-800">Zyn</span>
+                <span className="font-sans text-xl font-bold text-slate-800">Zyn</span>
               </Link>
             </div>
 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { useAccount, useBalance } from 'wagmi';
+import { useAccount, useBalance, useChainId, useSwitchChain } from 'wagmi';
 import { parseEther } from 'viem';
 import { Share2, CheckCircle, ChevronDown, ChevronUp, RefreshCw, TrendingUp, Users, Clock } from 'lucide-react';
 
@@ -43,6 +43,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
 
   // Wallet integration
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   
   // Get Farcaster wallet address if available
   const farcasterAddress = isInFarcasterContext() && context?.user?.walletAddress 
@@ -60,6 +62,18 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ params }) => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [justPurchased, setJustPurchased] = useState(false);
   const [refreshingAfterPurchase, setRefreshingAfterPurchase] = useState(false);
+
+  // Auto-switch to Celo Mainnet when component loads
+  useEffect(() => {
+    if (isConnected && chainId && chainId !== 42220) {
+      console.log('🔄 Auto-switching to Celo Mainnet...', { currentChainId: chainId });
+      try {
+        switchChain({ chainId: 42220 });
+      } catch (error) {
+        console.error('❌ Failed to auto-switch to Celo Mainnet:', error);
+      }
+    }
+  }, [isConnected, chainId, switchChain]);
   const [isBuying, setIsBuying] = useState(false);
 
   // Local state

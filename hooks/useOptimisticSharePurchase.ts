@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react'
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain, useWalletClient } from 'wagmi'
 import { useNotificationHelpers } from './useNotificationHelpers'
-import { parseEther } from 'viem'
+import { parseEther, encodeFunctionData } from 'viem'
+import { generateReferralTag, submitDivviReferral } from '@/lib/divvi'
 
 const PREDICTION_MARKET_CORE_ABI = [
   {
@@ -49,6 +50,9 @@ export const useOptimisticSharePurchase = (marketId: string) => {
     hash,
   })
   const { notifyTransactionSuccess, notifyTransactionFailed } = useNotificationHelpers()
+  const { chainId, address } = useAccount()
+  const { switchChain } = useSwitchChain()
+  const { data: walletClient } = useWalletClient()
   
   // State for triggering data refresh
   const [refreshTrigger, setRefreshTrigger] = React.useState(0)
@@ -62,9 +66,21 @@ export const useOptimisticSharePurchase = (marketId: string) => {
   })
 
   const buyShares = useCallback(async (amount: string, side: 'yes' | 'no') => {
-    console.log('🛒 buyShares called:', { marketId, amount, side })
+    console.log('🛒 buyShares called:', { marketId, amount, side, currentChainId: chainId })
     
     try {
+      // Check if we're on the correct chain (Celo Mainnet)
+      if (chainId !== 42220) {
+        console.log('🔄 Switching to Celo Mainnet...')
+        try {
+          await switchChain({ chainId: 42220 })
+          console.log('✅ Successfully switched to Celo Mainnet')
+        } catch (error) {
+          console.error('❌ Failed to switch to Celo Mainnet:', error)
+          throw new Error('Please switch to Celo Mainnet to buy shares')
+        }
+      }
+
       // Check market status first
       if (marketData) {
         const currentTime = Math.floor(Date.now() / 1000)
@@ -92,22 +108,77 @@ export const useOptimisticSharePurchase = (marketId: string) => {
       const amountWei = parseEther(amount)
       console.log('💰 Amount in wei:', amountWei.toString())
       
-      // Execute transaction
-      console.log('📝 Writing contract...')
-      writeContract({
-        address: getCoreContractAddress(),
-        abi: PREDICTION_MARKET_CORE_ABI,
-        functionName: 'buyShares',
-        args: [BigInt(marketId), side === 'yes'],
-        value: amountWei
-      })
+      // Execute transaction with Divvi referral tracking
+      console.log('📝 Writing contract with Divvi referral...')
+      
+      let transactionHash: `0x${string}`;
+      
+      if (address && walletClient) {
+        try {
+          // Generate referral tag
+          const referralTag = generateReferralTag(address);
+          console.log('🏷️ Generated referral tag:', referralTag);
+          
+          // Encode function data
+          const data = encodeFunctionData({
+            abi: PREDICTION_MARKET_CORE_ABI,
+            functionName: 'buyShares',
+            args: [BigInt(marketId), side === 'yes'],
+          });
+          
+          // Append referral tag to data
+          const dataWithReferral = data + referralTag;
+          
+          // Send transaction with referral data using wallet client
+          transactionHash = await walletClient.sendTransaction({
+            account: address,
+            to: getCoreContractAddress(42220),
+            data: dataWithReferral as `0x${string}`,
+            value: amountWei,
+          });
+          
+          console.log('✅ Transaction sent with referral tag:', { transactionHash, referralTag });
+        } catch (error) {
+          console.warn('Failed to send transaction with referral, falling back to regular transaction:', error);
+          
+          // Fallback to regular Wagmi transaction
+          writeContract({
+            address: getCoreContractAddress(42220),
+            abi: PREDICTION_MARKET_CORE_ABI,
+            functionName: 'buyShares',
+            args: [BigInt(marketId), side === 'yes'],
+            value: amountWei
+          });
+          return; // Exit early for fallback
+        }
+      } else {
+        // Use regular Wagmi transaction if wallet client not available
+        writeContract({
+          address: getCoreContractAddress(42220),
+          abi: PREDICTION_MARKET_CORE_ABI,
+          functionName: 'buyShares',
+          args: [BigInt(marketId), side === 'yes'],
+          value: amountWei
+        });
+        return; // Exit early for fallback
+      }
+
+      // Submit referral to Divvi after successful transaction
+      if (transactionHash) {
+        try {
+          await submitDivviReferral(transactionHash, 42220);
+          console.log('✅ Divvi referral submitted successfully');
+        } catch (error) {
+          console.warn('Failed to submit Divvi referral:', error);
+        }
+      }
 
       console.log('⏳ Transaction submitted, waiting for confirmation...')
     } catch (error) {
       console.error('❌ Error in buyShares:', error)
       notifyTransactionFailed(`Failed to buy shares: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
-  }, [marketId, marketData, writeContract, notifyTransactionFailed])
+  }, [marketId, marketData, writeContract, notifyTransactionFailed, chainId, switchChain, address, walletClient])
 
   // Handle transaction receipt
   React.useEffect(() => {

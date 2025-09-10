@@ -3,12 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { appKit } from '@/config';
 import { useFarcaster } from '@/components/FarcasterProvider';
-import { useAccount, useConnect } from 'wagmi';
+import { useAccount, useConnect, useChainId, useSwitchChain } from 'wagmi';
 
 export default function AppKitProvider({ children }: { children: React.ReactNode }) {
   const { isInFarcasterContext, context } = useFarcaster();
   const { isConnected } = useAccount();
   const { connect, connectors } = useConnect();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   const [isMiniApp, setIsMiniApp] = useState(false);
 
   useEffect(() => {
@@ -50,6 +52,18 @@ export default function AppKitProvider({ children }: { children: React.ReactNode
       }
     }
   }, [isMiniApp, isConnected, connect, connectors]);
+
+  // Auto-switch to Celo Mainnet when connected to wrong chain
+  useEffect(() => {
+    if (isConnected && chainId && chainId !== 42220) {
+      console.log('🔄 Auto-switching to Celo Mainnet from AppKitProvider...', { currentChainId: chainId });
+      try {
+        switchChain({ chainId: 42220 });
+      } catch (error) {
+        console.error('❌ Failed to auto-switch to Celo Mainnet:', error);
+      }
+    }
+  }, [isConnected, chainId, switchChain]);
 
   // AppKit is already configured in the layout, just return children
   return <>{children}</>;

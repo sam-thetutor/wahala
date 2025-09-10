@@ -37,8 +37,8 @@ const MarketCardNew: React.FC<MarketCardNewProps> = ({ market, className }) => {
   };
   
   // Get category badge variant
-  const getCategoryVariant = (category: string) => {
-    const categoryMap: { [key: string]: string } = {
+  const getCategoryVariant = (category: string): "politics" | "sports" | "technology" | "entertainment" | "finance" | "science" | "weather" | "general" => {
+    const categoryMap: { [key: string]: "politics" | "sports" | "technology" | "entertainment" | "finance" | "science" | "weather" | "general" } = {
       'Politics': 'politics',
       'Sports': 'sports',
       'Technology': 'technology',

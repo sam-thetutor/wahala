@@ -45,7 +45,7 @@ export default function BottomNavigation() {
                 <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                   isActive('/') ? 'bg-white/20' : 'bg-gradient-to-r from-slate-50 to-blue-50'
                 }`}></div>
-                <span className={`font-handwriting text-xs sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-3 relative z-10 truncate font-semibold ${
+                <span className={`font-sans text-xs sm:text-base lg:text-lg text-center block transition-all duration-300 cursor-pointer flex items-center justify-center gap-1 sm:gap-3 relative z-10 truncate font-semibold ${
                   isActive('/') ? 'text-white' : 'text-slate-700'
                 }`}>
                   <Home className={`w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ${isActive('/') ? 'text-white' : 'text-slate-600'}`} />
@@ -87,7 +87,7 @@ export default function BottomNavigation() {
                         )}
                       </div>
                       {/* Farcaster Name */}
-                      <span className={`font-handwriting text-xs sm:text-sm lg:text-base font-semibold truncate ${
+                      <span className={`font-sans text-xs sm:text-sm lg:text-base font-semibold truncate ${
                         isActive('/profile') ? 'text-white' : 'text-slate-700'
                       }`}>
                         {getUserDisplayName() || displayName || username || `FID: ${userFid}` || 'User'}
@@ -96,10 +96,10 @@ export default function BottomNavigation() {
                   ) : (
                     <>
                       <User className={`w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ${isActive('/profile') ? 'text-white' : 'text-slate-600'}`} />
-                      <span className={`hidden sm:inline font-handwriting text-xs sm:text-base lg:text-lg font-semibold ${
+                      <span className={`hidden sm:inline font-sans text-xs sm:text-base lg:text-lg font-semibold ${
                         isActive('/profile') ? 'text-white' : 'text-slate-700'
                       }`}>Profile</span>
-                      <span className={`sm:hidden font-handwriting text-xs font-semibold ${
+                      <span className={`sm:hidden font-sans text-xs font-semibold ${
                         isActive('/profile') ? 'text-white' : 'text-slate-700'
                       }`}>Profile</span>
                     </>
@@ -121,7 +121,7 @@ export default function BottomNavigation() {
             <div className="flex-shrink-0">
               <button
                 onClick={() => disconnect()}
-                className="p-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-xl transition-all duration-300 text-white hover:scale-105 transform shadow-lg hover:shadow-xl"
+                className="p-3 bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 rounded-xl transition-all duration-300 text-white hover:scale-105 transform shadow-lg hover:shadow-xl"
                 title="Disconnect Wallet"
               >
                 <LogOut className="w-5 h-5" />

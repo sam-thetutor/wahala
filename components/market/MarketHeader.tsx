@@ -64,7 +64,7 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({
                     {formatVolume(totalVolume)} CELO
                   </Badge>
                   
-                  <Badge variant="info" size="sm">
+                  <Badge variant="outline" size="sm">
                     <Clock className="w-3 h-3 mr-1" />
                     {formatDate(market.endTime)}
                   </Badge>
