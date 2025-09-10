@@ -69,6 +69,8 @@ interface UsePredictionMarketReturn {
   // Claims
   claimWinnings: (marketId: number) => Promise<{ success: boolean; transactionHash?: string; error?: string }>;
   claimCreatorFee: (marketId: number) => Promise<{ success: boolean; transactionHash?: string; error?: string }>;
+  hasClaimedWinnings: (marketId: number) => Promise<boolean>;
+  hasClaimedCreatorFee: (marketId: number) => Promise<boolean>;
   // State management
   clearError: () => void;
   resetState: () => void;
@@ -456,6 +458,79 @@ export function usePredictionMarket(): UsePredictionMarketReturn {
     );
   }, [address, chainId, switchChain, handleContractCall]);
 
+  // Check if user has claimed winnings for a market
+  const hasClaimedWinnings = useCallback(async (marketId: number): Promise<boolean> => {
+    if (!address) return false;
+    
+    try {
+      const claimsContractAddress = getClaimsContractAddress(42220);
+      // Use a direct contract call since we can't use hooks inside callbacks
+      const { createPublicClient, http } = await import('viem');
+      const publicClient = createPublicClient({
+        transport: http('https://forno.celo.org'),
+        chain: celo,
+      });
+      
+      const result = await publicClient.readContract({
+        address: claimsContractAddress,
+        abi: PREDICTION_MARKET_CLAIMS_ABI,
+        functionName: 'hasUserClaimed',
+        args: [BigInt(marketId), address as Address],
+      });
+      
+      console.log('🔍 Checking winnings claim status:', {
+        marketId,
+        userAddress: address,
+        claimsContractAddress,
+        hasClaimed: result
+      });
+      
+      return result as boolean;
+    } catch (error) {
+      console.error('Error checking winnings claim status:', error);
+      return false;
+    }
+  }, [address]);
+
+  // Check if user has claimed creator fee for a market
+  const hasClaimedCreatorFee = useCallback(async (marketId: number): Promise<boolean> => {
+    if (!address) return false;
+    
+    try {
+      const coreContractAddress = getCoreContractAddress(42220);
+      // Use a direct contract call since we can't use hooks inside callbacks
+      const { createPublicClient, http } = await import('viem');
+      const publicClient = createPublicClient({
+        transport: http('https://forno.celo.org'),
+        chain: celo,
+      });
+      
+      const result = await publicClient.readContract({
+        address: coreContractAddress,
+        abi: PREDICTION_MARKET_CORE_ABI,
+        functionName: 'getCreatorFeeInfo',
+        args: [BigInt(marketId)],
+      });
+      
+      // result is [creator, fee, claimed] - we need the third element (claimed)
+      const [creator, fee, claimed] = result as [Address, bigint, boolean];
+      
+      console.log('🔍 Checking creator fee claim status:', {
+        marketId,
+        userAddress: address,
+        coreContractAddress,
+        creator,
+        fee: fee.toString(),
+        hasClaimed: claimed
+      });
+      
+      return claimed;
+    } catch (error) {
+      console.error('Error checking creator fee claim status:', error);
+      return false;
+    }
+  }, [address]);
+
   // Clear error
   const clearError = useCallback(() => {
     setContractState(prev => ({ ...prev, error: null }));
@@ -482,6 +557,8 @@ export function usePredictionMarket(): UsePredictionMarketReturn {
     changeUsername,
     claimWinnings,
     claimCreatorFee,
+    hasClaimedWinnings,
+    hasClaimedCreatorFee,
     clearError,
     resetState
   };

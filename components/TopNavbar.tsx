@@ -76,6 +76,18 @@ const TopNavbar: React.FC = () => {
                 >
                   🏆 Leaderboard
                 </Link>
+                {isAdmin && (
+                  <Link 
+                    href="/admin" 
+                    className={`transition-colors font-medium ${
+                      isActiveLink('/admin') 
+                        ? 'text-blue-600' 
+                        : 'text-gray-700 hover:text-blue-600'
+                    }`}
+                  >
+                    🛡️ Admin
+                  </Link>
+                )}
                 {isConnected && (
                   <>
                     <Link 

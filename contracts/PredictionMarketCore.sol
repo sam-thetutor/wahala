@@ -32,6 +32,12 @@ contract PredictionMarketCore is Ownable {
         uint256 creatorFee; // Track creator's fee
         bool creatorFeeClaimed; // Track if creator has claimed their fee
     }
+    
+    // Winnings tracking (separate to reduce stack depth)
+    struct WinningsData {
+        mapping(address => bool) hasClaimedWinnings; // Track if user has claimed winnings for this market
+        uint256 totalWinningsClaimed; // Track total winnings claimed for this market
+    }
 
     enum MarketStatus { ACTIVE, RESOLVED, CANCELLED }
 
@@ -40,6 +46,7 @@ contract PredictionMarketCore is Ownable {
     mapping(uint256 => Market) public markets;
     mapping(uint256 => MarketMetadata) public marketMetadata; // Separate mapping for metadata
     mapping(uint256 => CreatorFeeData) public creatorFeeData; // Separate mapping for creator fee data
+    mapping(uint256 => WinningsData) public winningsData; // Separate mapping for winnings data
     mapping(address => string) public usernames;
     mapping(string => bool) public usernameTaken;
     mapping(uint256 => mapping(address => bool)) public hasParticipated;
@@ -67,6 +74,7 @@ contract PredictionMarketCore is Ownable {
     event ClaimsContractSet(address indexed oldContract, address indexed newContract);
     event RewardsDisbursed(uint256 indexed marketId, address indexed claimant, uint256 amount);
     event CreatorFeeClaimed(uint256 indexed marketId, address indexed creator, uint256 amount);
+    event WinningsClaimed(uint256 indexed marketId, address indexed claimant, uint256 amount);
     event CreatorFeePercentageUpdated(uint256 oldPercentage, uint256 newPercentage);
     event MarketCreationFeeUpdated(uint256 oldFee, uint256 newFee);
     
@@ -214,11 +222,17 @@ contract PredictionMarketCore is Ownable {
         require(markets[marketId].status == MarketStatus.RESOLVED, "Market not resolved");
         require(amount > 0, "Amount must be positive");
         require(amount <= address(this).balance, "Insufficient contract balance");
+        require(!winningsData[marketId].hasClaimedWinnings[claimant], "Winnings already claimed");
+        
+        // Mark winnings as claimed
+        winningsData[marketId].hasClaimedWinnings[claimant] = true;
+        winningsData[marketId].totalWinningsClaimed += amount;
         
         // Transfer the rewards to the claimant
         payable(claimant).transfer(amount);
         
         emit RewardsDisbursed(marketId, claimant, amount);
+        emit WinningsClaimed(marketId, claimant, amount);
     }
     
     // Username management
@@ -328,6 +342,25 @@ contract PredictionMarketCore is Ownable {
         Market storage market = markets[marketId];
         CreatorFeeData storage feeData = creatorFeeData[marketId];
         return (market.creator, feeData.creatorFee, feeData.creatorFeeClaimed);
+    }
+    
+    // Function to check if user has claimed winnings for a market
+    function hasUserClaimedWinnings(uint256 marketId, address user) external view returns (bool) {
+        require(markets[marketId].id != 0, "Market does not exist");
+        return winningsData[marketId].hasClaimedWinnings[user];
+    }
+    
+    // Function to get total winnings claimed for a market
+    function getTotalWinningsClaimed(uint256 marketId) external view returns (uint256) {
+        require(markets[marketId].id != 0, "Market does not exist");
+        return winningsData[marketId].totalWinningsClaimed;
+    }
+    
+    // Function to get remaining winnings for a market (total pool - claimed)
+    function getRemainingWinnings(uint256 marketId) external view returns (uint256) {
+        require(markets[marketId].id != 0, "Market does not exist");
+        require(markets[marketId].status == MarketStatus.RESOLVED, "Market not resolved");
+        return markets[marketId].totalPool - winningsData[marketId].totalWinningsClaimed;
     }
     
     // Creator fee claiming

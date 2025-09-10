@@ -209,3 +209,4 @@ syncNewContractToDatabase()
     console.error('❌ Sync script failed:', error)
     process.exit(1)
   })
+

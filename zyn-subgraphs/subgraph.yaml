@@ -23,6 +23,8 @@ dataSources:
         - MarketCreated
         - SharesBought
         - MarketResolved
+        - CreatorFeeClaimed
+        - WinningsClaimed
         - UsernameSet
         - UsernameChanged
       abis:

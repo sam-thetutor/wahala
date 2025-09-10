@@ -12,9 +12,9 @@ import { formatEther } from 'viem';
 import Link from 'next/link';
 import { useUserActivity } from '@/hooks/useUserActivity';
 import { useUserStats } from '@/hooks/useUserStats';
-import { useUserEvents } from '@/hooks/useUserEvents';
 import { UserActivity, UserStats, ACTIVITY_CONFIG, MARKET_STATUS_CONFIG } from '@/types/profile';
 import { formatVolume, formatDate, shortenAddress, formatPercentage } from '@/lib/utils';
+import ClaimsSection from '@/components/ClaimsSection';
 
 const ProfileContent: React.FC = () => {
   const router = useRouter();
@@ -58,14 +58,8 @@ const ProfileContent: React.FC = () => {
     refetch: refetchStats
   } = useUserStats();
   
-  const { 
-    events, 
-    loading: eventsLoading, 
-    error: eventsError,
-    refetch: refetchEvents
-  } = useUserEvents();
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'activities' | 'markets' | 'events'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'activities' | 'markets' | 'claims'>('overview');
   const [isPolling, setIsPolling] = useState(false);
 
   // Get markets created by user from activities
@@ -89,8 +83,7 @@ const ProfileContent: React.FC = () => {
         setIsPolling(true);
         Promise.all([
           refetchActivities(),
-          refetchStats(),
-          refetchEvents()
+          refetchStats()
         ]).finally(() => {
           setIsPolling(false);
         });
@@ -103,7 +96,7 @@ const ProfileContent: React.FC = () => {
       clearInterval(pollInterval);
       clearTimeout(timeoutId);
     };
-  }, [farcasterAddress, refetchActivities, refetchStats, refetchEvents]);
+  }, [farcasterAddress, refetchActivities, refetchStats]);
 
   // Handle wallet not connected
   if (!isConnected || !farcasterAddress) {
@@ -195,7 +188,6 @@ const ProfileContent: React.FC = () => {
                 onClick={() => {
                   refetchActivities();
                   refetchStats();
-                  refetchEvents();
                 }}
                 className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs md:text-sm"
               >
@@ -212,7 +204,7 @@ const ProfileContent: React.FC = () => {
               { id: 'overview', label: 'Overview', count: null },
               { id: 'activities', label: 'Activities', count: userStats?.totalTrades || 0 },
               { id: 'markets', label: 'My Markets', count: userStats?.totalMarketsCreated || 0 },
-              { id: 'events', label: 'Events', count: events.length },
+              { id: 'claims', label: 'Claims', count: 0 },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -563,93 +555,8 @@ const ProfileContent: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'events' && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900">Blockchain Events</h2>
-              <div className="flex items-center space-x-2">
-                <select
-                  value={eventsLoading ? '' : 'all'}
-                  className="text-xs md:text-sm border border-gray-300 rounded-md px-2 py-1"
-                  disabled
-                >
-                  <option value="all">All Events</option>
-                </select>
-                <button
-                  onClick={refetchEvents}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Refresh"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            
-            {eventsLoading ? (
-              <div className="text-center py-6 md:py-8">
-                <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-blue-600 mx-auto mb-3 md:mb-4"></div>
-                <p className="text-sm md:text-base text-gray-600">Loading events...</p>
-              </div>
-            ) : eventsError ? (
-              <div className="text-center py-6 md:py-8">
-                <div className="text-red-400 text-3xl md:text-4xl mb-3 md:mb-4">⚠️</div>
-                <h4 className="text-base md:text-lg font-medium text-gray-900 mb-2">Error Loading Events</h4>
-                <p className="text-sm md:text-base text-gray-600 mb-4">{eventsError}</p>
-                <button
-                  onClick={refetchEvents}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                >
-                  Try Again
-                </button>
-              </div>
-            ) : events.length > 0 ? (
-              <div className="space-y-3 md:space-y-4">
-                {events.map((event) => (
-                  <div
-                    key={event.id}
-                    className="flex items-center p-3 md:p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="text-lg md:text-2xl mr-3 md:mr-4 p-2 bg-blue-100 rounded-lg">
-                      🔗
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-sm md:text-base text-gray-900">
-                            {event.eventType}
-                          </p>
-                          <p className="text-xs md:text-sm text-gray-600 mt-1">
-                            {event.market.question}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Block: {event.blockNumber} • TX: {shortenAddress(event.transactionHash)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {event.eventType}
-                          </span>
-                          <p className="text-xs md:text-sm text-gray-500 mt-1">
-                            {formatDate(event.createdAt.getTime() / 1000)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 md:py-8">
-                <div className="text-gray-400 text-3xl md:text-4xl mb-3 md:mb-4">🔗</div>
-                <h4 className="text-base md:text-lg font-medium text-gray-900 mb-2">No Events Found</h4>
-                <p className="text-sm md:text-base text-gray-600 mb-4">
-                  No blockchain events found for your address.
-                </p>
-              </div>
-            )}
-          </div>
+        {activeTab === 'claims' && (
+          <ClaimsSection userAddress={farcasterAddress} />
         )}
 
         <NotificationContainer 

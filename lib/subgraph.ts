@@ -114,6 +114,64 @@ export const queries = {
         transactionHash
       }
     }
+  `,
+  
+  getUserClaims: `
+    query GetUserClaims($userAddress: String!) {
+      # Get markets where user participated and market is resolved
+      participants(where: { user: $userAddress }) {
+        id
+        market {
+          id
+          question
+          description
+          status
+          outcome
+          totalYes
+          totalNo
+          totalPool
+          resolvedAt
+          creator
+        }
+        totalYesShares
+        totalNoShares
+        totalInvestment
+        firstPurchaseAt
+        lastPurchaseAt
+        transactionCount
+      }
+      # Get markets created by user that are resolved
+      markets(where: { creator: $userAddress, status: RESOLVED }) {
+        id
+        question
+        description
+        status
+        outcome
+        resolvedAt
+        creator
+        totalPool
+        totalYes
+        totalNo
+      }
+    }
+  `,
+  
+  getUserParticipations: `
+    query GetUserParticipations($userAddress: String!) {
+      participants(where: { user: $userAddress }) {
+        id
+        market {
+          id
+          question
+          status
+          outcome
+          resolvedAt
+        }
+        totalYesShares
+        totalNoShares
+        totalInvestment
+      }
+    }
   `
 }
 
@@ -152,6 +210,42 @@ export interface SubgraphGlobalStats {
   totalVolume: string
   totalFees: string
   lastUpdated: string
+}
+
+export interface SubgraphUserClaim {
+  participants: Array<{
+    id: string
+    market: {
+      id: string
+      question: string
+      description: string
+      status: string
+      outcome: boolean
+      totalYes: string
+      totalNo: string
+      totalPool: string
+      resolvedAt: string
+      creator: string
+    }
+    totalYesShares: string
+    totalNoShares: string
+    totalInvestment: string
+    firstPurchaseAt: string
+    lastPurchaseAt: string
+    transactionCount: string
+  }>
+  markets: Array<{
+    id: string
+    question: string
+    description: string
+    status: string
+    outcome: boolean
+    resolvedAt: string
+    creator: string
+    totalPool: string
+    totalYes: string
+    totalNo: string
+  }>
 }
 
 export interface SubgraphSharesBought {

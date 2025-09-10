@@ -36,7 +36,7 @@ import FarcasterUserProfile from '@/components/FarcasterUserProfile';
 import { useSubgraphMarkets } from '@/hooks/useSubgraphMarkets';
 import { formatEther } from 'viem';
 import NotificationContainer, { useNotifications } from '@/components/NotificationContainer';
-import ReferralBanner from '@/components/ReferralBanner';
+// ReferralBanner removed - using Divvi SDK instead
 import { MiniAppProvider, useMiniApp as useMiniAppContext } from '@/contexts/MiniAppContext';
 // Removed BottomNavigation - now using TopNavbar
 
@@ -231,7 +231,7 @@ const HomePageContent: React.FC = () => {
   return (
     <div className="min-h-screen">
       {/* Referral Banner */}
-      <ReferralBanner />
+      {/* Referral tracking handled by Divvi SDK */}
       
       {/* Hero Section - Mobile Optimized */}
       <div className="relative overflow-hidden min-h-screen flex items-center justify-center">
